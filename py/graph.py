@@ -38,9 +38,11 @@ def gen_hypercubic(d,l,dist,pbc=True,**kwargs):
 		p=kwargs['p'] if 'p' in kwargs.keys() else 0.5
 		assert p>=0 and p<=1
 
+	vs=[]
 	es=[]
 	num_vs=np.prod(l)
 	for v1 in range(num_vs):
+		vs.append(site())
 		v1_idx=copy.deepcopy(v1)
 		#identify position of site v1 on hypercubic lattice
 		base_coords=[]
@@ -62,32 +64,28 @@ def gen_hypercubic(d,l,dist,pbc=True,**kwargs):
 				j=rng.normal(loc=mean,scale=std)
 			elif dist=='bimodal':
 				j=rng.choice([1,-1],p=[p,1-p])
-			if v2<v1:
-				temp=v1
-				v1=v2
-				v2=temp
-			es.append([v1,v2,int(j*1e5)])
-	return num_vs,es
+			es.append(bond(v1,v2,j) if v1<v2 else bond(v2,v1,j))
+			# es.append([v1,v2] if v1<v2 else [v2,v1])
+	return vs,es
 
-def save_graph(fn,num_vs,es):
+def save_graph(fn,vs,es):
 	with open(fn,"w") as f:
-		f.write("%d %d"%(num_vs,len(es)))
+		f.write("%d %d"%(len(vs),len(es)))
 		for e in es:
 			f.write("\n")
-			f.write("%d %d %d"%tuple(e))
+			f.write("%d %d %d"%(e.v1,e.v2,e.j*1e5))
 
 def load_graph(fn):
 	with open(fn,"r") as f:
 		lines=f.readlines()
 	num_vs=int(lines[0].split(" ")[0])
+	vs=[]
 	es=[] #vertex1, vertex2, weight
+	for i in range(num_vs):
+		vs.append(site())
 	for n in range(len(lines[1:])):
 		v1,v2,j=(int(i) for i in lines[n+1].split(" "))
 		v1-=1 #TODO: munge rudy output to 0-indexing
 		v2-=1
-		if v2<v1:
-			temp=v1
-			v1=v2
-			v2=temp
-		es.append([v1,v2,j/1e5])
-	return num_vs,es
+		es.append(bond(v1,v2,j/1e5) if v1<v2 else bond(v2,v1,j/1e5))
+	return vs,es

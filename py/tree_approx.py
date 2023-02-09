@@ -32,9 +32,9 @@ q=2
 assert args.min_beta<=args.max_beta
 beta=args.min_beta
 
-n_sites,es=graph.load_graph(args.input)
-orig_sites=[graph.site() for i in range(n_sites)] #volumes
-orig_bonds=[graph.bond(e[0],e[1],e[2]) for e in es] #vertex1, vertex2, weight, order
+vs,es=graph.load_graph(args.input)
+orig_sites=copy.deepcopy(vs) #volumes
+orig_bonds=copy.deepcopy(es) #vertex1, vertex2, weight, order
 
 snapshots=[]
 times=[]

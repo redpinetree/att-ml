@@ -3,9 +3,13 @@
 
 #ignore pycache
 **__pycache__
+**.o
 
 #exceptions
 !.gitignore
 !/py/
 !/py_cmd/
 !/rudy/
+!/cpp/
+!/cpp_old/
+!Makefile

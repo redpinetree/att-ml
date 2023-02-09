@@ -34,24 +34,25 @@ q=args.q
 assert args.min_beta<=args.max_beta
 beta=args.min_beta
 
-n_sites,es=graph.load_graph(args.input)
-orig_sites=[graph.site() for i in range(n_sites)] #volumes
-orig_bonds=[graph.bond(e[0],e[1],e[2]) for e in es] #vertex1, vertex2, weight, order
+vs,es=graph.load_graph(args.input)
+orig_sites=copy.deepcopy(vs) #volumes
+orig_bonds=copy.deepcopy(es) #vertex1, vertex2, weight, order
 
 snapshots=[]
 times=[]
 while beta<=args.max_beta:
 	print("beta=%g"%beta)
-	start=time.time()
 	bonds=copy.deepcopy(orig_bonds)
 	sites=copy.deepcopy(orig_sites)
 	for i in range(len(bonds)):
 		bonds[i].j*=beta
+	start=time.time()
 	#bonds[-1] is the heaviest bond that is yet to be contracted
 	if args.sort_by_j:
 		bonds.sort(key=lambda e: (e.order is None,np.abs(e.j),e.v1,e.v2))
 	else:
-		bonds.sort(key=lambda e: (e.order is None,np.round(bmi(q,e.j),14),e.v1,e.v2))
+		# bonds.sort(key=lambda e: (e.order is None,np.round(bmi(q,e.j),14),e.v1,e.v2))
+		bonds.sort(key=lambda e: (e.order is None,bmi(q,e.j),e.v1,e.v2))
 	# print(bonds)
 	# print(sites)
 	
@@ -81,10 +82,11 @@ while beta<=args.max_beta:
 		# make_graph(sites,bonds,"tree%d"%img_count)
 		# img_count+=1
 		(master,slave)=(bonds[-1].v2,bonds[-1].v1) if sites[bonds[-1].v1].vol<sites[bonds[-1].v2].vol else (bonds[-1].v1,bonds[-1].v2)
-		sites[master].vol+=sites[slave].vol #update master vertex volume
+		sites[master].vol+=sites[slave].vol #update master vertex volume\
+		# print("")
 		# print(bonds[-1],master,slave)
 		current=bonds.pop()
-		bonds.sort(key=lambda e: (e.v1==slave or e.v2==slave,e.order is None),reverse=True)
+		bonds.sort(key=lambda e: (e.order is None,e.v1==slave or e.v2==slave),reverse=True)
 		bonds.append(current)
 		# print(bonds)
 		for i in range(len(bonds)-1):
@@ -131,6 +133,8 @@ while beta<=args.max_beta:
 						# print(bonds[i])
 				else: #since the list is sorted, go to next i coord when no matches appear in the i coord
 					break
+		# print(bonds)
+		# print(sites)
 		remove_idxs.sort(reverse=True)
 		for i in remove_idxs:
 			del bonds[i]
@@ -138,21 +142,23 @@ while beta<=args.max_beta:
 		if args.sort_by_j:
 			bonds.sort(key=lambda e: (e.order is None,np.abs(e.j),e.v1,e.v2))
 		else:
-			bonds.sort(key=lambda e: (e.order is None,np.round(bmi(q,e.j),14),e.v1,e.v2))
+			bonds.sort(key=lambda e: (e.order is None,bmi(q,e.j),e.v1,e.v2))
 		iteration+=1
-		# print(bonds)
 		# print(sites)
+		# print(bonds)
 		# print("")
+		# sys.exit(1)
 
+	end=time.time()
+	elapsed=end-start
+	times.append(elapsed)
+	
 	# print(bonds)
 	# print(sites)
 	# print([np.round(bmi(q,e.j),14) for e in bonds])
 	# make_graph(sites,bonds,"tree%d"%img_count)
 
 	snapshots.append([beta,bonds,sites])
-	end=time.time()
-	elapsed=end-start
-	times.append(elapsed)
 	print("Time elapsed for this beta: %f s"%times[-1])
 	beta+=args.step_beta
 	# sys.exit(1)
