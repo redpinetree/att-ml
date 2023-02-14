@@ -157,6 +157,6 @@ int main(int argc,char **argv){
     algorithm::tree_approx_old(q,g,sort_by_coupling);
     sw.split();
     std::cout<<std::string(g);
-    std::cout<<(double) (sw.elapsed()/1e3)<<"ms \n";
+    std::cout<<(double) sw.elapsed()<<"ms \n";
     sw.reset();
 }

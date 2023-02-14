@@ -1,15 +1,16 @@
 #include "site.hpp"
 
-site::site(){
-    this->vol_=1;
-}
-
-site::site(size_t vol){
-    this->vol_=vol;
-}
+site::site(): vol_(1),virt_(false){}
+site::site(size_t vol):vol_(vol),virt_(false){}
+site::site(size_t vol,std::pair<size_t,size_t> p):vol_(vol),virt_(true),p_(p){}
 
 site::operator std::string() const{
-    return std::to_string(this->vol());
+    if(this->virt()){
+        return "["+std::to_string(this->vol())+",("+std::to_string(this->p1())+","+std::to_string(this->p2())+")]";
+    }
+    else{
+        return std::to_string(this->vol());
+    }
 }
 
 std::ostream& operator<<(std::ostream& os,const site& v){
@@ -17,18 +18,15 @@ std::ostream& operator<<(std::ostream& os,const site& v){
     return os;
 }
 
-size_t site::vol() const{
-    return this->vol_;
-}
-
-std::multiset<bond,vertices_comparator> site::adj() const{
-    return this->adj_;
-}
-
-size_t& site::vol(){
-    return this->vol_;
-}
-
-std::multiset<bond,vertices_comparator>& site::adj(){
-    return this->adj_;
-}
+size_t site::vol() const{return this->vol_;}
+std::multiset<bond,vertices_comparator> site::adj() const{return this->adj_;}
+bool site::virt() const{return this->virt_;}
+std::pair<size_t,size_t> site::p() const{return this->p_;}
+size_t site::p1() const{return this->p_.first;}
+size_t site::p2() const{return this->p_.second;}
+size_t& site::vol(){return this->vol_;}
+std::multiset<bond,vertices_comparator>& site::adj(){return this->adj_;}
+bool& site::virt(){return this->virt_;}
+std::pair<size_t,size_t>& site::p(){return this->p_;}
+size_t& site::p1(){return this->p_.first;}
+size_t& site::p2(){return this->p_.second;}

@@ -15,8 +15,6 @@ double renorm_coupling(size_t q,double k1,double k2){
 
 template<typename cmp>
 void algorithm::tree_approx(size_t q,graph<cmp>& g){
-    stopwatch sw1,sw2,sw3;
-    // std::cout<<std::string(g)<<"\n";
     //graph deformation
     size_t iteration=0;
     while((*(g.es().rbegin())).todo()){
@@ -107,5 +105,5 @@ void algorithm::tree_approx(size_t q,graph<cmp>& g){
     // std::cout<<"volume time: "<<sw1.elapsed()<<"\n";
     // std::cout<<"reconnect time: "<<sw2.elapsed()<<"\n";
 }
-template void algorithm::tree_approx(size_t q,graph<coupling_comparator>& g);
-template void algorithm::tree_approx(size_t q,graph<bmi_comparator>& g);
+template void algorithm::tree_approx(size_t,graph<coupling_comparator>&);
+template void algorithm::tree_approx(size_t,graph<bmi_comparator>&);
