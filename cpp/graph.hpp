@@ -1,5 +1,5 @@
-#ifndef GRAPH
-#define GRAPH
+#ifndef GRAPH_
+#define GRAPH_
 
 #include <vector>
 #include <set>

@@ -7,7 +7,6 @@
 #include "graph.hpp"
 
 namespace graph_utils{
-    extern std::mt19937 prng;
     template<typename distribution,typename cmp>
     graph<cmp> gen_hypercubic(size_t,std::vector<size_t>,bool,distribution&,double);
     template<typename cmp>
