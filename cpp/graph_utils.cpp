@@ -29,6 +29,7 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
             base_coords.push_back(v1_idx%ls[d_idx]);
             v1_idx/=ls[d_idx];
         }
+        vs[v1].coords()=base_coords;
         //add offset (+1 for nearest neighbor)
         for(size_t d_idx=0;d_idx<d;d_idx++){
             //boundary condition
@@ -51,7 +52,9 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
             vs[v2].adj().insert(bond(q,v1,v2,j));
         }
     }
-    return graph<cmp>(vs,es);
+    graph<cmp> g(vs,es);
+    g.dims()=ls;
+    return g;
 }
 template graph<coupling_comparator> graph_utils::gen_hypercubic<std::normal_distribution<double>,coupling_comparator>(size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
 template graph<coupling_comparator> graph_utils::gen_hypercubic<std::discrete_distribution<int>,coupling_comparator>(size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);

@@ -35,11 +35,15 @@ public:
     }
     std::vector<site> vs() const{return this->vs_;};
     std::multiset<bond,cmp> es() const{return this->es_;};
+    std::vector<size_t> dims() const{return this->dims_;};
     std::vector<site>& vs(){return this->vs_;};
     std::multiset<bond,cmp>& es(){return this->es_;};
+    std::vector<size_t>& dims(){return this->dims_;};
 private:
     std::vector<site> vs_;
     std::multiset<bond,cmp> es_;
+    //only nonempty if regular lattice
+    std::vector<size_t> dims_;
 };
 
 #endif

@@ -20,12 +20,14 @@ std::ostream& operator<<(std::ostream& os,const site& v){
 
 size_t site::vol() const{return this->vol_;}
 std::multiset<bond,vertices_comparator> site::adj() const{return this->adj_;}
+std::vector<size_t> site::coords() const{return this->coords_;}
 bool site::virt() const{return this->virt_;}
 std::pair<size_t,size_t> site::p() const{return this->p_;}
 size_t site::p1() const{return this->p_.first;}
 size_t site::p2() const{return this->p_.second;}
 size_t& site::vol(){return this->vol_;}
 std::multiset<bond,vertices_comparator>& site::adj(){return this->adj_;}
+std::vector<size_t>& site::coords(){return this->coords_;}
 bool& site::virt(){return this->virt_;}
 std::pair<size_t,size_t>& site::p(){return this->p_;}
 size_t& site::p1(){return this->p_.first;}

@@ -2,6 +2,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <random>
 #include <chrono>
 #include <getopt.h>
@@ -13,6 +14,8 @@
 #include "graph_utils.hpp"
 #include "algorithm.hpp"
 #include "observables.hpp"
+
+#define PI 3.14159265358979323846
 
 void print_usage(){
     std::cerr<<"usage: tree_approx_potts [--options] <q> <n_samples> <d> <{l|l0,l1,...}> <min_beta> <max_beta> <step_beta>\n";
@@ -61,6 +64,28 @@ void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,do
     m2_1=observables::m(g,q,2,1)/pow(n_phys_sites,2);
     m2_2=observables::m(g,q,2,2)/pow(n_phys_sites,2);
     m4_2=observables::m(g,q,4,2)/pow(n_phys_sites,4);
+}
+
+template<typename cmp>
+void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,double& m1_2,double& m2_1,double& m2_2,double& m4_2,double& k_min,std::complex<double>& m2_2_k){
+    //use bottom-up approach to compute observables, avoiding stack overflow
+    m1_1=observables::m(g,q,1,1)/n_phys_sites;
+    m1_2=observables::m(g,q,1,2)/n_phys_sites;
+    m2_1=observables::m(g,q,2,1)/pow(n_phys_sites,2);
+    m2_2=observables::m(g,q,2,2)/pow(n_phys_sites,2);
+    m4_2=observables::m(g,q,4,2)/pow(n_phys_sites,4);
+    if(g.dims().size()!=0){
+        std::vector<double> k(g.dims().size(),0);
+        auto max_it=std::max_element(g.dims().begin(),g.dims().end());
+        size_t max_idx=max_it-g.dims().begin();
+        k_min=2*PI/(*max_it); //max dim yields min k
+        k[max_idx]=k_min;
+        // std::cout<<observables::m(g,q,1,1,k)<<"\n";
+        // std::cout<<observables::m(g,q,1,2,k)<<"\n";
+        // std::cout<<observables::m(g,q,2,1,k)<<"\n";
+        // std::cout<<observables::m(g,q,2,2,k)<<"\n";
+        m2_2_k=observables::m(g,q,2,2,k)/pow(n_phys_sites,2);
+    }
 }
 
 int main(int argc,char **argv){
@@ -143,8 +168,10 @@ int main(int argc,char **argv){
         if((argc-optind)==4){
             size_t l=(size_t) atoi(argv[optind++]);
             if((!open_bc)&&(l<3)){
-                std::cerr<<"Error: dimension length must be at least 3 if periodic bcs are used to ensure that the graph has no multiedges.\n";
-                if(mpi_utils::root){print_usage();}
+                if(mpi_utils::root){
+                    std::cerr<<"Error: dimension length must be at least 3 if periodic bcs are used to ensure that the graph has no multiedges.\n";
+                    print_usage();
+                }
                 exit(1);
             }
             for(size_t i=0;i<d;i++){
@@ -174,7 +201,7 @@ int main(int argc,char **argv){
     double step_beta=(double) atof(argv[optind++]);
     //override verbosity if proc_num>1
     if(mpi_utils::proc_num>1){
-        if(mpi_utils::root){
+        if(mpi_utils::root && verbose>0){
             std::cerr<<"Since MPI is being used with more than 1 process, verbosity forced to 0.\n";
         }
         verbose=0;
@@ -229,8 +256,9 @@ int main(int argc,char **argv){
         }
         double beta=min_beta;
         size_t n_phys_sites;
-        double m1_1,m1_2,m2_1,m2_2,m4_2;
-        double q2sqrt,q2_var,q2_std,sus_sg,binder_q;
+        double m1_1,m1_2,m2_1,m2_2,m4_2,k_min;
+        std::complex<double> m2_2_k;
+        double q2_var,q2_std,sus_sg,binder_q,sus_sg_k,corr_len_sg;
         std::stringstream header1_ss,header1_vals_ss,header2_ss;
         observables::output_lines.clear(); //flush output lines
         std::string header1_ls_str;
@@ -257,10 +285,16 @@ int main(int argc,char **argv){
         }
         header1_vals_ss<<sample<<" "<<q<<" "<<ls.size()<<" "<<header1_ls_vals_str<<"\n";
         observables::output_lines.push_back(header1_vals_ss.str());
-        header2_ss<<"beta m1_1 m1_2 m2_1 m2_2 m4_2 q2_std sus_sg binder_q\n";
+        if(n_samples!=0){ //hypercubic lattice is used
+            header2_ss<<"beta m1_1 m1_2 m2_1 m2_2 m4_2 q2_std sus_sg binder_q corr_len_sg\n";
+        }
+        else{
+            header2_ss<<"beta m1_1 m1_2 m2_1 m2_2 m4_2 q2_std sus_sg binder_q\n";
+        }
         observables::output_lines.push_back(header2_ss.str());
         while(beta<=max_beta){
             observables::known_factors.clear(); //flush cache for observable computation
+            observables::known_factors_complex.clear(); //flush cache for observable computation
             double trial_time=0; //not including init time
             if(verbose>=2){std::cout<<((use_t)?"temp=":"beta=")<<beta<<"\n";}
             if(sort_by_coupling){
@@ -280,7 +314,12 @@ int main(int argc,char **argv){
                 if(verbose>=3){std::cout<<"cmd_treeify time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
                 sw.start();
-                calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2);
+                if(g.dims().size()!=0){
+                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2,k_min,m2_2_k);
+                }
+                else{
+                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2);
+                }
                 sw.split();
                 if(verbose>=3){std::cout<<"m computation time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
@@ -305,7 +344,12 @@ int main(int argc,char **argv){
                 trial_time+=sw.elapsed();
                 sw.reset();
                 sw.start();
-                calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2);
+                if(g.dims().size()!=0){
+                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2,k_min,m2_2_k);
+                }
+                else{
+                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2);
+                }
                 sw.split();
                 if(verbose>=3){std::cout<<"m computation time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
@@ -317,9 +361,18 @@ int main(int argc,char **argv){
             q2_std=sqrt(q2_var);
             sus_sg=n_phys_sites*m2_2;
             binder_q=0.5*(3-(m4_2/pow(m2_2,2)));
+            if(n_samples!=0){ //hypercubic lattice is used
+                sus_sg_k=n_phys_sites*sqrt(std::norm(m2_2_k));
+                corr_len_sg=sqrt((sus_sg/sus_sg_k)-1)/(2*sin(k_min/2));
+            }
             //prepare output lines
             std::stringstream output_line_ss;
-            output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1<<" "<<m1_2<<" "<<m2_1<<" "<<m2_2<<" "<<m4_2<<" "<<q2_std<<" "<<sus_sg<<" "<<binder_q<<"\n";
+            if(n_samples!=0){ //hypercubic lattice is used
+                output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1<<" "<<m1_2<<" "<<m2_1<<" "<<m2_2<<" "<<m4_2<<" "<<q2_std<<" "<<sus_sg<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
+            }
+            else{
+                output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1<<" "<<m1_2<<" "<<m2_1<<" "<<m2_2<<" "<<m4_2<<" "<<q2_std<<" "<<sus_sg<<" "<<binder_q<<"\n";
+            }
             observables::output_lines.push_back(output_line_ss.str());
             if(verbose>=2){std::cout<<"Time elapsed for this beta/temp: "<<trial_time<<"ms\n";}
             times.push_back(trial_time);

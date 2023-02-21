@@ -2,6 +2,7 @@
 #define SITE
 
 #include <iostream>
+#include <vector>
 #include <set>
 #include <string>
 #include <utility>
@@ -18,12 +19,14 @@ public:
     friend std::ostream& operator<<(std::ostream&,const site&);
     size_t vol() const;
     std::multiset<bond,vertices_comparator> adj() const;
+    std::vector<size_t> coords() const;
     bool virt() const;
     std::pair<size_t,size_t> p() const;
     size_t p1() const;
     size_t p2() const;
     size_t& vol();
     std::multiset<bond,vertices_comparator>& adj();
+    std::vector<size_t>& coords();
     bool& virt();
     std::pair<size_t,size_t>& p();
     size_t& p1();
@@ -31,6 +34,8 @@ public:
 private:
     size_t vol_;
     std::multiset<bond,vertices_comparator> adj_;
+    //only used if a regular lattice is used instead of an arbitrary graph
+    std::vector<size_t> coords_;
     //only used in observable computation
     bool virt_;
     std::pair<size_t,size_t> p_;
