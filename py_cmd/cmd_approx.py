@@ -104,7 +104,7 @@ while beta<=args.max_beta:
 		# print("v1_orig=%d,v2_orig=%d"%(v1_orig_idx,v2_orig_idx))
 		# print("master=%d,slave=%d"%(master,slave))
 		#create new virtual site
-		sites.append(graph_cmd.virtual_site(bonds[-1].v1,bonds[-1].v2,sites))
+		sites.append(graph_cmd.virtual_site(bonds[-1].v1,bonds[-1].v2))
 		sites[-1].vol=copy.deepcopy(sites[master].vol)
 		# sites[-1].vol+=sites[slave].vol
 		#update volume of physical site associated with new virtual site for algorithm 1
@@ -149,10 +149,7 @@ while beta<=args.max_beta:
 			change=False
 			# if (bonds[i].v1==bonds[-1].v1 or bonds[i].v1==bonds[-1].v2):
 			if (bonds[i].v1==bonds[-1].v1 or bonds[i].v1==bonds[-1].v2) and bonds[i].up is None:
-				if bonds[i].v1==slave:
-					bonds[i].orig_v1=bonds[-1].orig_v1 if bonds[-1].v1==master else bonds[-1].orig_v2
-				else:
-					bonds[i].orig_v1=bonds[-1].orig_v1 if bonds[-1].v1==master else bonds[-1].orig_v2
+				bonds[i].orig_v1=bonds[-1].orig_v1 if bonds[-1].v1==master else bonds[-1].orig_v2
 				#reconnect
 				bonds[i].v1=bonds[i].v2 #move v2 to v1
 				bonds[i].v2=virtual_idx #because bonds[i] vertices<virtual_idx always
@@ -165,10 +162,7 @@ while beta<=args.max_beta:
 				change=True
 			# elif (bonds[i].v2==bonds[-1].v1 or bonds[i].v2==bonds[-1].v2)==slave:
 			elif (bonds[i].v2==bonds[-1].v1 or bonds[i].v2==bonds[-1].v2) and bonds[i].up is None:
-				if bonds[i].v2==slave:
-					bonds[i].orig_v2=bonds[-1].orig_v1 if bonds[-1].v1==master else bonds[-1].orig_v2
-				else:
-					bonds[i].orig_v2=bonds[-1].orig_v1 if bonds[-1].v1==master else bonds[-1].orig_v2
+				bonds[i].orig_v2=bonds[-1].orig_v1 if bonds[-1].v1==master else bonds[-1].orig_v2
 				#reconnect
 				bonds[i].v2=virtual_idx
 				#update bond weight
@@ -331,8 +325,9 @@ while beta<=args.max_beta:
 		# print(sites)
 		# print("")
 
-	# print(bonds)
-	# print(sites)
+	bonds.reverse()
+	print(bonds)
+	print(sites)
 	# # make_graph(sites,bonds,"tree%d"%img_count)
 
 	snapshots.append([beta,bonds,sites])

@@ -1,0 +1,57 @@
+#ifndef BOND
+#define BOND
+
+#include <iostream>
+#include <string>
+#include <utility>
+
+#include "ndarray.hpp"
+
+class bond{
+public:
+    bond();
+    bond(size_t,size_t,size_t,array2d<double>);
+    bond(size_t,std::pair<size_t,size_t>,array2d<double>);
+    operator std::string() const;
+    friend std::ostream& operator<<(std::ostream&,const bond&);
+    size_t q() const;
+    std::pair<size_t,size_t> v() const;
+    std::pair<size_t,size_t> v_orig() const;
+    size_t v1() const;
+    size_t v2() const;
+    size_t v1_orig() const;
+    size_t v2_orig() const;
+    size_t virt_count() const;
+    array2d<double> w() const;
+    double j() const;
+    double bmi() const;
+    size_t order() const;
+    bool todo() const;
+    size_t& q();
+    std::pair<size_t,size_t>& v();
+    std::pair<size_t,size_t>& v_orig();
+    size_t& v1();
+    size_t& v2();
+    size_t& v1_orig();
+    size_t& v2_orig();
+    size_t& virt_count();
+    array2d<double>& w();
+    double& j();
+    double& bmi();
+    size_t& order();
+    bool& todo();
+    void j(size_t,array2d<double>&);
+    void bmi(size_t,array2d<double>&);
+private:
+    size_t q_;
+    std::pair<size_t,size_t> v_;
+    std::pair<size_t,size_t> v_orig_;
+    size_t virt_count_;
+    array2d<double> w_;
+    double j_;
+    double bmi_;
+    size_t order_; //in observable computation, this is the upstream site
+    bool todo_;
+};
+
+#endif
