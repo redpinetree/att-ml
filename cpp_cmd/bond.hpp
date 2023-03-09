@@ -23,6 +23,7 @@ public:
     size_t v2_orig() const;
     size_t virt_count() const;
     array2d<double> w() const;
+    array2d<size_t> f() const;
     double j() const;
     double bmi() const;
     size_t order() const;
@@ -36,6 +37,7 @@ public:
     size_t& v2_orig();
     size_t& virt_count();
     array2d<double>& w();
+    array2d<size_t>& f();
     double& j();
     double& bmi();
     size_t& order();
@@ -48,6 +50,7 @@ private:
     std::pair<size_t,size_t> v_orig_;
     size_t virt_count_;
     array2d<double> w_;
+    array2d<size_t> f_;
     double j_;
     double bmi_;
     size_t order_; //in observable computation, this is the upstream site

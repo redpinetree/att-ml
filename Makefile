@@ -1,6 +1,6 @@
 MPICXX = mpicxx
 CXX = g++
-CXXFLAGS = -O3 -march=native -pipe -std=c++17
+CXXFLAGS = -O3 -ffloat-store -ffp-contract=off -march=native -pipe -std=c++17
 
 TARGET = ./bin/tree_approx_potts
 TARGET_CMD = ./bin/cmd_approx

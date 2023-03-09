@@ -19,7 +19,7 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
         num_vs*=ls[i];
     }
     for(size_t v1=0;v1<num_vs;v1++){
-        vs.push_back(site());
+        vs.push_back(site(q,1));
     }
     for(size_t v1=0;v1<num_vs;v1++){
         size_t v1_idx=v1;
@@ -99,7 +99,7 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
     std::stringstream first_line_ss(line);
     first_line_ss>>num_vs>>num_es;
     for(size_t i=0;i<num_vs;i++){
-        vs.push_back(site());
+        vs.push_back(site(q,1));
     }
     while(std::getline(ifs,line)){
         std::stringstream line_ss(line);

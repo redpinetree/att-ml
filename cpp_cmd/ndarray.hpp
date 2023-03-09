@@ -4,6 +4,7 @@
 #include <vector>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 template<typename T>
 class array2d{
@@ -33,11 +34,20 @@ public:
             exit(1);
         }
         std::vector<T> res;
+        //TODO: shewchuk summation
         if(ax==0){
             for(size_t j=0;j<this->ny();j++){
                 T e=0;
+                // for(size_t i=0;i<this->nx();i++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
                 for(size_t i=0;i<this->nx();i++){
-                    e+=this->at(i,j);
+                    v.push_back(this->at(i,j));
+                }
+                std::sort(v.begin(),v.end());
+                for(size_t i=0;i<v.size();i++){
+                    e+=v[i];
                 }
                 res.push_back(e);
             }
@@ -45,8 +55,16 @@ public:
         else if(ax==1){
             for(size_t i=0;i<this->nx();i++){
                 T e=0;
-                for(size_t j=0;j<this->ny();j++){
-                    e+=this->at(i,j);
+                // for(size_t j=0;j<this->ny();j++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t j=0;j<this->nx();j++){
+                    v.push_back(this->at(i,j));
+                }
+                std::sort(v.begin(),v.end());
+                for(size_t j=0;j<v.size();j++){
+                    e+=v[j];
                 }
                 res.push_back(e);
             }
@@ -64,6 +82,8 @@ public:
     }
     size_t nx() const{return this->nx_;}
     size_t ny() const{return this->ny_;}
+    std::vector<T> e() const{return this->e_;}
+    std::vector<T>& e(){return this->e_;}
     T at(size_t y,size_t x) const{return this->e_[(this->nx()*y)+x];}
     T& at(size_t y,size_t x){return this->e_[(this->nx()*y)+x];}
 private:

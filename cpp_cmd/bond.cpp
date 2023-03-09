@@ -1,5 +1,6 @@
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 #include "bond.hpp"
 
@@ -7,11 +8,13 @@ bond::bond(){}
 bond::bond(size_t q,size_t v1,size_t v2,array2d<double> w):q_(q),w_(w),virt_count_(0),order_(0),todo_(true){
     this->v_=(v1<v2)?std::pair<size_t,size_t>(v1,v2):std::pair<size_t,size_t>(v2,v1);
     this->v_orig_=this->v();
+    this->f_=array2d<size_t>(1,1);
     this->bmi(q,w);
     this->j(q,w);
 }
 
 bond::bond(size_t q,std::pair<size_t,size_t> v,array2d<double> w):q_(q),v_(v),v_orig_(v),virt_count_(0),w_(w),order_(0),todo_(true){
+    this->f_=array2d<size_t>(1,1);
     this->bmi(q,w);
     this->j(q,w);
 }
@@ -34,6 +37,7 @@ size_t bond::v1_orig() const{return this->v_orig_.first;}
 size_t bond::v2_orig() const{return this->v_orig_.second;}
 size_t bond::virt_count() const{return this->virt_count_;}
 array2d<double> bond::w() const{return this->w_;}
+array2d<size_t> bond::f() const{return this->f_;}
 double bond::j() const{return this->j_;}
 double bond::bmi() const{return this->bmi_;}
 size_t bond::order() const{return this->order_;}
@@ -48,16 +52,23 @@ size_t& bond::v2_orig(){return this->v_orig_.second;}
 size_t& bond::virt_count(){return this->virt_count_;}
 double& bond::j(){return this->j_;}
 array2d<double>& bond::w(){return this->w_;}
+array2d<size_t>& bond::f(){return this->f_;}
 double& bond::bmi(){return this->bmi_;}
 size_t& bond::order(){return this->order_;}
 bool& bond::todo(){return this->todo_;}
 
 //only sensible for potts models
 void bond::j(size_t q,array2d<double>& w){
-    this->j_=-log(((1/w.at(0,0))-w.nx())/(double) (w.nx()*(w.nx()-1)));
+    double arg=((1/w.at(0,0))-w.nx())/(double) (w.nx()*(w.nx()-1));
+    // this->j_=(arg>0)?-log(arg):-INFINITY;
+    this->j_=-log(arg);
 }
 
 void bond::bmi(size_t q,array2d<double>& w){
+    // if(this->j()==-INFINITY){
+        // this->bmi_=0;
+        // return;
+    // }
     array2d<double> p_ij(w.nx(),w.ny());
     std::vector<double> sum_ax0(w.nx());
     std::vector<double> sum_ax1(w.ny());

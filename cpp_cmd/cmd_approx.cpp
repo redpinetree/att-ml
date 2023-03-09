@@ -59,21 +59,21 @@ graph<cmp> gen_lattice(size_t q,std::vector<size_t> ls,bool open_bc,std::string 
 template<typename cmp>
 void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,double& m1_2,double& m2_1,double& m2_2,double& m4_2){
     //use bottom-up approach to compute observables, avoiding stack overflow
-    m1_1=observables::m(g,q,1,1)/n_phys_sites;
-    m1_2=observables::m(g,q,1,2)/n_phys_sites;
-    m2_1=observables::m(g,q,2,1)/pow(n_phys_sites,2);
-    m2_2=observables::m(g,q,2,2)/pow(n_phys_sites,2);
-    m4_2=observables::m(g,q,4,2)/pow(n_phys_sites,4);
+    m1_1=observables::m(g,g.vs().size()-1,1,1)/n_phys_sites;
+    m1_2=observables::m(g,g.vs().size()-1,1,2)/n_phys_sites;
+    m2_1=observables::m(g,g.vs().size()-1,2,1)/pow(n_phys_sites,2);
+    m2_2=observables::m(g,g.vs().size()-1,2,2)/pow(n_phys_sites,2);
+    m4_2=observables::m(g,g.vs().size()-1,4,2)/pow(n_phys_sites,4);
 }
 
 template<typename cmp>
 void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,double& m1_2,double& m2_1,double& m2_2,double& m4_2,double& k_min,std::complex<double>& m2_2_k){
     //use bottom-up approach to compute observables, avoiding stack overflow
-    m1_1=observables::m(g,q,1,1)/n_phys_sites;
-    m1_2=observables::m(g,q,1,2)/n_phys_sites;
-    m2_1=observables::m(g,q,2,1)/pow(n_phys_sites,2);
-    m2_2=observables::m(g,q,2,2)/pow(n_phys_sites,2);
-    m4_2=observables::m(g,q,4,2)/pow(n_phys_sites,4);
+    m1_1=observables::m(g,g.vs().size()-1,1,1)/n_phys_sites;
+    m1_2=observables::m(g,g.vs().size()-1,1,2)/n_phys_sites;
+    m2_1=observables::m(g,g.vs().size()-1,2,1)/pow(n_phys_sites,2);
+    m2_2=observables::m(g,g.vs().size()-1,2,2)/pow(n_phys_sites,2);
+    m4_2=observables::m(g,g.vs().size()-1,4,2)/pow(n_phys_sites,4);
     if(g.dims().size()!=0){
         std::vector<double> k(g.dims().size(),0);
         auto max_it=std::max_element(g.dims().begin(),g.dims().end());
@@ -84,7 +84,7 @@ void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,do
         // std::cout<<observables::m(g,q,1,2,k)<<"\n";
         // std::cout<<observables::m(g,q,2,1,k)<<"\n";
         // std::cout<<observables::m(g,q,2,2,k)<<"\n";
-        m2_2_k=observables::m(g,q,2,2,k)/pow(n_phys_sites,2);
+        m2_2_k=observables::m(g,g.vs().size()-1,2,2,k)/pow(n_phys_sites,2);
     }
 }
 
@@ -301,7 +301,7 @@ int main(int argc,char **argv){
                 graph<coupling_comparator> g=input_set?graph_utils::load_graph<coupling_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<coupling_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
                 n_phys_sites=g.vs().size();
                 sw.start();
-                algorithm::cmd_approx(q,g);
+                algorithm::cmd_approx(q,g,0);
                 sw.split();
                 if(verbose>=4){std::cout<<std::string(g);}
                 if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
@@ -329,7 +329,7 @@ int main(int argc,char **argv){
                 graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
                 n_phys_sites=g.vs().size();
                 sw.start();
-                algorithm::cmd_approx(q,g);
+                algorithm::cmd_approx(q,g,0);
                 sw.split();
                 if(verbose>=4){std::cout<<std::string(g);}
                 if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
