@@ -57,22 +57,24 @@ graph<cmp> gen_lattice(size_t q,std::vector<size_t> ls,bool open_bc,std::string 
 }
 
 template<typename cmp>
-void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,double& m1_2,double& m2_1,double& m2_2,double& m4_2){
+void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,double& m1_2,double& m2_1,double& m2_2,double& m4_1,double& m4_2){
     //use bottom-up approach to compute observables, avoiding stack overflow
     m1_1=observables::m(g,q,1,1)/n_phys_sites;
     m1_2=observables::m(g,q,1,2)/n_phys_sites;
     m2_1=observables::m(g,q,2,1)/pow(n_phys_sites,2);
     m2_2=observables::m(g,q,2,2)/pow(n_phys_sites,2);
-    m4_2=observables::m(g,q,4,2)/pow(n_phys_sites,4);
+    m4_1=observables::m(g,q,4,1)/pow(n_phys_sites,4);
+    m4_2=observables::m(g,g.vs().size()-1,4,2)/pow(n_phys_sites,4);
 }
 
 template<typename cmp>
-void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,double& m1_2,double& m2_1,double& m2_2,double& m4_2,double& k_min,std::complex<double>& m2_2_k){
+void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,double& m1_2,double& m2_1,double& m2_2,double& m4_1,double& m4_2,double& k_min,std::complex<double>& m2_2_k){
     //use bottom-up approach to compute observables, avoiding stack overflow
     m1_1=observables::m(g,q,1,1)/n_phys_sites;
     m1_2=observables::m(g,q,1,2)/n_phys_sites;
     m2_1=observables::m(g,q,2,1)/pow(n_phys_sites,2);
     m2_2=observables::m(g,q,2,2)/pow(n_phys_sites,2);
+    m4_1=observables::m(g,q,4,1)/pow(n_phys_sites,4);
     m4_2=observables::m(g,q,4,2)/pow(n_phys_sites,4);
     if(g.dims().size()!=0){
         std::vector<double> k(g.dims().size(),0);
@@ -247,18 +249,20 @@ int main(int argc,char **argv){
     std::vector<double> times;
     stopwatch sw,sw_total;
     sw_total.start();
+    bool add_suffix=(n_samples==0)?false:true;
     n_samples=(n_samples==0)?1:n_samples;
     for(size_t sample=mpi_utils::proc_rank;sample<n_samples;sample+=mpi_utils::proc_num){
         std::string sample_output_fn=output;
         if(n_samples!=0){
             if(verbose>=1){std::cout<<"sample "<<sample<<":\n";}
-            sample_output_fn+="_"+std::to_string(sample);
+            if(add_suffix){sample_output_fn+="_"+std::to_string(sample);}
         }
+        sample_output_fn+=".txt";
         double beta=min_beta;
         size_t n_phys_sites;
-        double m1_1,m1_2,m2_1,m2_2,m4_2,k_min;
+        double m1_1,m1_2,m2_1,m2_2,m4_1,m4_2,k_min;
         std::complex<double> m2_2_k;
-        double q2_var,q2_std,sus_sg,binder_q,sus_sg_k,corr_len_sg;
+        double q2_var,q2_std,sus_fm,sus_sg,binder_m,binder_q,sus_sg_k,corr_len_sg;
         std::stringstream header1_ss,header1_vals_ss,header2_ss;
         observables::output_lines.clear(); //flush output lines
         std::string header1_ls_str;
@@ -286,10 +290,10 @@ int main(int argc,char **argv){
         header1_vals_ss<<sample<<" "<<q<<" "<<ls.size()<<" "<<header1_ls_vals_str<<"\n";
         observables::output_lines.push_back(header1_vals_ss.str());
         if(n_samples!=0){ //hypercubic lattice is used
-            header2_ss<<"beta m1_1 m1_2 m2_1 m2_2 m4_2 q2_std sus_sg binder_q corr_len_sg\n";
+            header2_ss<<"beta m1_1 m1_2 m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg\n";
         }
         else{
-            header2_ss<<"beta m1_1 m1_2 m2_1 m2_2 m4_2 q2_std sus_sg binder_q\n";
+            header2_ss<<"beta m1_1 m1_2 m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q\n";
         }
         observables::output_lines.push_back(header2_ss.str());
         while(beta<=max_beta){
@@ -315,10 +319,10 @@ int main(int argc,char **argv){
                 trial_time+=sw.elapsed();
                 sw.start();
                 if(g.dims().size()!=0){
-                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2,k_min,m2_2_k);
+                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_1,m4_2,k_min,m2_2_k);
                 }
                 else{
-                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2);
+                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_1,m4_2);
                 }
                 sw.split();
                 if(verbose>=3){std::cout<<"m computation time: "<<(double) sw.elapsed()<<"ms\n";}
@@ -345,10 +349,10 @@ int main(int argc,char **argv){
                 sw.reset();
                 sw.start();
                 if(g.dims().size()!=0){
-                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2,k_min,m2_2_k);
+                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_1,m4_2,k_min,m2_2_k);
                 }
                 else{
-                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_2);
+                    calc_observables(g_out,q,n_phys_sites,m1_1,m1_2,m2_1,m2_2,m4_1,m4_2);
                 }
                 sw.split();
                 if(verbose>=3){std::cout<<"m computation time: "<<(double) sw.elapsed()<<"ms\n";}
@@ -359,7 +363,9 @@ int main(int argc,char **argv){
             //compute output quantities
             q2_var=m4_2-pow(m2_2,2);
             q2_std=sqrt(q2_var);
+            sus_fm=n_phys_sites*m1_2;
             sus_sg=n_phys_sites*m2_2;
+            binder_m=0.5*(3-(m4_1/pow(m2_1,2)));
             binder_q=0.5*(3-(m4_2/pow(m2_2,2)));
             if(n_samples!=0){ //hypercubic lattice is used
                 sus_sg_k=n_phys_sites*sqrt(std::norm(m2_2_k));
@@ -368,10 +374,10 @@ int main(int argc,char **argv){
             //prepare output lines
             std::stringstream output_line_ss;
             if(n_samples!=0){ //hypercubic lattice is used
-                output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1<<" "<<m1_2<<" "<<m2_1<<" "<<m2_2<<" "<<m4_2<<" "<<q2_std<<" "<<sus_sg<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
+                output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1<<" "<<m1_2<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
             }
             else{
-                output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1<<" "<<m1_2<<" "<<m2_1<<" "<<m2_2<<" "<<m4_2<<" "<<q2_std<<" "<<sus_sg<<" "<<binder_q<<"\n";
+                output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1<<" "<<m1_2<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<"\n";
             }
             observables::output_lines.push_back(output_line_ss.str());
             if(verbose>=2){std::cout<<"Time elapsed for this beta/temp: "<<trial_time<<"ms\n";}
@@ -379,7 +385,7 @@ int main(int argc,char **argv){
             beta+=step_beta;
         }
         if(output_set){
-            observables::write_output(sample_output_fn+".txt",observables::output_lines);
+            observables::write_output(sample_output_fn,observables::output_lines);
         }
         else{
             observables::write_output(observables::output_lines);

@@ -100,9 +100,6 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
         size_t v1,v2;
         double j;
         line_ss>>v1>>v2>>j;
-        //TEMPORARY
-        v1-=1;
-        v2-=1;
         j/=1e5;
         j*=beta;
         es.insert(bond(q,v1,v2,j));
