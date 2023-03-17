@@ -814,7 +814,7 @@ x       [V is the cartesian product of V1 and V2, i.e., is the set of\n\
 	      if (j > nnodes)
 		j = j - nnodes;
 	    }
-	    printf("%d %d %1.0f\n", i, j, cost[k]);
+	    printf("%d %d %1.0f\n", i-1, j-1, cost[k]); //modified from i,j
 	  }
 	}
 	free((char *) cost);
@@ -880,7 +880,7 @@ x       [V is the cartesian product of V1 and V2, i.e., is the set of\n\
 	      if (j > nnodes)
 		j -= nnodes;
 	    }
-	    printf("%d %d %1.0f\n", i, j, cost[e]);
+	    printf("%d %d %1.0f\n", i-1, j-1, cost[e]); //modified from i,j
 	  }
 	}
 	free((char *) cost);
@@ -932,7 +932,7 @@ x       [V is the cartesian product of V1 and V2, i.e., is the set of\n\
 	      if (j > nnodes)
 		j = j - nnodes;
 	    }
-	    printf("%d %d %1.0f\n", i, j, cost[k]);
+	    printf("%d %d %1.0f\n", i-1, j-1, cost[k]); //modified from i,j
 	  }
 	}
 	free((char *) cost);
@@ -995,7 +995,7 @@ x       [V is the cartesian product of V1 and V2, i.e., is the set of\n\
 	      if (j > nnodes)
 		j -= nnodes;
 	    }
-	    printf("%d %d %1.0f\n", i, j, cost[e]);
+	    printf("%d %d %1.0f\n", i-1, j-1, cost[e]); //modified from i,j
 	  }
 	}
 	free((char *) cost);
