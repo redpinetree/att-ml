@@ -130,7 +130,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         }
         //calculate pair_{ij}
         //TODO: calculate pair'_{ij}^{env} (uses cm func), can be reused for pair'_{ki_mu}^{env}?
-        //TODO: NaNs out with test256.txt
         array2d<double> pair_ij(current.w().nx(),current.w().ny());
         array2d<double> pair_ij_env(current.w().nx(),current.w().ny());
         double sum_pair_ij=0;
@@ -213,6 +212,26 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
             // std::cout<<"rg:\n"<<std::string(current_bond.w())<<"\n";
             // std::cout<<"rg:\n"<<std::string(test)<<"\n";
             */
+            
+            //TODO: see if this works
+            // if((source==current_bond.v1())&&(current_bond.w().ny()!=r_k)){
+                // array2d<double> new_w(current_bond.w().nx(),r_k);
+                // for(size_t i=0;i<current_bond.w().nx();i++){
+                    // for(size_t j=0;j<current_bond.w().ny();j++){
+                        // new_w.at(i,j)=current_bond.w().at(i,j);
+                    // }
+                // }
+                // current_bond.w()=new_w;
+            // }
+            // else if((source==current_bond.v2())&&(current_bond.w().ny()!=r_k)){
+                // array2d<double> new_w(current_bond.w().ny(),r_k);
+                // for(size_t i=0;i<current_bond.w().nx();i++){
+                    // for(size_t j=0;j<current_bond.w().ny();j++){
+                        // new_w.at(i,j)=current_bond.w().at(i,j);
+                    // }
+                // }
+                // current_bond.w()=new_w;
+            // }
             
             //TODO: implement shewchuk summation, O(n)? time complexity on average, instead of sorting then summing, which is O(n log n)+O(n). but make sure to check times, since this scales with r_k (or q)
             //NOTE: right now, this uses a workaround for floating-point non-associativity, which involves storing addends in vectors and then sorting them before adding.

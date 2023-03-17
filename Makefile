@@ -32,9 +32,9 @@ $(TARGET_OLD): $(OBJ_OLD)
 	$(MPICXX) -c $< -o $@ $(CXXFLAGS)
 
 clean:
-	# @rm -f ./cpp/*.o 2>/dev/null || true
+	@rm -f ./cpp/*.o 2>/dev/null || true
 	@rm -f ./cpp_cmd/*.o 2>/dev/null || true
 	# @rm -f ./cpp_old/*.o 2>/dev/null || true
-	# @rm $(TARGET) 2>/dev/null || true
+	@rm $(TARGET) 2>/dev/null || true
 	@rm $(TARGET_CMD) 2>/dev/null || true
 	# @rm $(TARGET_OLD) 2>/dev/null || true
