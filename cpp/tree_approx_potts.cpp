@@ -64,7 +64,7 @@ void calc_observables(graph<cmp>& g,size_t q,size_t n_phys_sites,double& m1_1,do
     m2_1=observables::m(g,q,2,1)/pow(n_phys_sites,2);
     m2_2=observables::m(g,q,2,2)/pow(n_phys_sites,2);
     m4_1=observables::m(g,q,4,1)/pow(n_phys_sites,4);
-    m4_2=observables::m(g,g.vs().size()-1,4,2)/pow(n_phys_sites,4);
+    m4_2=observables::m(g,q,4,2)/pow(n_phys_sites,4);
 }
 
 template<typename cmp>
