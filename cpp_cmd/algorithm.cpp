@@ -1,6 +1,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <fstream>
 
 #include "algorithm.hpp"
 #include "bond.hpp"
@@ -45,6 +46,8 @@ array2d<size_t> algorithm::f_maxent(site v_i,site v_j,array2d<double> w,size_t r
 
 template<typename cmp>
 void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
+    std::ofstream ij_ofs("pair_ij_eff_k_dump.txt");
+    std::ofstream ki_ofs("pair_ki_eff_k_dump.txt");
     r_max=(r_max==0)?q:r_max;
     //graph deformation
     size_t iteration=0;
@@ -116,13 +119,21 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         //precompute intermediate quantities for weight optimization
         std::vector<double> g1(current.w().nx(),1);
         std::vector<double> g2(current.w().ny(),1);
+        array2d<double> pair_ij(current.w().nx(),current.w().ny());
+        array2d<double> pair_ij_env(current.w().nx(),current.w().ny());
+        
+        std::vector<std::string> ij_eff_k_dump_lines;
+        for(size_t n1=0;n1<25;n1++){
+        std::stringstream ij_eff_k_dump_line;
         for(size_t i=0;i<current.w().nx();i++){
+            g1[i]=1;
             for(auto it=g.vs()[current.v1()].adj().begin();it!=g.vs()[current.v1()].adj().end();++it){
                 // std::cout<<"g1_contrib: "<<((*it).w().sum_over_axis(((*it).v1()==current.v1())?0:1))[i]<<"\n";
                 g1[i]*=((*it).w().sum_over_axis(((*it).v1()==current.v1())?0:1))[i];
             }
         }
         for(size_t j=0;j<current.w().ny();j++){
+            g2[j]=1;
             for(auto it=g.vs()[current.v2()].adj().begin();it!=g.vs()[current.v2()].adj().end();++it){
                 // std::cout<<"g2_contrib: "<<((*it).w().sum_over_axis(((*it).v1()==current.v2())?0:1))[i]<<"\n";
                 g2[j]*=((*it).w().sum_over_axis(((*it).v1()==current.v2())?0:1))[j];
@@ -130,8 +141,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         }
         //calculate pair_{ij}
         //TODO: calculate pair'_{ij}^{env} (uses cm func), can be reused for pair'_{ki_mu}^{env}?
-        array2d<double> pair_ij(current.w().nx(),current.w().ny());
-        array2d<double> pair_ij_env(current.w().nx(),current.w().ny());
         double sum_pair_ij=0;
         double sum_pair_ij_env=0;
         for(size_t i=0;i<pair_ij.nx();i++){
@@ -161,6 +170,13 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
             for(size_t j=0;j<pair_ij_env.ny();j++){
                 current.w().at(i,j)=pair_ij.at(i,j)/pair_ij_env.at(i,j);
             }
+        }
+        current.j(current.q(),current.w());
+        ij_eff_k_dump_line<<current.v1()<<" "<<current.v2()<<" "<<n1<<" "<<current.j()<<"\n";
+        ij_eff_k_dump_lines.push_back(ij_eff_k_dump_line.str());
+        }
+        for(size_t i=0;i<ij_eff_k_dump_lines.size();i++){
+            ij_ofs<<ij_eff_k_dump_lines[i];
         }
         
         //confluent mapping decomposition
@@ -237,7 +253,9 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
             //NOTE: right now, this uses a workaround for floating-point non-associativity, which involves storing addends in vectors and then sorting them before adding.
             //pair_ki,imu if source==current.v1(), pair_kj,jnu if source==current.v2(). wlog, use pair_ki and imu.
             //k, the new index, is always second because virtual indices > physical indices.
-            for(size_t n=0;n<1;n++){
+            std::vector<std::string> ki_eff_k_dump_lines;
+            for(size_t n2=0;n2<25;n2++){
+            std::stringstream ki_eff_k_dump_line;
             array2d<double> pair_ki((source==current.v1())?current_bond.w().nx():current_bond.w().ny(),r_k);
             array2d<double> pair_ki_env((source==current.v1())?current_bond.w().nx():current_bond.w().ny(),r_k);
             double sum_pair_ki=0;
@@ -299,9 +317,15 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
                     // test.at(i,j)=pair_ki.at(i,j)/pair_ki_env.at(i,j);
                 }
             }
+            current_bond.j(current_bond.q(),current_bond.w());
+            ki_eff_k_dump_line<<current_bond.v1()<<" "<<current_bond.v2()<<" "<<n2<<" "<<current_bond.j()<<"\n";
+            ki_eff_k_dump_lines.push_back(ki_eff_k_dump_line.str());
             // std::cout<<"opt:\n"<<std::string(current_bond.w())<<"\n";
             // std::cout<<"opt:\n"<<std::string(test)<<"\n";
             // exit(1);
+            }
+            for(size_t i=0;i<ki_eff_k_dump_lines.size();i++){
+                ki_ofs<<ki_eff_k_dump_lines[i];
             }
             
             current_bond.j(q,current_bond.w()); //update edge
