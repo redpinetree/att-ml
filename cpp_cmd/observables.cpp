@@ -106,6 +106,7 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
         for(size_t i=0;i<r_i;i++){
             size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
             double e=r_k*(*g.vs()[root].adj().begin()).w().at(i,j); //correct use of r_k?
+            // double e=r_k*w(r_k,i,j,(*g.vs()[root].adj().begin()).j()); //correct use of r_k? (older method)
             prob_ij.at(k,j,i)=e;
             prob_i.at(k,i)+=e; //compute marginals
             prob_j.at(k,j)+=e; //compute marginals
