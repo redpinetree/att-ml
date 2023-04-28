@@ -53,9 +53,9 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
                     w.at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1))));
                 }
             }
-            es.insert(bond(q,v1,v2,w));
-            vs[v1].adj().insert(bond(q,v1,v2,w));
-            vs[v2].adj().insert(bond(q,v1,v2,w));
+            es.insert(bond(v1,v2,w));
+            vs[v1].adj().insert(bond(v1,v2,w));
+            vs[v2].adj().insert(bond(v1,v2,w));
         }
     }
     graph<cmp> g(vs,es);
@@ -114,9 +114,9 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
                 w.at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1))));
             }
         }
-        es.insert(bond(q,v1,v2,w));
-        vs[v1].adj().insert(bond(q,v1,v2,w));
-        vs[v2].adj().insert(bond(q,v1,v2,w));
+        es.insert(bond(v1,v2,w));
+        vs[v1].adj().insert(bond(v1,v2,w));
+        vs[v2].adj().insert(bond(v1,v2,w));
     }
     return graph<cmp>(vs,es);
 }

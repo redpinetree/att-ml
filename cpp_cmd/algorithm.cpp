@@ -4,50 +4,13 @@
 #include <fstream>
 
 #include "algorithm.hpp"
+#include "optimize.hpp"
 #include "bond.hpp"
 #include "site.hpp"
 #include "stopwatch.hpp"
 
-double renorm_coupling(size_t q,double k1,double k2){
-    double num=exp(k1+k2)+(q-1);
-    double denom=exp(k1)+exp(k2)+(q-2);
-    return log(num/denom);
-}
-
-//default cmd function (alg. 1)
-size_t algorithm::f(site v_i,size_t s_i,site v_j,size_t s_j){
-    return (v_i.vol()>=v_j.vol())?s_i:s_j;
-}
-
-//cmd function that maximizes the entropy
-array2d<size_t> algorithm::f_maxent(site v_i,site v_j,array2d<double> w,size_t r_k){
-    array2d<size_t> f_res(v_i.rank(),v_j.rank());
-    std::vector<double> w_sums(r_k);
-    // std::cout<<v_i.rank()*v_j.rank()<<"\n";
-    for(size_t n=0;n<v_i.rank()*v_j.rank();n++){
-        auto max_it=std::max_element(w.e().begin(),w.e().end());
-        double max=*max_it;
-        size_t argmax=std::distance(w.e().begin(),max_it);
-        size_t i=argmax%w.nx();
-        size_t j=argmax/w.nx();
-        size_t k=std::distance(w_sums.begin(),std::min_element(w_sums.begin(),w_sums.end()));
-        w_sums[k]+=max;
-        // std::cout<<v_i.vol()<<" "<<v_j.vol()<<" "<<i<<" "<<j<<" "<<k<<" "<<w_sums[k]<<"\n";
-        w.e()[argmax]=-1; //weights can never be negative so this element will never be the max. also, passed by value so no change to original.
-        f_res.at(i,j)=k;
-    }
-    double S=0;
-    for(size_t n=0;n<w_sums.size();n++){
-        S-=w_sums[n]*log(w_sums[n]);
-    }
-    // std::cout<<"entropy S="<<S<<"\n";
-    return f_res;
-}
-
 template<typename cmp>
 void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
-    std::ofstream ij_ofs("pair_ij_eff_k_dump.txt");
-    std::ofstream ki_ofs("pair_ki_eff_k_dump.txt");
     r_max=(r_max==0)?q:r_max;
     //graph deformation
     size_t iteration=0;
@@ -55,12 +18,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         // sw1.start();
         bond current=*(g.es().rbegin());
         g.es().erase((++(g.es().rbegin())).base());
-        
-        // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
-        // std::cout<<"maxent:\n"<<std::string(algorithm::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
-        //TODO: resolve difference between f_maxent() and f() if possible
-        // current.f()=algorithm::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
-        // std::cout<<std::string(f)<<"\n";
         
         //determine master and slave node
         size_t master,slave;
@@ -100,14 +57,13 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
             }
         }
         
-        //determine cmd function f()
-        array2d<size_t> f(current.w().nx(),current.w().ny());
-        for(size_t i=0;i<f.nx();i++){
-            for(size_t j=0;j<f.ny();j++){
-                f.at(i,j)=algorithm::f(g.vs()[current.v1()],i,g.vs()[current.v2()],j);
-            }
-        }
-        current.f()=f;
+        //initialize cmd function f()
+        current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
+        // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        //TODO: resolve difference between f_maxent() and f() if possible
+        // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
+        // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
+        // std::cout<<std::string(f)<<"\n";
         
         // sw1.split();
         // std::cout<<std::string(current)<<","<<master<<","<<slave<<","<<g.vs()[master].adj().size()<<","<<g.vs()[slave].adj().size()<<"\n";
@@ -116,7 +72,8 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         // std::cout<<iteration<<"\n";
         // sw2.start();
         std::vector<bond> cluster;
-        std::vector<std::pair<size_t,size_t> > prev_idxs; //for identifying shifted bonds in alg.1 simplification
+        bond old_current=current; //for debug
+        std::vector<bond> old_cluster=cluster; //for debug
         std::vector<std::pair<size_t,size_t> > dupes;
         g.vs()[master].adj().erase(current); //remove the copy of the current edge from the master site
         g.vs()[slave].adj().erase(current); //remove the copy of the current edge from the slave site
@@ -127,7 +84,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
             // for(auto it=g.vs()[slave].adj().begin();it!=g.vs()[slave].adj().end();++it){
                 // std::cout<<std::string(*it)<<"\n";
             // }
-            size_t i=0;
             size_t source,not_source;
             bond current_bond;
             if(!g.vs()[slave].adj().empty()){
@@ -158,7 +114,7 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
                 g.vs()[source].adj().erase(loc2); //remove the edge copy from the source site
             }
             
-            prev_idxs.push_back(std::pair<size_t,size_t>(current_bond.v1(),current_bond.v2()));
+            old_cluster.push_back(current_bond); //DEBUG for cost function
             size_t other_site;
             if((current_bond.v1()==current.v1())||(current_bond.v1()==current.v2())){ //current_bond always has todo=true
                 // current_bond.v1_orig()=(current.v1()==master)?current.v1_orig():current.v2_orig();
@@ -201,27 +157,15 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         // for(size_t n=0;n<cluster.size();n++){
             // std::cout<<std::string(cluster[n])<<"\n";
         // }
+        
         // DEBUG: just recompute w based on renormed j if conn. to slave.
-        for(size_t n=0;n<cluster.size();n++){
-            // array2d<double> test(current_bond.w().nx(),current_bond.w().ny());
-            // std::cout<<slave<<" "<<cluster[n].v1_orig()<<" "<<cluster[n].v2_orig()<<"\n";
-            // if((cluster[n].v1_orig()==slave)||(cluster[n].v2_orig()==slave)){
-            if((prev_idxs[n].first==slave)||(prev_idxs[n].second==slave)){
-                cluster[n].j()=renorm_coupling(q,cluster[n].j(),current.j()); //update bond weight
-                // double test_j=renorm_coupling(q,cluster[n].j(),cluster[n].j()); //update bond weight
-                for(size_t i=0;i<q;i++){
-                    for(size_t j=0;j<q;j++){
-                        cluster[n].w().at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-cluster[n].j())))):(1/((q*exp(cluster[n].j()))+(q*(q-1))));
-                        // test.at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-test_j)))):(1/((q*exp(test_j))+(q*(q-1))));
-                    }
-                }
-                cluster[n].j(q,cluster[n].w());
-                cluster[n].bmi(q,cluster[n].w());
-            }
-            // else{
-                // test=cluster[n].w();
-            // }
-        }
+        // optimize::potts_renorm(slave,old_cluster,current,cluster);
+        
+        // std::cout<<"HERE\n";
+        // optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,20,0);
+        // std::cout<<"HERE DONE\n";
+        optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,100,0.1);
+        
         // std::cout<<"current: "<<std::string(current)<<"\n";
         // std::cout<<"cluster edges:\n";
         // for(size_t n=0;n<cluster.size();n++){
@@ -260,8 +204,8 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
                 else{
                     cluster[dupes[i].first].v2_orig()=(current.v1()==master)?current.v1_orig():current.v2_orig();
                 }
-                cluster[dupes[i].first].j(q,cluster[dupes[i].first].w());
-                cluster[dupes[i].first].bmi(q,cluster[dupes[i].first].w());
+                cluster[dupes[i].first].j(q,cluster[dupes[i].first].w()); //only valid for potts models with constant rank
+                cluster[dupes[i].first].bmi(cluster[dupes[i].first].w());
                 // std::cout<<"->"<<std::string(cluster[dupes[i].first])<<"\n";
                 cluster.erase(cluster.begin()+dupes[i].second);
             }

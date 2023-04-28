@@ -10,11 +10,10 @@
 class bond{
 public:
     bond();
-    bond(size_t,size_t,size_t,array2d<double>);
-    bond(size_t,std::pair<size_t,size_t>,array2d<double>);
+    bond(size_t,size_t,array2d<double>);
+    bond(std::pair<size_t,size_t>,array2d<double>);
     operator std::string() const;
     friend std::ostream& operator<<(std::ostream&,const bond&);
-    size_t q() const;
     std::pair<size_t,size_t> v() const;
     std::pair<size_t,size_t> v_orig() const;
     size_t v1() const;
@@ -28,7 +27,6 @@ public:
     double bmi() const;
     size_t order() const;
     bool todo() const;
-    size_t& q();
     std::pair<size_t,size_t>& v();
     std::pair<size_t,size_t>& v_orig();
     size_t& v1();
@@ -43,9 +41,8 @@ public:
     size_t& order();
     bool& todo();
     void j(size_t,array2d<double>&);
-    void bmi(size_t,array2d<double>&);
+    void bmi(array2d<double>&);
 private:
-    size_t q_;
     std::pair<size_t,size_t> v_;
     std::pair<size_t,size_t> v_orig_;
     size_t virt_count_;

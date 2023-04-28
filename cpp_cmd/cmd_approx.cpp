@@ -334,6 +334,7 @@ int main(int argc,char **argv){
                 n_phys_sites=g.vs().size();
                 sw.start();
                 algorithm::cmd_approx(q,g,0);
+                // algorithm::cmd_approx(q,g,4);
                 sw.split();
                 if(verbose>=4){std::cout<<std::string(g);}
                 if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}

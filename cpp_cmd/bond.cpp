@@ -5,18 +5,18 @@
 #include "bond.hpp"
 
 bond::bond(){}
-bond::bond(size_t q,size_t v1,size_t v2,array2d<double> w):q_(q),w_(w),virt_count_(0),order_(0),todo_(true){
+bond::bond(size_t v1,size_t v2,array2d<double> w):w_(w),virt_count_(0),order_(0),todo_(true){
     this->v_=(v1<v2)?std::pair<size_t,size_t>(v1,v2):std::pair<size_t,size_t>(v2,v1);
     this->v_orig_=this->v();
     this->f_=array2d<size_t>(1,1);
-    this->bmi(q,w);
-    this->j(q,w);
+    this->j(this->w().nx(),w); //only valid for potts models with constant rank
+    this->bmi(w);
 }
 
-bond::bond(size_t q,std::pair<size_t,size_t> v,array2d<double> w):q_(q),v_(v),v_orig_(v),virt_count_(0),w_(w),order_(0),todo_(true){
+bond::bond(std::pair<size_t,size_t> v,array2d<double> w):v_(v),v_orig_(v),virt_count_(0),w_(w),order_(0),todo_(true){
     this->f_=array2d<size_t>(1,1);
-    this->bmi(q,w);
-    this->j(q,w);
+    this->j(this->w().nx(),w); //only valid for potts models with constant rank
+    this->bmi(w);
 }
 
 bond::operator std::string() const{
@@ -28,7 +28,7 @@ std::ostream& operator<<(std::ostream& os,const bond& e){
     return os;
 }
 
-size_t bond::q() const{return this->q_;}
+// size_t bond::q() const{return this->q_;}
 std::pair<size_t,size_t> bond::v() const{return this->v_;}
 std::pair<size_t,size_t> bond::v_orig() const{return this->v_orig_;}
 size_t bond::v1() const{return this->v_.first;}
@@ -42,7 +42,7 @@ double bond::j() const{return this->j_;}
 double bond::bmi() const{return this->bmi_;}
 size_t bond::order() const{return this->order_;}
 bool bond::todo() const{return this->todo_;}
-size_t& bond::q(){return this->q_;}
+// size_t& bond::q(){return this->q_;}
 std::pair<size_t,size_t>& bond::v(){return this->v_;}
 std::pair<size_t,size_t>& bond::v_orig(){return this->v_orig_;}
 size_t& bond::v1(){return this->v_.first;}
@@ -64,7 +64,7 @@ void bond::j(size_t q,array2d<double>& w){
     this->j_=-log(arg);
 }
 
-void bond::bmi(size_t q,array2d<double>& w){
+void bond::bmi(array2d<double>& w){
     // if(this->j()==-INFINITY){
         // this->bmi_=0;
         // return;
