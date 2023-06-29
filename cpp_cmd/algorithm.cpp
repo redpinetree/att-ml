@@ -162,9 +162,9 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         // optimize::potts_renorm(slave,old_cluster,current,cluster);
         
         // std::cout<<"HERE\n";
-        // optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,20,0);
+        optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,20,0);
         // std::cout<<"HERE DONE\n";
-        optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,100,0.1);
+        // optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,1000,0.01);
         
         // std::cout<<"current: "<<std::string(current)<<"\n";
         // std::cout<<"cluster edges:\n";
