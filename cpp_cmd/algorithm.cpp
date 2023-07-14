@@ -58,9 +58,9 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         }
         
         //initialize cmd function f()
-        current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
-        // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
-        //TODO: resolve difference between f_maxent() and f() if possible
+        // current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
+        current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        // TODO: resolve difference between f_maxent() and f() if possible
         // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
         // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
         // std::cout<<std::string(f)<<"\n";
@@ -162,9 +162,10 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
         // optimize::potts_renorm(slave,old_cluster,current,cluster);
         
         // std::cout<<"HERE\n";
-        optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,20,0);
-        // std::cout<<"HERE DONE\n";
+        optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,25,0);
+        // optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,2,0);
         // optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,1000,0.01);
+        // std::cout<<"HERE DONE\n";
         
         // std::cout<<"current: "<<std::string(current)<<"\n";
         // std::cout<<"cluster edges:\n";
@@ -221,7 +222,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max){
             g.es().insert(cluster[n]);
         }
         
-        // std::cout<<"\n";
         current.order()=g.vs().size()-1;
         current.todo()=false;
         g.es().insert(current);

@@ -12,7 +12,7 @@ public:
     array2d(){
         this->e_=std::vector<T>(1,0);
     }
-    array2d(size_t ny,size_t nx):nx_(nx),ny_(ny){
+    array2d(size_t nx,size_t ny):nx_(nx),ny_(ny){
         this->e_=std::vector<T>(ny*nx,0);
     }
     operator std::string() const{
@@ -59,7 +59,7 @@ public:
                     // e+=this->at(i,j);
                 // }
                 std::vector<T> v;
-                for(size_t j=0;j<this->nx();j++){
+                for(size_t j=0;j<this->ny();j++){
                     v.push_back(this->at(i,j));
                 }
                 std::sort(v.begin(),v.end());
@@ -71,7 +71,7 @@ public:
         }
         return res;
     }
-    T sum_over_all(){
+    T sum_over_all(){ //TODO: sum after sorting
         T res=0;
         for(size_t i=0;i<this->nx();i++){
             for(size_t j=0;j<this->ny();j++){
@@ -84,8 +84,8 @@ public:
     size_t ny() const{return this->ny_;}
     std::vector<T> e() const{return this->e_;}
     std::vector<T>& e(){return this->e_;}
-    T at(size_t y,size_t x) const{return this->e_[(this->nx()*y)+x];}
-    T& at(size_t y,size_t x){return this->e_[(this->nx()*y)+x];}
+    T at(size_t x,size_t y) const{return this->e_[(this->nx()*y)+x];}
+    T& at(size_t x,size_t y){return this->e_[(this->nx()*y)+x];}
 private:
     size_t nx_;
     size_t ny_;
@@ -96,7 +96,7 @@ template<typename T>
 class array3d{
 public:
     array3d(){}
-    array3d(size_t nz,size_t ny,size_t nx):nx_(nx),ny_(ny),nz_(nz){
+    array3d(size_t nx,size_t ny,size_t nz):nx_(nx),ny_(ny),nz_(nz){
         this->e_=std::vector<T>(nz*ny*nx,0);
     }
     operator std::string() const{
@@ -112,15 +112,15 @@ public:
                 }
                 str<<((j==(this->ny()-1))?"]":",\n");
             }
-            str<<((k==(this->ny()-1))?"]\n":",\n\n");
+            str<<((k==(this->nz()-1))?"]\n":",\n\n");
         }
         return str.str();
     }
     size_t nx() const{return this->nx_;}
     size_t ny() const{return this->ny_;}
     size_t nz() const{return this->nz_;}
-    T at(size_t z,size_t y,size_t x) const{return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
-    T& at(size_t z,size_t y,size_t x){return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    T at(size_t x,size_t y,size_t z) const{return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    T& at(size_t x,size_t y,size_t z){return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
 private:
     size_t nx_;
     size_t ny_;

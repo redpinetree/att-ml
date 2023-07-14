@@ -107,9 +107,9 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
             size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
             double e=r_k*(*g.vs()[root].adj().begin()).w().at(i,j); //correct use of r_k?
             // double e=r_k*w(r_k,i,j,(*g.vs()[root].adj().begin()).j()); //correct use of r_k? (older method)
-            prob_ij.at(k,j,i)=e;
-            prob_i.at(k,i)+=e; //compute marginals
-            prob_j.at(k,j)+=e; //compute marginals
+            prob_ij.at(i,j,k)=e;
+            prob_i.at(i,k)+=e; //compute marginals
+            prob_j.at(j,k)+=e; //compute marginals
         }
     }
     //TODO: how does c make sense now? it depends on r_k probably?
@@ -141,7 +141,7 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
-                weight*=(down==0)?prob_i.at(q_idxs[i],spin_combos[s][i]):prob_j.at(q_idxs[i],spin_combos[s][i]);
+                weight*=(down==0)?prob_i.at(spin_combos[s][i],q_idxs[i]):prob_j.at(spin_combos[s][i],q_idxs[i]);
             }
             // if(depth==0){std::cout<<weight<<","<<contrib<<"\n";}
             temp+=weight*contrib;
@@ -183,7 +183,7 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
                 double factor_prod=factors[0]*factors[1];
                 double weight=1;
                 for(size_t i=0;i<p;i++){
-                    weight*=prob_ij.at(q_idxs[i],spin_combos[s1][i],spin_combos[s0][i]);
+                    weight*=prob_ij.at(spin_combos[s0][i],spin_combos[s1][i],q_idxs[i]);
                 }
                 // if(depth==0){std::cout<<weight<<","<<factors[0]<<","<<factors[1]<<","<<factor_prod<<"\n";}
                 c_res+=coef*weight*factor_prod;
@@ -272,16 +272,16 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
     //compute probs
     size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
     size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
-    array3d<double> prob_ij(r_k,r_j,r_i);
-    array2d<double> prob_i(r_k,r_i);
-    array2d<double> prob_j(r_k,r_j);
+    array3d<double> prob_ij(r_i,r_j,r_k);
+    array2d<double> prob_i(r_i,r_k);
+    array2d<double> prob_j(r_j,r_k);
     for(size_t j=0;j<r_j;j++){
         for(size_t i=0;i<r_i;i++){
             size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
             double e=r_k*(*g.vs()[root].adj().begin()).w().at(i,j);
-            prob_ij.at(k,j,i)=e;
-            prob_i.at(k,i)+=e; //compute marginals
-            prob_j.at(k,j)+=e; //compute marginals
+            prob_ij.at(i,j,k)=e;
+            prob_i.at(i,k)+=e; //compute marginals
+            prob_j.at(j,k)+=e; //compute marginals
         }
     }
     std::vector<size_t> q_idxs;
@@ -311,7 +311,7 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
-                weight*=(down==0)?prob_i.at(q_idxs[i],spin_combos[s][i]):prob_j.at(q_idxs[i],spin_combos[s][i]);
+                weight*=(down==0)?prob_i.at(spin_combos[s][i],q_idxs[i]):prob_j.at(spin_combos[s][i],q_idxs[i]);
             }
             // if(depth==0){std::cout<<weight<<","<<contrib<<"\n";}
             // temp+=weight*((down==0)?contrib:std::conj(contrib)); //needed?
@@ -355,7 +355,7 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
                 factor_prod+=std::conj(factors[0])*factors[1]; //(b,a)
                 double weight=1;
                 for(size_t i=0;i<p;i++){
-                    weight*=prob_ij.at(q_idxs[i],spin_combos[s1][i],spin_combos[s0][i]);
+                    weight*=prob_ij.at(spin_combos[s0][i],spin_combos[s1][i],q_idxs[i]);
                 }
                 // if(depth==0){std::cout<<weight<<","<<factors[0]<<","<<factors[1]<<","<<factor_prod<<"\n";}
                 c_res+=coef*weight*factor_prod;

@@ -333,8 +333,8 @@ int main(int argc,char **argv){
                 graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
                 n_phys_sites=g.vs().size();
                 sw.start();
-                algorithm::cmd_approx(q,g,0);
-                // algorithm::cmd_approx(q,g,4);
+                // algorithm::cmd_approx(q,g,0);
+                algorithm::cmd_approx(q,g,2);
                 sw.split();
                 if(verbose>=4){std::cout<<std::string(g);}
                 if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
