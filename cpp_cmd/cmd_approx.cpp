@@ -31,8 +31,11 @@ void print_usage(){
     std::cerr<<"\t-i,--input: path to specified input file containing graph description. the graph is assumed to not contain multiedges.\n";
     std::cerr<<"\t-o,--output: prefix for output files. please omit the file extension.\n";
     std::cerr<<"\t-d,--distribution: distribution for sampling bond configurations. one of \"gaussian\",\"bimodal\" (+1/-1),\"uniform\".\n";
-    std::cerr<<"\t-1,--dist_param1: distribution hyperparameter.\n\t\tgaussian-> mean\n\t\tbimodal -> probability of ferromagnetic bond\n\t\tuniform -> minimum bond strength\n";
-    std::cerr<<"\t-2,--dist_param2: distribution hyperparameter.\n\t\tgaussian-> standard deviation\n\t\tbimodal -> ignored, overriden to 0\n\t\tuniform -> maximum bond strength\n";
+    std::cerr<<"\t-1,--dist-param1: distribution hyperparameter.\n\t\tgaussian-> mean\n\t\tbimodal -> probability of ferromagnetic bond\n\t\tuniform -> minimum bond strength\n";
+    std::cerr<<"\t-2,--dist-param2: distribution hyperparameter.\n\t\tgaussian-> standard deviation\n\t\tbimodal -> ignored, overriden to 0\n\t\tuniform -> maximum bond strength\n";
+    std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
+    std::cerr<<"\t-n,--iter-max: maximum number of optimization iterations\n";
+    std::cerr<<"\t-l,--learning-rate: learning rate. if nonzero, the optimization method will be gradient descent instead of iterative optimization.\n";
 }
 
 template<typename cmp>
@@ -105,6 +108,9 @@ int main(int argc,char **argv){
     bool dist_param2_set=false;
     std::string input,output,dist;
     double dist_param1,dist_param2;
+    size_t r_max=0;
+    size_t iter_max=100; //default is 100 iterations max
+    double lr=0;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -116,12 +122,15 @@ int main(int argc,char **argv){
             {"input",required_argument,0,'i'},
             {"output",required_argument,0,'o'},
             {"distribution",required_argument,0,'d'},
-            {"dist_param1",required_argument,0,'1'},
-            {"dist_param2",required_argument,0,'2'},
+            {"dist-param1",required_argument,0,'1'},
+            {"dist-param2",required_argument,0,'2'},
+            {"r-max",required_argument,0,'r'},
+            {"iter-max",required_argument,0,'n'},
+            {"learning-rate",required_argument,0,'l'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -135,6 +144,9 @@ int main(int argc,char **argv){
             case 'd': dist=std::string(optarg); dist_set=true; break;
             case '1': dist_param1=(double) atof(optarg); dist_param1_set=true; break;
             case '2': dist_param2=(double) atof(optarg); dist_param2_set=true; break;
+            case 'r': r_max=(size_t) atoi(optarg); break;
+            case 'n': iter_max=(size_t) atoi(optarg); break;
+            case 'l': lr=(double) atof(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -246,6 +258,12 @@ int main(int argc,char **argv){
             dist_param2=0;
         }
     }
+    if(r_max==0){
+        std::cout<<"Maximum rank is zero. Will default to r_max=q.\n";
+    }
+    if(lr!=0){
+        std::cout<<"Learning rate is nonzero. Using gradient descent method.\n";
+    }
     std::vector<double> times;
     stopwatch sw,sw_total;
     sw_total.start();
@@ -305,7 +323,7 @@ int main(int argc,char **argv){
                 graph<coupling_comparator> g=input_set?graph_utils::load_graph<coupling_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<coupling_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
                 n_phys_sites=g.vs().size();
                 sw.start();
-                algorithm::cmd_approx(q,g,0);
+                algorithm::cmd_approx(q,g,r_max,iter_max,lr);
                 sw.split();
                 if(verbose>=4){std::cout<<std::string(g);}
                 if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
@@ -333,8 +351,7 @@ int main(int argc,char **argv){
                 graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
                 n_phys_sites=g.vs().size();
                 sw.start();
-                // algorithm::cmd_approx(q,g,0);
-                algorithm::cmd_approx(q,g,2);
+                algorithm::cmd_approx(q,g,r_max,iter_max,lr);
                 sw.split();
                 if(verbose>=4){std::cout<<std::string(g);}
                 if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
