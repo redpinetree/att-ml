@@ -95,6 +95,8 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         }
     }
     sum_pair_ij=vec_add_float(sum_pair_ij_addends);
+        
+    // std::cout<<(std::string) current.f()<<"\n";
     
     for(size_t n1=0;n1<max_it;n1++){
         std::stringstream ij_bmi_dump_line;
@@ -399,6 +401,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         ki_ofs<<ki_bmi_dump_lines[i];
         ki_cost_ofs<<ki_cost_dump_lines[i];
     }
+    // std::cout<<(std::string) current.w()<<"\n";
     // std::cout<<"HERE kl_iterative done\n";
 }
 
@@ -424,10 +427,10 @@ array2d<size_t> optimize::f_maxent(site v_i,site v_j,array2d<double> w,size_t r_
         size_t argmax=std::distance(w.e().begin(),max_it);
         size_t i=argmax%w.nx();
         size_t j=argmax/w.nx();
-        size_t k=std::distance(w_sums.begin(),std::min_element(w_sums.begin(),w_sums.end()));
+        size_t k=std::distance(w_sums.begin(),std::min_element(w_sums.begin(),w_sums.end())); //choose first case of smallest cumulative sum
         w_sums[k]+=max;
         // std::cout<<v_i.vol()<<" "<<v_j.vol()<<" "<<i<<" "<<j<<" "<<k<<" "<<w_sums[k]<<"\n";
-        w.e()[argmax]=-1; //weights can never be negative so this element will never be the max. also, passed by value so no change to original.
+        w.at(i,j)=-1; //weights can never be negative so this element will never be the max. also, w is passed by value so no change to original.
         f_res.at(i,j)=k;
     }
     // double S=0;
