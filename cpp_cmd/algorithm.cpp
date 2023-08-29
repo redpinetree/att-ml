@@ -213,6 +213,9 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
             // }
         }
         
+        current.order()=g.vs().size()-1;
+        current.todo()=false;
+        g.es().insert(current);
         //reinsert cluster edges into adjs and edgelist
         for(size_t n=0;n<cluster.size();n++){
             g.vs()[cluster[n].v1()].adj().insert(cluster[n]);
@@ -220,9 +223,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
             g.es().insert(cluster[n]);
         }
         
-        current.order()=g.vs().size()-1;
-        current.todo()=false;
-        g.es().insert(current);
         // sw2.split();
         iteration++;
         // std::cout<<std::string(g)<<"\n";

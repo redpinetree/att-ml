@@ -50,7 +50,6 @@ size_t binom(size_t n,size_t k){
 }
 
 std::vector<std::string> observables::output_lines;
-std::vector<std::vector<double> > observables::probs;
 std::map<std::tuple<size_t,size_t,size_t,std::vector<size_t> >,double> observables::known_factors;
 std::map<std::tuple<size_t,size_t,size_t,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::known_factors_complex;
 
@@ -59,32 +58,6 @@ void observables::cmd_treeify(graph<cmp>& g){
     for(auto it=g.es().begin();it!=g.es().end();++it){
         //keep track of bonds associated with each virtual site
         g.vs()[(*it).order()].adj().insert(*it);
-    }
-    
-    //calculate probs
-    observables::probs=std::vector<std::vector<double> >(g.vs().size());
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        if(!g.vs()[(*it).v1()].virt()){
-            observables::probs[(*it).v1()]=std::vector<double>(g.vs()[(*it).v1()].rank(),pow(g.vs()[(*it).v1()].rank(),-1));
-        }
-        if(!g.vs()[(*it).v2()].virt()){
-            observables::probs[(*it).v2()]=std::vector<double>(g.vs()[(*it).v2()].rank(),pow(g.vs()[(*it).v2()].rank(),-1));
-        }
-        std::vector<double> p_k(g.vs()[(*it).order()].rank(),0);
-        double sum=0;
-        for(size_t i=0;i<g.vs()[(*it).v1()].rank();i++){
-            for(size_t j=0;j<g.vs()[(*it).v2()].rank();j++){
-                double k=(*it).f().at(i,j);
-                double e=(*it).w().at(i,j);
-                double p=observables::probs[(*it).v1()][i]*observables::probs[(*it).v2()][j]*(*it).w().at(i,j);
-                sum+=p;
-                p_k[k]+=p;
-            }
-        }
-        for(size_t k=0;k<p_k.size();k++){
-            p_k[k]/=sum;
-        }
-        observables::probs[(*it).order()]=p_k;
     }
 }
 template void observables::cmd_treeify<coupling_comparator>(graph<coupling_comparator>&);
@@ -130,9 +103,7 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
         double res=1;
         for(size_t i=0;i<r_k;i++){
             res*=(((n%2)==1))?pow((((double)(r_k*(i==0))-1)/(r_k-1)),c[i]):1;
-            // res*=pow(2*(i==0)-1,c[i]);
         }
-        // res/=(double) pow(r_k,p);
         // std::cout<<res<<"\n";
         return res;
     }
@@ -149,39 +120,17 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
     array3d<double> prob_ij(r_i,r_j,r_k);
     array2d<double> prob_i(r_i,r_k);
     array2d<double> prob_j(r_j,r_k);
-    std::cout<<"f:\n"<<(std::string) (*g.vs()[root].adj().begin()).f()<<"\n";
-    std::cout<<"w:\n"<<(std::string) (*g.vs()[root].adj().begin()).w()<<"\n";
+    // std::cout<<"f:\n"<<(std::string) (*g.vs()[root].adj().begin()).f()<<"\n";
+    // std::cout<<"w:\n"<<(std::string) (*g.vs()[root].adj().begin()).w()<<"\n";
     array2d<size_t> test_f=(*g.vs()[root].adj().begin()).f();
-    // if(test_f.nx()==2&&test_f.ny()==3){
-    // test_f.at(0,0)=0;
-    // test_f.at(0,1)=1;
-    // test_f.at(0,2)=0;
-    // test_f.at(1,0)=0;
-    // test_f.at(1,1)=1;
-    // test_f.at(1,2)=2;
-    // test_f.at(2,0)=1;
-    // test_f.at(2,1)=0;
-    // test_f.at(2,2)=2;
-    // }
-    // std::cout<<"test_f:\n"<<(std::string) test_f<<"\n";
-    // array2d<double> test_w=(*g.vs()[root].adj().begin()).w();
-    // test_w.at(0,0)*=0;
-    // test_w.at(0,1)*=0;
-    // test_w.at(1,0)*=0;
-    // test_w.at(1,1)*=0;
-    // std::cout<<"test_w:\n"<<(std::string) test_w<<"\n";
     for(size_t j=0;j<r_j;j++){
         for(size_t i=0;i<r_i;i++){
             size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
-            // size_t k=test_f.at(i,j);
             double e=(*g.vs()[root].adj().begin()).w().at(i,j);
-            // double e=test_w.at(i,j);
             // std::cout<<i<<" "<<j<<" "<<k<<" "<<e<<"\n";
             prob_ij.at(i,j,k)=e;
-            prob_i.at(i,k)+=e; //compute marginals, no norm
-            prob_j.at(j,k)+=e; //compute marginals, no norm
-            // prob_i.at(i,k)+=r_j*e; //compute marginals
-            // prob_j.at(j,k)+=r_i*e; //compute marginals
+            prob_i.at(i,k)+=e; //compute marginals
+            prob_j.at(j,k)+=e; //compute marginals
         }
     }
     
@@ -223,9 +172,9 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
             }
         }
     }
-    std::cout<<(std::string)prob_ij<<"\n";
-    std::cout<<(std::string)prob_i<<"\n";
-    std::cout<<(std::string)prob_j<<"\n";
+    // std::cout<<(std::string)prob_ij<<"\n";
+    // std::cout<<(std::string)prob_i<<"\n";
+    // std::cout<<(std::string)prob_j<<"\n";
     std::vector<size_t> q_idxs;
     for(size_t i=0;i<c.size();i++){
         for(size_t j=0;j<c[i];j++){
@@ -258,12 +207,10 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
             for(size_t i=0;i<p;i++){
                 weight*=(down==0)?prob_i.at(spin_combos[down][s][i],q_idxs[i]):prob_j.at(spin_combos[down][s][i],q_idxs[i]);
             }
-            if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].p1():g.vs()[root].p2())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
+            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].p1():g.vs()[root].p2())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
             temp+=weight*contrib;
-            // temp+=weight*contrib*pow(g.vs()[g.vs()[root].p1()].vol()!=1?g.vs()[g.vs()[root].p1()].vol()-1:1,p);
-            // temp+=weight*contrib/((double) pow((down==0)?r_j:r_i,p));
         }
-        if(depth==0){std::cout<<"subtree "<<down<<":"<<temp<<"\n";}
+        // if(depth==0){std::cout<<"subtree "<<down<<":"<<temp<<"\n";}
         c_res+=temp;
     }
     // if(depth==0){std::cout<<"c_res (subtrees):"<<c_res<<"\n";}
@@ -308,11 +255,10 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
                 c_res+=coef*weight*factor_prod;
             }
         }
-        if(depth==0){std::cout<<"c_res ("<<c1<<","<<c0<<") "<<coef<<": "<<c_res<<"\n";}
+        // if(depth==0){std::cout<<"c_res ("<<c1<<","<<c0<<") "<<coef<<": "<<c_res<<"\n";}
         res+=c_res;
     }
     // if(depth==0){std::cout<<"res :"<<n<<" "<<p<<" "<<root<<" "<<res<<"\n";}
-    // res/=pow(r_k,p);
     return res;
 }
 template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,std::vector<size_t>,size_t);
@@ -322,24 +268,23 @@ template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,siz
 template<typename cmp>
 double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p){
     // std::vector<size_t> c(g.vs()[root].rank(),0);
-    // c[2]=p;
+    // c[0]=p;
     // return observables::m(g,n,p,c);
     
-    // size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    // size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
-    // size_t r_k=g.vs()[root].rank();
-    // std::vector<double> p_k(r_k,0);
-    // for(size_t j=0;j<r_j;j++){
-        // for(size_t i=0;i<r_i;i++){
-            // size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
-            // double e=(*g.vs()[root].adj().begin()).w().at(i,j);
-            // p_k[k]+=e;
-        // }
-    // }
-    
-    // std::cout<<"weights: ";
-    // for(size_t i=0;i<g.vs()[root].rank();i++){
-        // std::cout<<p_k[i]<<" ";
+    size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
+    size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
+    size_t r_k=g.vs()[root].rank();
+    std::vector<double> p_k(r_k,0);
+    for(size_t j=0;j<r_j;j++){
+        for(size_t i=0;i<r_i;i++){
+            size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
+            double e=(*g.vs()[root].adj().begin()).w().at(i,j);
+            p_k[k]+=e;
+        }
+    }
+    // std::cout<<"PROBS: ";
+    // for(size_t j=0;j<p_k.size();j++){
+        // std::cout<<p_k[j]<<" ";
     // }
     // std::cout<<"\n";
     
@@ -351,19 +296,18 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p){
         double prob_factor=1;
         for(size_t i=0;i<combo.size();i++){
             c[combo[i]]++;
-            // prob_factor*=p_k[combo[i]];
-            std::cout<<"PROBS: ";
-            for(size_t j=0;j<observables::probs[root].size();j++){
-                std::cout<<observables::probs[root][j]<<" ";
-            }
-            std::cout<<"\n";
-            prob_factor*=observables::probs[root][combo[i]];
+            prob_factor*=p_k[combo[i]];
         }
         double contrib=observables::m(g,n,p,c);
         res+=contrib*prob_factor;
-        if(n){std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<"\n";}
+        // if(n){
+            // for(size_t i=0;i<c.size();i++){
+                // std::cout<<c[i]<<" ";
+            // }
+            // std::cout<<"\n";
+            // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<prob_factor<<"\n";
+        // }
     }
-    // res/=pow(g.vs()[root].rank(),p);
     return res;
 }
 template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t);
@@ -444,13 +388,17 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
     for(size_t j=0;j<r_j;j++){
         for(size_t i=0;i<r_i;i++){
             size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
-            // std::cout<<r_k<<" "<<(*g.vs()[root].adj().begin()).w().at(i,j)<<"\n";
             double e=(*g.vs()[root].adj().begin()).w().at(i,j);
+            // std::cout<<i<<" "<<j<<" "<<k<<" "<<e<<"\n";
             prob_ij.at(i,j,k)=e;
-            prob_i.at(i,k)+=r_j*e; //compute marginals
-            prob_j.at(j,k)+=r_i*e; //compute marginals
+            prob_i.at(i,k)+=e; //compute marginals
+            prob_j.at(j,k)+=e; //compute marginals
         }
     }
+    
+    // std::cout<<(std::string)prob_ij<<"\n";
+    // std::cout<<(std::string)prob_i<<"\n";
+    // std::cout<<(std::string)prob_j<<"\n";
     for(size_t k=0;k<r_k;k++){
         double sum_ij=0;
         for(size_t i=0;i<r_i;i++){
@@ -522,8 +470,7 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
                 weight*=(down==0)?prob_i.at(spin_combos[down][s][i],q_idxs[i]):prob_j.at(spin_combos[down][s][i],q_idxs[i]);
             }
             // if(depth==0){std::cout<<weight<<","<<contrib<<"\n";}
-            // temp+=weight*contrib;
-            temp+=weight*contrib/((double) pow((down==0)?r_j:r_i,p));
+            temp+=weight*contrib;
         }
         // if(depth==0){std::cout<<"subtree "<<down<<":"<<temp<<"\n";}
         c_res+=temp;
@@ -587,15 +534,42 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
     // c[0]=p;
     // return observables::m(g,n,p,c,k);
     
+    size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
+    size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
+    size_t r_k=g.vs()[root].rank();
+    std::vector<double> p_k(r_k,0);
+    for(size_t j=0;j<r_j;j++){
+        for(size_t i=0;i<r_i;i++){
+            size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
+            double e=(*g.vs()[root].adj().begin()).w().at(i,j);
+            p_k[k]+=e;
+        }
+    }
+    // std::cout<<"PROBS: ";
+    // for(size_t j=0;j<p_k.size();j++){
+        // std::cout<<p_k[j]<<" ";
+    // }
+    // std::cout<<"\n";
+    
     std::complex<double> res=0;
     std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
     for(size_t idx=0;idx<combos.size();idx++){
         std::vector<size_t> combo=combos[idx];
         std::vector<size_t> c(g.vs()[root].rank(),0);
+        double prob_factor=1;
         for(size_t i=0;i<combo.size();i++){
             c[combo[i]]++;
+            prob_factor*=p_k[combo[i]];
         }
-        res+=observables::m(g,n,p,c,k);
+        std::complex<double> contrib=observables::m(g,n,p,c,k);
+        res+=contrib*prob_factor;
+        // if(n){
+            // for(size_t i=0;i<c.size();i++){
+                // std::cout<<c[i]<<" ";
+            // }
+            // std::cout<<"\n";
+            // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<prob_factor<<"\n";
+        // }
     }
     return res;
 }
