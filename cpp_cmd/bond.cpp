@@ -227,6 +227,14 @@ void bond::bmi(array2d<double>& w){
             p_j[j]+=p_ij.at(i,j);
         }
     }
+    // for(size_t i=0;i<p_i.size();i++){
+        // std::cout<<p_i[i]<<" ";
+    // }
+    // std::cout<<"\n";
+    // for(size_t j=0;j<p_j.size();j++){
+        // std::cout<<p_j[j]<<" ";
+    // }
+    // std::cout<<"\n";
     double S_ij=0;
     double S_i=0;
     double S_j=0;

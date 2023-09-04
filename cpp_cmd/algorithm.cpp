@@ -152,10 +152,12 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         
         //optimization of weights in spin cluster
         // std::cout<<"\noptimization of weights in spin cluster:\n";
-        // std::cout<<"current: "<<std::string(current)<<"\n";
+        // std::cout<<"current: "<<(std::string)current<<"\n";
+        // std::cout<<(std::string)current.w()<<"\n";
         // std::cout<<"cluster edges:\n";
         // for(size_t n=0;n<cluster.size();n++){
-            // std::cout<<std::string(cluster[n])<<"\n";
+            // std::cout<<(std::string)cluster[n]<<"\n";
+            // std::cout<<(std::string)cluster[n].w()<<"\n";
         // }
         
         // DEBUG: just recompute w based on renormed j if conn. to slave.
@@ -165,10 +167,12 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         optimize::kl_iterative(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,lr);
         // std::cout<<"HERE DONE\n";
         
-        // std::cout<<"current: "<<std::string(current)<<"\n";
+        // std::cout<<"current: "<<(std::string)current<<"\n";
+        // std::cout<<(std::string)current.w()<<"\n";
         // std::cout<<"cluster edges:\n";
         // for(size_t n=0;n<cluster.size();n++){
-            // std::cout<<std::string(cluster[n])<<"\n";
+            // std::cout<<(std::string)cluster[n]<<"\n";
+            // std::cout<<(std::string)cluster[n].w()<<"\n";
         // }
         
         //merge identical bonds

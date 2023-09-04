@@ -3,8 +3,8 @@
 #include "optimize.hpp"
 
 //DEBUG GLOBALS
-size_t pair_opt_ij_count_idx=0;
-size_t pair_opt_ki_count_idx=0;
+size_t p_prime_ij_opt_count_idx=0;
+size_t p_prime_ki_opt_count_idx=0;
 std::ofstream ij_ofs("pair_ij_bmi_dump.txt");
 std::ofstream ki_ofs("pair_ki_bmi_dump.txt");
 std::ofstream ij_cost_ofs("pair_ij_cost_dump.txt");
@@ -59,29 +59,29 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         for(size_t n=0;n<cluster.size();n++){
             std::stringstream ki_bmi_dump_line;
             std::stringstream ki_cost_dump_line;
-            ki_bmi_dump_line<<(pair_opt_ki_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<0<<" "<<cluster[n].bmi()<<"\n";
+            ki_bmi_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<0<<" "<<cluster[n].bmi()<<"\n";
             // std::cout<<ki_eff_k_dump_lines.size()<<"\n";
             ki_bmi_dump_lines.push_back(ki_bmi_dump_line.str());
             //DEBUG: calculate cost function
             double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
-            ki_cost_dump_line<<(pair_opt_ki_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<0<<" "<<cost<<"\n";
+            ki_cost_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<0<<" "<<cost<<"\n";
             ki_cost_dump_lines.push_back(ki_cost_dump_line.str());
         }
         std::stringstream ij_bmi_dump_line;
         std::stringstream ij_cost_dump_line;
-        ij_bmi_dump_line<<pair_opt_ij_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<0<<" "<<current.bmi()<<"\n";
+        ij_bmi_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<0<<" "<<current.bmi()<<"\n";
         ij_bmi_dump_lines.push_back(ij_bmi_dump_line.str());
         //DEBUG: calculate cost function
         double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
-        ij_cost_dump_line<<pair_opt_ij_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<0<<" "<<cost<<"\n";
+        ij_cost_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<0<<" "<<cost<<"\n";
         ij_cost_dump_lines.push_back(ij_cost_dump_line.str());
     }
     
     //precompute intermediate quantities for weight optimization
     std::vector<double> gi(current.w().nx(),1);
     std::vector<double> gj(current.w().ny(),1);
-    array2d<double> pair_ij(current.w().nx(),current.w().ny());
-    array2d<double> pair_ij_env(current.w().nx(),current.w().ny());
+    array2d<double> p_ij(current.w().nx(),current.w().ny());
+    array2d<double> p_prime_ij_env(current.w().nx(),current.w().ny());
         
     for(size_t i=0;i<current.w().nx();i++){
         std::vector<double> gi_factors;
@@ -109,10 +109,10 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         std::stringstream ij_bmi_dump_line;
         std::stringstream ij_cost_dump_line;
         //calculate P_{ij},P'^{env}_{ij}
-        std::vector<double> sum_pair_ij_addends;
-        std::vector<double> sum_pair_ij_env_addends;
-        for(size_t i=0;i<pair_ij.nx();i++){
-            for(size_t j=0;j<pair_ij.ny();j++){
+        std::vector<double> sum_p_ij_addends;
+        std::vector<double> sum_p_prime_ij_env_addends;
+        for(size_t i=0;i<p_ij.nx();i++){
+            for(size_t j=0;j<p_ij.ny();j++){
                 //calculate G'(f_k(S_i,S_j))
                 std::vector<double> gi_prime(r_k,1);
                 std::vector<double> gj_prime(r_k,1);
@@ -146,41 +146,46 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                 factors.push_back(old_current.w().at(i,j));
                 factors.push_back(gi[i]);
                 factors.push_back(gj[j]);
-                pair_ij.at(i,j)=vec_mult_float(factors);
-                sum_pair_ij_addends.push_back(pair_ij.at(i,j));
+                p_ij.at(i,j)=vec_mult_float(factors);
+                sum_p_ij_addends.push_back(p_ij.at(i,j));
                 //calculate P'^{env}_{ij}
                 factors_env.push_back(gi_prime[k]);
                 factors_env.push_back(gj_prime[k]);
-                pair_ij_env.at(i,j)=vec_mult_float(factors_env);
-                sum_pair_ij_env_addends.push_back(pair_ij_env.at(i,j));
+                p_prime_ij_env.at(i,j)=vec_mult_float(factors_env);
+                sum_p_prime_ij_env_addends.push_back(p_prime_ij_env.at(i,j)*current.w().at(i,j)); //restore divided factor to get z'
             }
         }
         //normalize P_{ij},P'^{env}_{ij}
-        double sum_pair_ij=vec_add_float(sum_pair_ij_addends);
-        double sum_pair_ij_env=vec_add_float(sum_pair_ij_env_addends);
-        for(size_t i=0;i<pair_ij.nx();i++){
-            for(size_t j=0;j<pair_ij.ny();j++){
-                if(fabs(sum_pair_ij)>1e-10){
-                    pair_ij.at(i,j)/=sum_pair_ij;
+        double sum_p_ij=vec_add_float(sum_p_ij_addends);
+        double sum_p_prime_ij_env=vec_add_float(sum_p_prime_ij_env_addends);
+        for(size_t i=0;i<p_ij.nx();i++){
+            for(size_t j=0;j<p_ij.ny();j++){
+                if(fabs(sum_p_ij)>1e-10){
+                    p_ij.at(i,j)/=sum_p_ij;
                 }
-                if(fabs(sum_pair_ij_env)>1e-10){
-                    pair_ij_env.at(i,j)/=sum_pair_ij_env;
+                if(fabs(sum_p_prime_ij_env)>1e-10){
+                    p_prime_ij_env.at(i,j)/=sum_p_prime_ij_env;
                 }
             }
         }
         // std::cout<<(std::string)current.f()<<"\n";
-        // std::cout<<(std::string)pair_ij<<"\n";
-        // std::cout<<(std::string)pair_ij_env<<"\n";
-        for(size_t i=0;i<pair_ij.nx();i++){
-            for(size_t j=0;j<pair_ij.ny();j++){
+        // std::cout<<(std::string)p_ij<<"\n";
+        // std::cout<<(std::string)p_prime_ij_env<<"\n";
+        for(size_t i=0;i<p_ij.nx();i++){
+            for(size_t j=0;j<p_ij.ny();j++){
                 if(lr==0){ //lr==0 means use iterative method based on stationarity condition
-                    if(fabs(pair_ij_env.at(i,j))>1e-10){
-                        current.w().at(i,j)=pair_ij.at(i,j)/pair_ij_env.at(i,j);
+                    if(fabs(p_prime_ij_env.at(i,j))>1e-10){
+                        current.w().at(i,j)=p_ij.at(i,j)/p_prime_ij_env.at(i,j);
                     }
                 }
                 else{ //lr!=0 means use gradient descent with lr
                     if(fabs(current.w().at(i,j))>1e-10){
-                        current.w().at(i,j)-=lr*((pair_ij_env.at(i,j)*current.w().at(i,j))-pair_ij.at(i,j))/current.w().at(i,j);
+                        // current.w().at(i,j)=p_ij.at(i,j)/p_prime_ij_env.at(i,j);
+                        // current.w().at(i,j)-=lr*((p_prime_ij_env.at(i,j)*current.w().at(i,j))-p_ij.at(i,j))/current.w().at(i,j);
+                        current.w().at(i,j)-=lr*(p_prime_ij_env.at(i,j)-(p_ij.at(i,j)/current.w().at(i,j)));
+                        if(current.w().at(i,j)<0){ //in case the weight is negative, force it to be nonnegative!
+                            current.w().at(i,j)=1e-10;
+                        }
                     }
                 }
             }
@@ -196,7 +201,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         // std::cout<<(std::string) current.f()<<"\n";
         
         //NOTE: right now, this uses a workaround for floating-point non-associativity, which involves storing addends in vectors and then sorting them before adding.
-        //pair_ki,imu if source==current.v1(), pair_kj,jnu if source==current.v2(). wlog, use pair_ki and imu.
+        //p_prime_ki,imu if source==current.v1(), p_prime_kj,jnu if source==current.v2(). wlog, use p_prime_ki and imu.
         //k, the new index, is always second because virtual indices > physical indices.
         for(size_t n=0;n<cluster.size();n++){
             //determine whether this bond was connected to site i or to site j
@@ -210,40 +215,40 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         
             std::stringstream ki_bmi_dump_line;
             std::stringstream ki_cost_dump_line;
-            array2d<double> pair_ki(cluster[n].w().nx(),cluster[n].w().ny());
-            array2d<double> pair_ki_env(cluster[n].w().nx(),cluster[n].w().ny());
+            array2d<double> p_ki(cluster[n].w().nx(),cluster[n].w().ny());
+            array2d<double> p_prime_ki_env(cluster[n].w().nx(),cluster[n].w().ny());
             //reinitialize weight matrix to correct size if needed on first iteration
-            if(n1==0){ //if first iteration, resize pair_ki
+            if(n1==0){ //if first iteration, resize p_prime_ki
                 if(source==current.v1()){
-                    pair_ki=array2d<double>((current.v1()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-                    pair_ki_env=array2d<double>((current.v1()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
+                    p_ki=array2d<double>((current.v1()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
+                    p_prime_ki_env=array2d<double>((current.v1()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
                 }
                 else{
-                    pair_ki=array2d<double>((current.v2()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-                    pair_ki_env=array2d<double>((current.v2()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
+                    p_ki=array2d<double>((current.v2()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
+                    p_prime_ki_env=array2d<double>((current.v2()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
                 }
             }
-            if((pair_ki.nx()!=cluster[n].w().nx())||(pair_ki.ny()!=cluster[n].w().ny())){
-                // std::cout<<(std::string)cluster[n].w()<<"\n";
-                array2d<double> new_w(pair_ki.nx(),pair_ki.ny());
+            if((p_ki.nx()!=cluster[n].w().nx())||(p_ki.ny()!=cluster[n].w().ny())){
+                array2d<double> new_w(p_ki.nx(),p_ki.ny());
                 for(size_t i=0;i<new_w.nx();i++){
                     for(size_t j=0;j<new_w.ny();j++){
                         if((i<cluster[n].w().nx())&&(j<cluster[n].w().ny())){
-                            new_w.at(i,j)=cluster[n].w().at(i,j);
+                            new_w.at(i,j)=cluster[n].w().at(i,j)*(cluster[n].w().nx()*cluster[n].w().ny())/(double) (new_w.nx()*new_w.ny());
+                            // new_w.at(i,j)=cluster[n].w().at(i,j);
                         }
                         else{
-                            new_w.at(i,j)=0;
+                            new_w.at(i,j)=1/(double) (new_w.nx()*new_w.ny());
+                            // new_w.at(i,j)=0;
                         }
                     }
                 }
                 cluster[n].w()=new_w;
-                // std::cout<<(std::string)cluster[n].w()<<"\n";
             }
             //prep to calculate P^_{ki_\mu}, P'^{env}_{ki_\mu}
-            std::vector<std::vector<double> > addends(pair_ki.nx()*pair_ki.ny());
-            std::vector<std::vector<double> > addends_env(pair_ki_env.nx()*pair_ki_env.ny());
-            std::vector<double> sum_pair_ki_addends;
-            std::vector<double> sum_pair_ki_env_addends;
+            std::vector<std::vector<double> > addends(p_ki.nx()*p_ki.ny());
+            std::vector<std::vector<double> > addends_env(p_prime_ki_env.nx()*p_prime_ki_env.ny());
+            std::vector<double> sum_p_ki_addends;
+            std::vector<double> sum_p_prime_ki_env_addends;
             cluster[n].bmi(cluster[n].w());
             for(size_t i=0;i<current.w().nx();i++){
                 for(size_t j=0;j<current.w().ny();j++){
@@ -273,6 +278,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                     }
                     gi_prime[k]=vec_mult_float(gi_prime_factors);
                     gj_prime[k]=vec_mult_float(gj_prime_factors);
+                    
                     //divide appropriate factor
                     if(source==current.v1()){
                         if(fabs((cluster[n].w().sum_over_axis(0))[k])>1e-10){
@@ -285,7 +291,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                         }
                     }
                     //get addends
-                    for(size_t imu=0;imu<pair_ki.nx();imu++){
+                    for(size_t imu=0;imu<p_ki.nx();imu++){
                         std::vector<double> factors;
                         std::vector<double> factors_env;
                         //calculate P_{ki_\mu} addends
@@ -308,51 +314,53 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                         }
                         factors.push_back(gi[i]);
                         factors.push_back(gj[j]);
-                        sum_pair_ki_addends.push_back(vec_mult_float(factors));
-                        addends[(k*pair_ki.nx())+imu].push_back(vec_mult_float(factors));
+                        addends[(k*p_ki.nx())+imu].push_back(vec_mult_float(factors));
+                        sum_p_ki_addends.push_back(vec_mult_float(factors));
                         //calculate P'^{env}_{ki_\mu} addends
                         factors_env.push_back(current.w().at(i,j));
                         factors_env.push_back(gi_prime[k]);
                         factors_env.push_back(gj_prime[k]);
-                        sum_pair_ki_env_addends.push_back(vec_mult_float(factors_env));
-                        addends_env[(k*pair_ki_env.nx())+imu].push_back(vec_mult_float(factors_env));
+                        addends_env[(k*p_prime_ki_env.nx())+imu].push_back(vec_mult_float(factors_env));
+                        sum_p_prime_ki_env_addends.push_back(vec_mult_float(factors_env)*cluster[n].w().at(imu,k)); //restore divided factor to get z'
                     }
                 }
             }
             //calculate P^_{ki_\mu}, P'^{env}_{ki_\mu}
-            for(size_t imu=0;imu<pair_ki.nx();imu++){
-                for(size_t k=0;k<pair_ki.ny();k++){
-                    pair_ki.at(imu,k)=vec_add_float(addends[(k*pair_ki.nx())+imu]);
-                    pair_ki_env.at(imu,k)=vec_add_float(addends_env[(k*pair_ki.nx())+imu]);
+            for(size_t imu=0;imu<p_ki.nx();imu++){
+                for(size_t k=0;k<p_ki.ny();k++){
+                    p_ki.at(imu,k)=vec_add_float(addends[(k*p_ki.nx())+imu]);
+                    p_prime_ki_env.at(imu,k)=vec_add_float(addends_env[(k*p_ki.nx())+imu]);
                 }
             }
-            double sum_pair_ki=vec_add_float(sum_pair_ki_addends);
-            double sum_pair_ki_env=vec_add_float(sum_pair_ki_env_addends);
+            double sum_p_ki=vec_add_float(sum_p_ki_addends);
+            double sum_p_prime_ki_env=vec_add_float(sum_p_prime_ki_env_addends);
             //normalize P_{ki_\mu},P'^{env}_{ki_\mu}
-            for(size_t i=0;i<pair_ki.nx();i++){
-                for(size_t j=0;j<pair_ki.ny();j++){
-                    if(fabs(sum_pair_ki)>1e-10){
-                        pair_ki.at(i,j)/=sum_pair_ki;
+            for(size_t i=0;i<p_ki.nx();i++){
+                for(size_t j=0;j<p_ki.ny();j++){
+                    if(fabs(sum_p_ki)>1e-10){
+                        p_ki.at(i,j)/=sum_p_ki;
                     }
-                    if(fabs(sum_pair_ki_env)>1e-10){
-                        pair_ki_env.at(i,j)/=sum_pair_ki_env;
+                    if(fabs(sum_p_prime_ki_env)>1e-10){
+                        p_prime_ki_env.at(i,j)/=sum_p_prime_ki_env;
                     }
                 }
             }
-            // std::cout<<"pre-reinit f:\n"<<(std::string)current.f()<<"\n";
-            // std::cout<<"pre-reinit pair_ki:\n"<<(std::string)pair_ki<<"\n";
-            // std::cout<<"pre-reinit pair_ki_env:\n"<<(std::string)pair_ki_env<<"\n";
             
-            for(size_t i=0;i<pair_ki.nx();i++){
-                for(size_t j=0;j<pair_ki.ny();j++){
+            for(size_t i=0;i<p_ki.nx();i++){
+                for(size_t j=0;j<p_ki.ny();j++){
                     if(lr==0){ //lr==0 means use iterative method based on stationarity condition
-                        if(fabs(pair_ki_env.at(i,j))>1e-10){
-                            cluster[n].w().at(i,j)=pair_ki.at(i,j)/pair_ki_env.at(i,j);
+                        if(fabs(p_prime_ki_env.at(i,j))>1e-10){
+                            cluster[n].w().at(i,j)=p_ki.at(i,j)/p_prime_ki_env.at(i,j);
                         }
                     }
                     else{ //lr!=0 means use gradient descent with lr
                         if(fabs(cluster[n].w().at(i,j))>1e-10){
-                            cluster[n].w().at(i,j)-=lr*((pair_ki_env.at(i,j)*cluster[n].w().at(i,j))-pair_ki.at(i,j))/cluster[n].w().at(i,j);
+                            // cluster[n].w().at(i,j)=p_ki.at(i,j)/p_prime_ki_env.at(i,j);
+                            // cluster[n].w().at(i,j)-=lr*((p_prime_ki_env.at(i,j)*cluster[n].w().at(i,j))-p_ki.at(i,j))/cluster[n].w().at(i,j);
+                            cluster[n].w().at(i,j)-=lr*(p_prime_ki_env.at(i,j)-(p_ki.at(i,j)/cluster[n].w().at(i,j)));
+                            if(cluster[n].w().at(i,j)<0){ //in case the weight is negative, force it to be nonnegative!
+                                cluster[n].w().at(i,j)=1e-10;
+                            }
                         }
                     }
                 }
@@ -363,29 +371,29 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
             // std::cout<<"postfinal cluster[n].w():\n"<<(std::string)cluster[n].w()<<"\n";
             
             //DEBUG OUTPUT
-            ki_bmi_dump_line<<(pair_opt_ki_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<(n1+1)<<" "<<cluster[n].bmi()<<"\n";
+            ki_bmi_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<(n1+1)<<" "<<cluster[n].bmi()<<"\n";
             // std::cout<<ki_eff_k_dump_lines.size()<<"\n";
             ki_bmi_dump_lines.push_back(ki_bmi_dump_line.str());
             //DEBUG: calculate cost function
             double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
-            ki_cost_dump_line<<(pair_opt_ki_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
+            ki_cost_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
             ki_cost_dump_lines.push_back(ki_cost_dump_line.str());
         }
         
         //DEBUG OUTPUT
-        ij_bmi_dump_line<<pair_opt_ij_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<current.bmi()<<"\n";
+        ij_bmi_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<current.bmi()<<"\n";
         ij_bmi_dump_lines.push_back(ij_bmi_dump_line.str());
         //DEBUG: calculate cost function
         double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
-        ij_cost_dump_line<<pair_opt_ij_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
+        ij_cost_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
         ij_cost_dump_lines.push_back(ij_cost_dump_line.str());
     }
-    pair_opt_ij_count_idx++;
+    p_prime_ij_opt_count_idx++;
     for(size_t i=0;i<ij_bmi_dump_lines.size();i++){
         ij_ofs<<ij_bmi_dump_lines[i];
         ij_cost_ofs<<ij_cost_dump_lines[i];
     }
-    pair_opt_ki_count_idx+=cluster.size();
+    p_prime_ki_opt_count_idx+=cluster.size();
     for(size_t i=0;i<ki_bmi_dump_lines.size();i++){
         ki_ofs<<ki_bmi_dump_lines[i];
         ki_cost_ofs<<ki_cost_dump_lines[i];
@@ -436,62 +444,91 @@ double optimize::renorm_coupling(size_t q,double k1,double k2){
 }
 
 double optimize::kl_div(std::vector<site> sites,bond old_current,std::vector<bond> old_cluster,bond current,std::vector<bond> cluster){
+    // std::cout<<(std::string)current<<"\n";
     // std::cout<<(std::string)current.f()<<"\n";
     // std::cout<<(std::string)current.w()<<"\n";
     
-    array2d<double> g(sites[current.v1()].rank(),sites[current.v2()].rank());
-    for(size_t i=0;i<sites[current.v1()].rank();i++){
-        for(size_t j=0;j<sites[current.v2()].rank();j++){
-            double g_res=1;
-            for(size_t n=0;n<old_cluster.size();n++){
-                double spin_sum=0;
-                size_t source;
-                if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v1()==old_current.v2()){
-                    source=(old_cluster[n].v1()==old_current.v1())?old_current.v1():old_current.v2();
-                }
-                else{
-                    source=(old_cluster[n].v2()==old_current.v1())?old_current.v1():old_current.v2();
-                }
-                if(source==old_current.v1()){ //connected to site i
-                    if(old_cluster[n].v1()==old_current.v1()){ //site imu > site i
-                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
-                            spin_sum+=old_cluster[n].w().at(i,imu);
-                        }
-                    }
-                    else{ //site imu < site i
-                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
-                            spin_sum+=old_cluster[n].w().at(imu,i);
-                        }
-                    }
-                }
-                else{ //connected to site j
-                    if(old_cluster[n].v1()==old_current.v2()){ //site imu > site j
-                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
-                            spin_sum+=old_cluster[n].w().at(j,imu);
-                        }
-                    }
-                    else{ //site imu < site j
-                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
-                            spin_sum+=old_cluster[n].w().at(imu,j);
-                        }
-                    }
-                }
-                g_res*=spin_sum;
+    std::vector<double> g_prime(*(std::max_element(current.f().e().begin(),current.f().e().end()))+1);
+    for(size_t k=0;k<g_prime.size();k++){
+        double g_prime_res=1;
+        for(size_t n=0;n<cluster.size();n++){
+            double spin_sum_prime=0;
+            for(size_t imu=0;imu<cluster[n].w().nx();imu++){
+                spin_sum_prime+=cluster[n].w().at(imu,k);
             }
-            g.at(i,j)=g_res;
+            g_prime_res*=spin_sum_prime;
         }
+        g_prime[k]=g_prime_res;
     }
     
-    double a_old=0;
-    double b_old=0;
-    for(size_t i=0;i<sites[old_current.v1()].rank();i++){
-        for(size_t j=0;j<sites[old_current.v2()].rank();j++){
-            double contrib_a=(old_current.w().at(i,j)>0)?old_current.w().at(i,j)*g.at(i,j)*log(old_current.w().at(i,j)):old_current.w().at(i,j)*g.at(i,j)*log(1e-100);
-            double contrib_b=old_current.w().at(i,j)*g.at(i,j);
-            double contrib_b_logs=0;
+    std::vector<double> gi(sites[old_current.v1()].rank());
+    std::vector<double> gj(sites[old_current.v2()].rank());
+    for(size_t i=0;i<sites[current.v1()].rank();i++){
+        double gi_res=1;
+        for(size_t n=0;n<old_cluster.size();n++){
+            double spin_sum_i=0;
+            size_t source;
+            if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v1()==old_current.v2()){
+                source=(old_cluster[n].v1()==old_current.v1())?old_current.v1():old_current.v2();
+            }
+            else{
+                source=(old_cluster[n].v2()==old_current.v1())?old_current.v1():old_current.v2();
+            }
+            if(source==old_current.v1()){ //connected to site i
+                if(old_cluster[n].v1()==old_current.v2()){ //site imu > site i
+                    for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
+                        spin_sum_i+=old_cluster[n].w().at(i,imu);
+                    }
+                }
+                else{ //site imu < site i
+                    for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
+                        spin_sum_i+=old_cluster[n].w().at(imu,i);
+                    }
+                }
+                gi_res*=spin_sum_i;
+            }
+        }
+        gi[i]=gi_res;
+    }
+    for(size_t j=0;j<sites[current.v2()].rank();j++){
+        double gj_res=1;
+        for(size_t n=0;n<old_cluster.size();n++){
+            double spin_sum_j=0;
+            size_t source;
+            if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v1()==old_current.v2()){
+                source=(old_cluster[n].v1()==old_current.v1())?old_current.v1():old_current.v2();
+            }
+            else{
+                source=(old_cluster[n].v2()==old_current.v1())?old_current.v1():old_current.v2();
+            }
+            if(source==old_current.v2()){ //connected to site j
+                if(old_cluster[n].v1()==old_current.v2()){ //site imu > site j
+                    for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
+                        spin_sum_j+=old_cluster[n].w().at(j,imu);
+                    }
+                }
+                else{ //site imu < site j
+                    for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
+                        spin_sum_j+=old_cluster[n].w().at(imu,j);
+                    }
+                }
+                gj_res*=spin_sum_j;
+            }
+        }
+        gj[j]=gj_res;
+    }
+    
+    array2d<double> gi_tilde(sites[old_current.v1()].rank(),sites[old_current.v2()].rank());
+    array2d<double> gj_tilde(sites[old_current.v1()].rank(),sites[old_current.v2()].rank());
+    for(size_t i=0;i<sites[current.v1()].rank();i++){
+        for(size_t j=0;j<sites[current.v2()].rank();j++){
+            double gi_tilde_res=0;
+            double gj_tilde_res=0;
             for(size_t n=0;n<old_cluster.size();n++){
-                double spin_sum_z_prime=0;
-                double spin_sum_b=0;
+                double spin_sum_i_tilde=0;
+                double spin_sum_j_tilde=0;
+                double div_factor=0;
+                size_t k=current.f().at(i,j);
                 size_t source;
                 if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v1()==old_current.v2()){
                     source=(old_cluster[n].v1()==old_current.v1())?old_current.v1():old_current.v2();
@@ -502,51 +539,52 @@ double optimize::kl_div(std::vector<site> sites,bond old_current,std::vector<bon
                 if(source==old_current.v1()){ //connected to site i
                     if(old_cluster[n].v1()==old_current.v1()){ //site imu > site i
                         for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
-                            if(old_cluster[n].w().at(i,imu)>0){
-                                spin_sum_b+=log(old_cluster[n].w().at(i,imu));
-                            }
-                            else{
-                                spin_sum_b+=log(1e-100);
+                            div_factor+=old_cluster[n].w().at(i,imu);
+                        }
+                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
+                            if(cluster[n].w().at(imu,k)>0){
+                                spin_sum_i_tilde+=old_cluster[n].w().at(i,imu)*log(cluster[n].w().at(imu,k));
                             }
                         }
                     }
                     else{ //site imu < site i
                         for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
-                            if(old_cluster[n].w().at(imu,i)>0){
-                                spin_sum_b+=log(old_cluster[n].w().at(imu,i));
-                            }
-                            else{
-                                spin_sum_b+=log(1e-100);
+                            div_factor+=old_cluster[n].w().at(imu,i);
+                        }
+                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
+                            if(cluster[n].w().at(imu,k)>0){
+                                spin_sum_i_tilde+=old_cluster[n].w().at(imu,i)*log(cluster[n].w().at(imu,k));
                             }
                         }
                     }
+                    gi_tilde_res+=(div_factor>0)?(spin_sum_i_tilde*gi[i]/div_factor):0;
                 }
                 else{ //connected to site j
                     if(old_cluster[n].v1()==old_current.v2()){ //site imu > site j
                         for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
-                            if(old_cluster[n].w().at(j,imu)>0){
-                                spin_sum_b+=log(old_cluster[n].w().at(j,imu));
-                            }
-                            else{
-                                spin_sum_b+=log(1e-100);
+                            div_factor+=old_cluster[n].w().at(j,imu);
+                        }
+                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
+                            if(cluster[n].w().at(imu,k)>0){
+                                spin_sum_j_tilde+=old_cluster[n].w().at(j,imu)*log(cluster[n].w().at(imu,k));
                             }
                         }
                     }
                     else{ //site imu < site j
                         for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
-                            if(old_cluster[n].w().at(imu,j)>0){
-                                spin_sum_b+=log(old_cluster[n].w().at(imu,j));
-                            }
-                            else{
-                                spin_sum_b+=log(1e-100);
+                            div_factor+=old_cluster[n].w().at(imu,j);
+                        }
+                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
+                            if(cluster[n].w().at(imu,k)>0){
+                                spin_sum_j_tilde+=old_cluster[n].w().at(imu,j)*log(cluster[n].w().at(imu,k));
                             }
                         }
                     }
+                    gj_tilde_res+=(div_factor>0)?(spin_sum_j_tilde*gj[j]/div_factor):0;
                 }
-                contrib_b_logs+=spin_sum_b;
             }
-            a_old+=contrib_a;
-            b_old+=contrib_b*contrib_b_logs;
+            gi_tilde.at(i,j)=gi_tilde_res;
+            gj_tilde.at(i,j)=gj_tilde_res;
         }
     }
     
@@ -556,85 +594,20 @@ double optimize::kl_div(std::vector<site> sites,bond old_current,std::vector<bon
     double b=0;
     for(size_t i=0;i<sites[current.v1()].rank();i++){
         for(size_t j=0;j<sites[current.v2()].rank();j++){
-            double contrib_z_prime=current.w().at(i,j);
-            double contrib_z=old_current.w().at(i,j)*g.at(i,j);
-            // double contrib_a=(current.w().at(i,j)>0)?old_current.w().at(i,j)*g.at(i,j)*log(current.w().at(i,j)):old_current.w().at(i,j)*g.at(i,j)*log(1e-100);
-            double contrib_a=(current.w().at(i,j)>0)?old_current.w().at(i,j)*g.at(i,j)*log(current.w().at(i,j)):0;
-            double contrib_b=old_current.w().at(i,j)*g.at(i,j);
+            double contrib_z_prime=current.w().at(i,j)*g_prime[current.f().at(i,j)];
+            double contrib_z=old_current.w().at(i,j)*gi[i]*gj[j];
+            double contrib_a=(current.w().at(i,j)>0)?old_current.w().at(i,j)*gi[i]*gj[j]*log(current.w().at(i,j)):0;
+            double contrib_b=old_current.w().at(i,j)*((gi_tilde.at(i,j)*gj[j])+(gi[i]*gj_tilde.at(i,j)));
             size_t k=current.f().at(i,j);
             double contrib_b_logs=0;
-            for(size_t n=0;n<cluster.size();n++){
-                double spin_sum_z_prime=0;
-                double spin_sum_b=0;
-                size_t source;
-                if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v1()==old_current.v2()){
-                    source=(old_cluster[n].v1()==old_current.v1())?old_current.v1():old_current.v2();
-                }
-                else{
-                    source=(old_cluster[n].v2()==old_current.v1())?old_current.v1():old_current.v2();
-                }
-                if(source==old_current.v1()){ //connected to site i
-                    if(old_cluster[n].v1()==old_current.v1()){ //site imu > site i
-                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
-                            if(cluster[n].w().at(imu,k)>0){
-                                spin_sum_b+=log(cluster[n].w().at(imu,k));
-                            }
-                            // else{
-                                // spin_sum_b+=log(1e-100);
-                            // }
-                        }
-                    }
-                    else{ //site imu < site i
-                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
-                            if(cluster[n].w().at(imu,k)>0){
-                                spin_sum_b+=log(cluster[n].w().at(imu,k));
-                            }
-                            // else{
-                                // spin_sum_b+=log(1e-100);
-                            // }
-                        }
-                    }
-                }
-                else{ //connected to site j
-                    if(old_cluster[n].v1()==old_current.v2()){ //site imu > site j
-                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
-                            if(cluster[n].w().at(imu,k)>0){
-                                spin_sum_b+=log(cluster[n].w().at(imu,k));
-                            }
-                            // else{
-                                // spin_sum_b+=log(1e-100);
-                            // }
-                        }
-                    }
-                    else{ //site imu < site j
-                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
-                            if(cluster[n].w().at(imu,k)>0){
-                                spin_sum_b+=log(cluster[n].w().at(imu,k));
-                            }
-                            // else{
-                                // spin_sum_b+=log(1e-100);
-                            // }
-                        }
-                    }
-                }
-                for(size_t imu=0;imu<cluster[n].w().nx();imu++){
-                    spin_sum_z_prime+=cluster[n].w().at(imu,k);
-                }
-                contrib_z_prime*=spin_sum_z_prime;
-                contrib_b_logs+=spin_sum_b;
-            }
             z_prime+=contrib_z_prime;
             z+=contrib_z;
             a+=contrib_a;
-            b+=contrib_b*contrib_b_logs;
+            b+=contrib_b;
         }
     }
-    // std::cout<<"z: "<<z<<"\nz': "<<z_prime<<"\n";
+    // std::cout<<"z: "<<z<<"\nz': "<<z_prime<<"\nz': "<<z_prime2<<"\n";
     // std::cout<<"a: "<<a<<"\nb: "<<b<<"\n";
-    // double res=log(z_prime)-(a/z);
-    // double res=(a/z)+(b/z)-log(z_prime);
-    // double res=log(z_prime)-(a/z)-(b/z);
-    // double res=(a_old/z)+(b_old/z)-log(z);
-    double res=((a_old/z)+(b_old/z)-log(z))-((a/z)+(b/z)-log(z_prime));
+    double res=log(z_prime)-(a/z)-(b/z);
     return res;
 }
