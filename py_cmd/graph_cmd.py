@@ -9,7 +9,7 @@ class site:
 		return str(self.vol)
 
 class virtual_site(site): #extends site by including parent data
-	def __init__(self,p1,p2,sites):
+	def __init__(self,p1,p2):
 		super().__init__()
 		self.parents=(p1,p2)
 		self.virtual_flag=True
@@ -68,6 +68,7 @@ class bond:
 		else: #skip if w is already normalized properly
 			p_ij=copy.deepcopy(self.w)
 		# p_ij=copy.deepcopy(self.w)
+		self.w=p_ij #needed?
 		p_i=np.sum(p_ij,axis=0) #marginals
 		p_j=np.sum(p_ij,axis=1)
 		with np.errstate(divide='ignore',invalid='ignore'): #if we have 0*ln(0), it is set to 0

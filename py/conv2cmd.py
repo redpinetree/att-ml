@@ -21,9 +21,9 @@ def conv2cmd(q,old_bonds,old_sites):
 		old_v2=old_bonds[-1-i].v2
 		j=old_bonds[-1-i].j
 		if d[old_v1]<d[old_v2]:
-			sites.append(graph_cmd.virtual_site(d[old_v1],d[old_v2],sites))
+			sites.append(graph_cmd.virtual_site(d[old_v1],d[old_v2]))
 		else:
-			sites.append(graph_cmd.virtual_site(d[old_v2],d[old_v1],sites))
+			sites.append(graph_cmd.virtual_site(d[old_v2],d[old_v1]))
 		sites[-1].vol=sites[d[old_v1]].vol if sites[d[old_v1]].vol>sites[d[old_v2]].vol else sites[d[old_v2]].vol
 		w=np.zeros((q,q))
 		for k in range(w.shape[0]):

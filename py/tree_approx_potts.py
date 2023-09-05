@@ -153,8 +153,8 @@ while beta<=args.max_beta:
 	elapsed=end-start
 	times.append(elapsed)
 	
-	# print(bonds)
-	# print(sites)
+	print(bonds)
+	print(sites)
 	# print([np.round(bmi(q,e.j),14) for e in bonds])
 	# make_graph(sites,bonds,"tree%d"%img_count)
 
