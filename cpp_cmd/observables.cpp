@@ -50,6 +50,7 @@ size_t binom(size_t n,size_t k){
 }
 
 std::vector<std::string> observables::output_lines;
+std::vector<std::vector<double> > observables::probs;
 std::map<std::tuple<size_t,size_t,size_t,std::vector<size_t> >,double> observables::known_factors;
 std::map<std::tuple<size_t,size_t,size_t,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::known_factors_complex;
 
@@ -58,6 +59,32 @@ void observables::cmd_treeify(graph<cmp>& g){
     for(auto it=g.es().begin();it!=g.es().end();++it){
         //keep track of bonds associated with each virtual site
         g.vs()[(*it).order()].adj().insert(*it);
+    }
+    
+    //calculate probs
+    observables::probs=std::vector<std::vector<double> >(g.vs().size());
+    for(auto it=g.es().begin();it!=g.es().end();++it){
+        if(!g.vs()[(*it).v1()].virt()){
+            observables::probs[(*it).v1()]=std::vector<double>(g.vs()[(*it).v1()].rank(),pow(g.vs()[(*it).v1()].rank(),-1));
+        }
+        if(!g.vs()[(*it).v2()].virt()){
+            observables::probs[(*it).v2()]=std::vector<double>(g.vs()[(*it).v2()].rank(),pow(g.vs()[(*it).v2()].rank(),-1));
+        }
+        std::vector<double> p_k(g.vs()[(*it).order()].rank(),0);
+        double sum=0;
+        for(size_t i=0;i<g.vs()[(*it).v1()].rank();i++){
+            for(size_t j=0;j<g.vs()[(*it).v2()].rank();j++){
+                double k=(*it).f().at(i,j);
+                double e=(*it).w().at(i,j);
+                double p=observables::probs[(*it).v1()][i]*observables::probs[(*it).v2()][j]*(*it).w().at(i,j);
+                sum+=p;
+                p_k[k]+=p;
+            }
+        }
+        for(size_t k=0;k<p_k.size();k++){
+            p_k[k]/=sum;
+        }
+        observables::probs[(*it).order()]=p_k;
     }
 }
 template void observables::cmd_treeify<coupling_comparator>(graph<coupling_comparator>&);
@@ -104,7 +131,6 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
         for(size_t i=0;i<r_k;i++){
             res*=(((n%2)==1))?pow((((double)(r_k*(i==0))-1)/(r_k-1)),c[i]):1;
         }
-        // std::cout<<res<<"\n";
         return res;
     }
     double res=0;
@@ -296,7 +322,8 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p){
         double prob_factor=1;
         for(size_t i=0;i<combo.size();i++){
             c[combo[i]]++;
-            prob_factor*=p_k[combo[i]];
+            // prob_factor*=p_k[combo[i]];
+            prob_factor*=observables::probs[root][combo[i]];
         }
         double contrib=observables::m(g,n,p,c);
         res+=contrib*prob_factor;

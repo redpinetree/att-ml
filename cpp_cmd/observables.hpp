@@ -12,6 +12,7 @@
 
 namespace observables{
     extern std::vector<std::string> output_lines;
+    extern std::vector<std::vector<double> > probs;
     extern std::map<std::tuple<size_t,size_t,size_t,std::vector<size_t> >,double> known_factors;
     extern std::map<std::tuple<size_t,size_t,size_t,std::vector<size_t>,std::vector<double> >,std::complex<double> > known_factors_complex;
     template<typename cmp>
