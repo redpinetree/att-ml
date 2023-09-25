@@ -406,7 +406,8 @@ array2d<size_t> optimize::f_alg1(site v_i,site v_j){
     array2d<size_t> f_res(v_i.rank(),v_j.rank());
     for(size_t s_i=0;s_i<v_i.rank();s_i++){
         for(size_t s_j=0;s_j<v_j.rank();s_j++){
-            f_res.at(s_i,s_j)=(v_i.vol()>=v_j.vol())?s_i:s_j;
+            // f_res.at(s_i,s_j)=(v_i.vol()>=v_j.vol())?s_i:s_j;
+            f_res.at(s_i,s_j)=s_i;
         }
     }
     return f_res;
