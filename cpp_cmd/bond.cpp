@@ -70,6 +70,7 @@ void bond::bmi(array2d<double>& w){
         // this->bmi_=0;
         // return;
     // }
+    size_t max_it=100;
     array2d<double> p_ij(w.nx(),w.ny());
     std::vector<double> sum_ax0(w.nx());
     std::vector<double> sum_ax1(w.ny());
@@ -136,7 +137,9 @@ void bond::bmi(array2d<double>& w){
             close_x[i]=((x[i]==0)||(fabs(x[i]-x_old[i])<1e-10))?1:0;
         }
         // std::cout<<"check: "<<std::all_of(close_x.begin(),close_x.end(),[](bool i){return i;})<<"\n";
+        size_t x_it=0;
         while(!std::all_of(close_x.begin(),close_x.end(),[](bool i){return i;})){
+            if(x_it>=max_it){break;}
             x_old=x;
             //explicit implementation of x'=(ry/rx)*(W(W^Tx)^-1)^-1
             for(size_t i=0;i<w.nx();i++){
@@ -153,6 +156,7 @@ void bond::bmi(array2d<double>& w){
             for(size_t i=0;i<close_x.size();i++){
                 close_x[i]=((x[i]==0)||(fabs(x[i]-x_old[i])<1e-10))?1:0;
             }
+            x_it++;
             // for(size_t i=0;i<close_x.size();i++){
                 // std::cout<<x[i]<<" ";
             // }
@@ -169,7 +173,9 @@ void bond::bmi(array2d<double>& w){
         for(size_t i=0;i<close_y.size();i++){
             close_y[i]=((y[i]==0)||(fabs(y[i]-y_old[i])<1e-10))?1:0;
         }
+        size_t y_it=0;
         while(!std::all_of(close_y.begin(),close_y.end(),[](bool i){return i;})){
+            if(y_it>=max_it){break;}
             y_old=y;
             //explicit implementation of y'=(rx/ry)*(W^T(Wy)^-1)^-1
             for(size_t i=0;i<w.ny();i++){
@@ -186,6 +192,7 @@ void bond::bmi(array2d<double>& w){
             for(size_t i=0;i<close_y.size();i++){
                 close_y[i]=((y[i]==0)||(fabs(y[i]-y_old[i])<1e-10))?1:0;
             }
+            y_it++;
             // for(size_t i=0;i<close_y.size();i++){
                 // std::cout<<y[i]<<" ";
             // }

@@ -49,10 +49,27 @@ size_t binom(size_t n,size_t k){
     return cache[k-1];
 }
 
+//prefactor for each local quantity
+double prefactor(size_t n_target,size_t r_k){
+    if(n_target==1){
+        return 1;
+    }
+    double denom_factor=0;
+    for(size_t m=1;m<=n_target;m++){
+        denom_factor+=binom(n_target,m)*pow(r_k,m-1)*pow(-1,n_target-m);
+    }
+    denom_factor+=(n_target%2==0)?1:-1;
+    if(denom_factor==0){
+        return 1;
+    }
+    double res=pow(pow(r_k-1,n_target)/(r_k*denom_factor),1/(double)n_target);
+    return res;
+}
+
 std::vector<std::string> observables::output_lines;
 std::vector<std::vector<double> > observables::probs;
-std::map<std::tuple<size_t,size_t,size_t,std::vector<size_t> >,double> observables::known_factors;
-std::map<std::tuple<size_t,size_t,size_t,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::known_factors_complex;
+std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::known_factors;
+std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::known_factors_complex;
 
 template<typename cmp>
 void observables::cmd_treeify(graph<cmp>& g){
@@ -90,46 +107,23 @@ void observables::cmd_treeify(graph<cmp>& g){
 template void observables::cmd_treeify<coupling_comparator>(graph<coupling_comparator>&);
 template void observables::cmd_treeify<bmi_comparator>(graph<bmi_comparator>&);
 
-//this m function is just a wrapper for the top-down version
-template<typename cmp>
-double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,size_t depth){
-    // std::vector<size_t> c(g.vs()[root].rank(),0);
-    // c[0]=p;
-    // return observables::m(g,root,n,p,c,depth);
-    
-    double res=0;
-    std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
-    for(size_t idx=0;idx<combos.size();idx++){
-        std::vector<size_t> combo=combos[idx];
-        std::vector<size_t> c(g.vs()[root].rank(),0);
-        for(size_t i=0;i<combo.size();i++){
-            c[combo[i]]++;
-        }
-        res+=observables::m(g,root,n,p,c,depth);
-    }
-    return res;
-}
-template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,size_t);
-template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t);
-
 //this m function calculates using a top-down approach. theoretically, this is sufficient to calculate observables, but due to stack size limitations, a segfault occurs with a stack overflow for large lattices.
 template<typename cmp>
-double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<size_t> c,size_t depth){
+double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t p,std::vector<size_t> r,std::vector<size_t> c,size_t depth){
     // std::cout<<depth<<"\n";
     size_t r_k=g.vs()[root].rank();
-    size_t sum_c=0;
-    for(size_t i=0;i<c.size();i++){
-        sum_c+=c[i];
-    }
-    if(sum_c!=p){
-        std::cout<<"c vector should have contents sum to p.\n";
+    if(c.size()!=p){
+        std::cout<<"c vector should have p elements.\n";
         exit(1);
     }
     //compute desired quantity, if leaf
     if(!g.vs()[root].virt()){
         double res=1;
-        for(size_t i=0;i<r_k;i++){
-            res*=(((n%2)==1))?pow((((double)(r_k*(i==0))-1)/(r_k-1)),c[i]):1;
+        for(size_t i=0;i<p;i++){
+            if(r[i]>=r_k){return 0;} //ignore when reference rank exceeds rank of spin
+            res*=pow(prefactor(n_target,r_k)*((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
+            // res*=pow(prefactor(n_target,r_k)*((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n%2);
+            // res*=pow(((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
         }
         return res;
     }
@@ -138,10 +132,6 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
     size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
     size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
     // std::cout<<r_i<<" "<<r_j<<" "<<r_k<<" "<<c.size()<<"\n";
-    if(c.size()!=r_k){
-        std::cout<<"c vector should have size equal to rank of root spin.\n";
-        exit(1);
-    }
     //conditional prob dists for i,j given k
     array3d<double> prob_ij(r_i,r_j,r_k);
     array2d<double> prob_i(r_i,r_k);
@@ -201,12 +191,6 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
     // std::cout<<(std::string)prob_ij<<"\n";
     // std::cout<<(std::string)prob_i<<"\n";
     // std::cout<<(std::string)prob_j<<"\n";
-    std::vector<size_t> q_idxs;
-    for(size_t i=0;i<c.size();i++){
-        for(size_t j=0;j<c[i];j++){
-            q_idxs.push_back(i);
-        }
-    }
     //subtree contributions
     double c_res=0;
     std::vector<std::vector<std::vector<size_t> > > spin_combos;
@@ -215,23 +199,19 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
     for(size_t down=0;down<2;down++){ //every non-leaf site has 2 downstream sites
         double temp=0;
         for(size_t s=0;s<spin_combos[down].size();s++){
-            std::vector<size_t> c_vals((down==0)?r_i:r_j,0);
-            for(size_t i=0;i<spin_combos[down][s].size();i++){
-                c_vals[spin_combos[down][s][i]]++;
-            }
-            // for(size_t i=0;i<c_vals.size();i++){std::cout<<c_vals[i]<<" ";}
+            std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             double contrib=0;
             try{
-                contrib=observables::known_factors.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n,p,c_vals));
+                contrib=observables::known_factors.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals));
             }
             catch(const std::out_of_range& oor){
-                contrib=m(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n,p,c_vals,depth+1);
-                observables::known_factors[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n,p,c_vals)]=contrib;
+                contrib=m(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,depth+1);
+                observables::known_factors[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals)]=contrib;
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
-                weight*=(down==0)?prob_i.at(spin_combos[down][s][i],q_idxs[i]):prob_j.at(spin_combos[down][s][i],q_idxs[i]);
+                weight*=(down==0)?prob_i.at(spin_combos[down][s][i],c[i]):prob_j.at(spin_combos[down][s][i],c[i]);
             }
             // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].p1():g.vs()[root].p2())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
             temp+=weight*contrib;
@@ -249,33 +229,27 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
         std::array<double,2> factors;
         for(size_t s0=0;s0<spin_combos[0].size();s0++){
             for(size_t s1=0;s1<spin_combos[1].size();s1++){
-                std::vector<size_t> c_vals0(r_i,0);
-                std::vector<size_t> c_vals1(r_j,0);
-                for(size_t i=0;i<spin_combos[0][s0].size();i++){
-                    c_vals0[spin_combos[0][s0][i]]++;
-                }
-                for(size_t i=0;i<spin_combos[1][s1].size();i++){
-                    c_vals1[spin_combos[1][s1][i]]++;
-                }
+                std::vector<size_t> c_vals0=spin_combos[0][s0];
+                std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
                 try{
-                    factors[0]=known_factors.at(std::make_tuple(g.vs()[root].p1(),c0,p,c_vals0));
+                    factors[0]=known_factors.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0));
                 }
                 catch(const std::out_of_range& oor){
-                    factors[0]=m(g,g.vs()[root].p1(),c0,p,c_vals0,depth+1);
-                    known_factors[std::make_tuple(g.vs()[root].p1(),c0,p,c_vals0)]=factors[0];
+                    factors[0]=m(g,g.vs()[root].p1(),n_target,c0,p,r,c_vals0,depth+1);
+                    known_factors[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0)]=factors[0];
                 }
                 try{
-                    factors[1]=known_factors.at(std::make_tuple(g.vs()[root].p2(),c1,p,c_vals1));
+                    factors[1]=known_factors.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1));
                 }
                 catch(const std::out_of_range& oor){
-                    factors[1]=m(g,g.vs()[root].p2(),c1,p,c_vals1,depth+1);
-                    known_factors[std::make_tuple(g.vs()[root].p2(),c1,p,c_vals1)]=factors[1];
+                    factors[1]=m(g,g.vs()[root].p2(),n_target,c1,p,r,c_vals1,depth+1);
+                    known_factors[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1)]=factors[1];
                 }
                 double factor_prod=factors[0]*factors[1];
                 double weight=1;
                 for(size_t i=0;i<p;i++){
-                    weight*=prob_ij.at(spin_combos[0][s0][i],spin_combos[1][s1][i],q_idxs[i]);
+                    weight*=prob_ij.at(spin_combos[0][s0][i],spin_combos[1][s1][i],c[i]);
                 }
                 // if(depth==0){std::cout<<weight<<","<<factors[0]<<","<<factors[1]<<","<<factor_prod<<"\n";}
                 c_res+=coef*weight*factor_prod;
@@ -285,14 +259,15 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<si
         res+=c_res;
     }
     // if(depth==0){std::cout<<"res :"<<n<<" "<<p<<" "<<root<<" "<<res<<"\n";}
+    // res*=pow((r_k-1)/(double)r_k,p);
     return res;
 }
-template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,std::vector<size_t>,size_t);
-template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<size_t>,size_t);
+template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,size_t);
+template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,size_t);
 
 //this m function is just a wrapper for the bottom-up version
 template<typename cmp>
-double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p){
+double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t p,bool abs_flag){
     // std::vector<size_t> c(g.vs()[root].rank(),0);
     // c[0]=p;
     // return observables::m(g,n,p,c);
@@ -316,77 +291,75 @@ double observables::m(graph<cmp>& g,size_t root,size_t n,size_t p){
     
     double res=0;
     std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
+    std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,p);
     for(size_t idx=0;idx<combos.size();idx++){
-        std::vector<size_t> combo=combos[idx];
-        std::vector<size_t> c(g.vs()[root].rank(),0);
+        std::vector<size_t> c=combos[idx];
         double prob_factor=1;
-        for(size_t i=0;i<combo.size();i++){
-            c[combo[i]]++;
-            // prob_factor*=p_k[combo[i]];
-            prob_factor*=observables::probs[root][combo[i]];
+        for(size_t i=0;i<c.size();i++){
+            // prob_factor*=p_k[c[i]];
+            prob_factor*=observables::probs[root][c[i]];
         }
-        double contrib=observables::m(g,n,p,c);
-        res+=contrib*prob_factor;
-        // if(n){
-            // for(size_t i=0;i<c.size();i++){
-                // std::cout<<c[i]<<" ";
+        double sub_res=0;
+        for(size_t i=0;i<r_combos.size();i++){
+            double contrib=observables::m(g,n_target,n_target,p,r_combos[i],c);
+            if(abs_flag){
+                sub_res=(contrib>sub_res)?contrib:sub_res;
+            }
+            else{
+                sub_res+=contrib;
+            }
+            // if(n_target){
+                // for(size_t j=0;j<c.size();j++){
+                    // std::cout<<r_combos[i][j]<<" ";
+                // }
+                // std::cout<<"; ";
+                // for(size_t j=0;j<c.size();j++){
+                    // std::cout<<c[j]<<" ";
+                // }
+                // std::cout<<"\n";
+                // std::cout<<"contrib: " <<n_target<<" "<<p<<" "<<contrib<<" "<<prob_factor<<"\n";
             // }
-            // std::cout<<"\n";
-            // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<prob_factor<<"\n";
-        // }
+        }
+        res+=sub_res*prob_factor;
     }
+    // res*=pow((r_k-1)/(double)r_k,p);
     return res;
 }
-template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t);
-template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t);
+template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,bool);
+template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,bool);
 
 //this m function calculates using a bottom-up approach. this fixes the stack size issue since all top-down calls resolve with depth 1. this function still requires the top-down version to compute observables as the tree is traversed towards the root.
 template<typename cmp>
-double observables::m(graph<cmp>& g,size_t n,size_t p,std::vector<size_t> c){
+double observables::m(graph<cmp>& g,size_t n_target,size_t n,size_t p,std::vector<size_t> r,std::vector<size_t> c){
     //due to the ordering defined by the comparator, the leaves are at the start and the root is at the end of the multiset.
     for(auto it=g.es().begin();it!=g.es().end();++it){
         std::array<size_t,2> v_idxs{(*it).v1(),(*it).v2()};
-        std::vector<size_t> c0(g.vs()[v_idxs[0]].rank(),0);
-        c0[0]=p;
-        std::vector<size_t> c1(g.vs()[v_idxs[1]].rank(),0);
-        c1[0]=p;
-        
-        known_factors[std::make_tuple(v_idxs[0],n,p,c0)]=m(g,v_idxs[0],n,p,c0,0);
-        known_factors[std::make_tuple(v_idxs[1],n,p,c1)]=m(g,v_idxs[1],n,p,c1,0);
+        std::vector<size_t> c0(p,0);
+        std::vector<size_t> c1(p,0);
+        known_factors[std::make_tuple(v_idxs[0],n_target,n,p,r,c0)]=m(g,v_idxs[0],n_target,n,p,r,c0,0);
+        known_factors[std::make_tuple(v_idxs[1],n_target,n,p,r,c1)]=m(g,v_idxs[1],n_target,n,p,r,c1,0);
     }
-    return m(g,g.vs().size()-1,n,p,c,0);
+    return m(g,g.vs().size()-1,n_target,n,p,r,c,0);
 }
-template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,std::vector<size_t>);
-template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,std::vector<size_t>);
-
-//this m function is just a wrapper for the top-down version
-template<typename cmp>
-std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<double> k,size_t depth){
-    std::vector<size_t> c(g.vs()[root].rank(),0);
-    c[0]=p;
-    return observables::m(g,root,n,p,c,k,depth);
-}
-template std::complex<double> observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,std::vector<double>,size_t);
-template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<double>,size_t);
+template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>);
+template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>);
 
 //this m function calculates using a top-down approach. theoretically, this is sufficient to calculate observables, but due to stack size limitations, a segfault occurs with a stack overflow for large lattices.
+
 template<typename cmp>
-std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<size_t> c,std::vector<double> k,size_t depth){
+std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t p,std::vector<size_t> r,std::vector<size_t> c,std::vector<double> k,size_t depth){
     // std::cout<<depth<<"\n";
     size_t r_k=g.vs()[root].rank();
-    size_t sum_c=0;
-    for(size_t i=0;i<c.size();i++){
-        sum_c+=c[i];
-    }
-    if(sum_c!=p){
-        std::cout<<"c vector should have contents sum to p.\n";
+    if(c.size()!=p){
+        std::cout<<"c vector should have p elements.\n";
         exit(1);
     }
     //compute desired quantity, if leaf
     if(!g.vs()[root].virt()){
         std::complex<double> res=1;
-        for(size_t i=0;i<r_k;i++){
-            res*=(((n%2)==1))?pow((((double)(r_k*(i==0))-1)/(r_k-1)),c[i]):1;
+        for(size_t i=0;i<p;i++){
+            if(r[i]>=r_k){return 0;} //ignore when reference rank exceeds rank of spin
+            res*=pow(prefactor(n_target,r_k)*((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
         }
         //compute ft
         double dot=0;
@@ -402,10 +375,6 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
     size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
     size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
     // std::cout<<r_i<<" "<<r_j<<" "<<r_k<<" "<<c.size()<<"\n";
-    if(c.size()!=r_k){
-        std::cout<<"c vector should have size equal to rank of root spin.\n";
-        exit(1);
-    }
     //conditional prob dists for i,j given k
     array3d<double> prob_ij(r_i,r_j,r_k);
     array2d<double> prob_i(r_i,r_k);
@@ -464,12 +433,6 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
     // std::cout<<(std::string)prob_ij<<"\n";
     // std::cout<<(std::string)prob_i<<"\n";
     // std::cout<<(std::string)prob_j<<"\n";
-    std::vector<size_t> q_idxs;
-    for(size_t i=0;i<c.size();i++){
-        for(size_t j=0;j<c[i];j++){
-            q_idxs.push_back(i);
-        }
-    }
     //subtree contributions
     std::complex<double> c_res=0;
     // std::vector<std::vector<size_t> > spin_combos=spin_cart_prod(r_k,p);
@@ -479,22 +442,19 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
     for(size_t down=0;down<2;down++){ //every non-leaf site has 2 downstream sites
         std::complex<double> temp=0;
         for(size_t s=0;s<spin_combos[down].size();s++){
-            std::vector<size_t> c_vals((down==0)?r_i:r_j,0);
-            for(size_t i=0;i<spin_combos[down][s].size();i++){
-                c_vals[spin_combos[down][s][i]]++;
-            }
+            std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             std::complex<double> contrib=0;
             try{
-                contrib=observables::known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n,p,c_vals,k));
+                contrib=observables::known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k));
             }
             catch(const std::out_of_range& oor){
-                contrib=m(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n,p,c_vals,k,depth+1);
-                observables::known_factors_complex[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n,p,c_vals,k)]=contrib;
+                contrib=m(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k,depth+1);
+                observables::known_factors_complex[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k)]=contrib;
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
-                weight*=(down==0)?prob_i.at(spin_combos[down][s][i],q_idxs[i]):prob_j.at(spin_combos[down][s][i],q_idxs[i]);
+                weight*=(down==0)?prob_i.at(spin_combos[down][s][i],c[i]):prob_j.at(spin_combos[down][s][i],c[i]);
             }
             // if(depth==0){std::cout<<weight<<","<<contrib<<"\n";}
             temp+=weight*contrib;
@@ -512,34 +472,28 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
         std::array<std::complex<double>,2> factors;
         for(size_t s0=0;s0<spin_combos[0].size();s0++){
             for(size_t s1=0;s1<spin_combos[1].size();s1++){
-                std::vector<size_t> c_vals0(r_i,0);
-                std::vector<size_t> c_vals1(r_j,0);
-                for(size_t i=0;i<spin_combos[0][s0].size();i++){
-                    c_vals0[spin_combos[0][s0][i]]++;
-                }
-                for(size_t i=0;i<spin_combos[1][s1].size();i++){
-                    c_vals1[spin_combos[1][s1][i]]++;
-                }
+                std::vector<size_t> c_vals0=spin_combos[0][s0];
+                std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
                 try{
-                    factors[0]=known_factors_complex.at(std::make_tuple(g.vs()[root].p1(),c0,p,c_vals0,k));
+                    factors[0]=known_factors_complex.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k));
                 }
                 catch(const std::out_of_range& oor){
-                    factors[0]=m(g,g.vs()[root].p1(),c0,p,c_vals0,k,depth+1);
-                    known_factors_complex[std::make_tuple(g.vs()[root].p1(),c0,p,c_vals0,k)]=factors[0];
+                    factors[0]=m(g,g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k,depth+1);
+                    known_factors_complex[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k)]=factors[0];
                 }
                 try{
-                    factors[1]=known_factors_complex.at(std::make_tuple(g.vs()[root].p2(),c1,p,c_vals1,k));
+                    factors[1]=known_factors_complex.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k));
                 }
                 catch(const std::out_of_range& oor){
-                    factors[1]=m(g,g.vs()[root].p2(),c1,p,c_vals1,k,depth+1);
-                    known_factors_complex[std::make_tuple(g.vs()[root].p2(),c1,p,c_vals1,k)]=factors[1];
+                    factors[1]=m(g,g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k,depth+1);
+                    known_factors_complex[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k)]=factors[1];
                 }
                 std::complex<double> factor_prod=factors[0]*std::conj(factors[1]); //(a,b)
                 factor_prod+=std::conj(factors[0])*factors[1]; //(b,a)
                 double weight=1;
                 for(size_t i=0;i<p;i++){
-                    weight*=prob_ij.at(spin_combos[0][s0][i],spin_combos[1][s1][i],q_idxs[i]);
+                    weight*=prob_ij.at(spin_combos[0][s0][i],spin_combos[1][s1][i],c[i]);
                 }
                 // if(depth==0){std::cout<<weight<<","<<factors[0]<<","<<factors[1]<<","<<factor_prod<<"\n";}
                 c_res+=coef*weight*factor_prod;
@@ -549,14 +503,15 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
         res+=c_res;
     }
     // if(depth==0){std::cout<<"res :"<<res<<"\n";}
+    // res*=pow((r_k-1)/(double)r_k,p);
     return res;
 }
-template std::complex<double> observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<double>,size_t);
-template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<double>,size_t);
+template std::complex<double> observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t> r,std::vector<size_t>,std::vector<double>,size_t);
+template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t> r,std::vector<size_t>,std::vector<double>,size_t);
 
 //this m function is just a wrapper for the bottom-up version
 template<typename cmp>
-std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,std::vector<double> k){
+std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t p,std::vector<double> k,bool abs_flag){
     // std::vector<size_t> c(g.vs()[root].rank(),0);
     // c[0]=p;
     // return observables::m(g,n,p,c,k);
@@ -580,16 +535,25 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
     
     std::complex<double> res=0;
     std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
+    std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,p);
     for(size_t idx=0;idx<combos.size();idx++){
-        std::vector<size_t> combo=combos[idx];
-        std::vector<size_t> c(g.vs()[root].rank(),0);
+        std::vector<size_t> c=combos[idx];
         double prob_factor=1;
-        for(size_t i=0;i<combo.size();i++){
-            c[combo[i]]++;
-            prob_factor*=p_k[combo[i]];
+        for(size_t i=0;i<c.size();i++){
+            // prob_factor*=p_k[c[i]];
+            prob_factor*=observables::probs[root][c[i]];
         }
-        std::complex<double> contrib=observables::m(g,n,p,c,k);
-        res+=contrib*prob_factor;
+        std::complex<double> sub_res=0;
+        for(size_t i=0;i<r_combos.size();i++){
+            std::complex<double> contrib=observables::m(g,n_target,n_target,p,r_combos[i],c,k);
+            if(abs_flag){
+                sub_res=(std::norm(contrib)>std::norm(sub_res))?contrib:sub_res;
+            }
+            else{
+                sub_res+=contrib;
+            }
+        }
+        res+=sub_res*prob_factor;
         // if(n){
             // for(size_t i=0;i<c.size();i++){
                 // std::cout<<c[i]<<" ";
@@ -598,56 +562,60 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n,size_t p,
             // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<prob_factor<<"\n";
         // }
     }
+    res*=pow((r_k-1)/(double)r_k,p);
     return res;
 }
-template std::complex<double> observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,std::vector<double>);
-template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<double>);
+template std::complex<double> observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,std::vector<double>,bool);
+template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<double>,bool);
 
 //this m function calculates using a bottom-up approach. this fixes the stack size issue since all top-down calls resolve with depth 1. this function still requires the top-down version to compute observables as the tree is traversed towards the root.
 template<typename cmp>
-std::complex<double> observables::m(graph<cmp>& g,size_t n,size_t p,std::vector<size_t> c,std::vector<double> k){
+std::complex<double> observables::m(graph<cmp>& g,size_t n_target,size_t n,size_t p,std::vector<size_t> r,std::vector<size_t> c,std::vector<double> k){
     //due to the ordering defined by the comparator, the leaves are at the start and the root is at the end of the multiset.
     for(auto it=g.es().begin();it!=g.es().end();++it){
         std::array<size_t,2> v_idxs{(*it).v1(),(*it).v2()};
-        std::vector<size_t> c0(g.vs()[v_idxs[0]].rank(),0);
-        c0[0]=p;
-        std::vector<size_t> c1(g.vs()[v_idxs[1]].rank(),0);
-        c1[0]=p;
-        
-        known_factors_complex[std::make_tuple(v_idxs[0],n,p,c0,k)]=m(g,v_idxs[0],n,p,c0,k,0);
-        known_factors_complex[std::make_tuple(v_idxs[1],n,p,c1,k)]=m(g,v_idxs[1],n,p,c1,k,0);
+        std::vector<size_t> c0(p,0);
+        std::vector<size_t> c1(p,0);
+        known_factors_complex[std::make_tuple(v_idxs[0],n_target,n,p,r,c0,k)]=m(g,v_idxs[0],n_target,n,p,r,c0,k,0);
+        known_factors_complex[std::make_tuple(v_idxs[1],n_target,n,p,r,c1,k)]=m(g,v_idxs[1],n_target,n,p,r,c1,k,0);
     }
-    return m(g,g.vs().size()-1,n,p,c,k,0);
+    return m(g,g.vs().size()-1,n_target,n,p,r,c,k,0);
 }
-template std::complex<double> observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,std::vector<size_t>,std::vector<double>);
-template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,std::vector<size_t>,std::vector<double>);
+template std::complex<double> observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double>);
+template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double>);
 
 template<typename cmp>
 void observables::print_moments(graph<cmp>& g,size_t q,size_t n_phys_sites){ //debug
-    double m1_1=observables::m(g,g.vs().size()-1,1,1);
-    double m1_2=observables::m(g,g.vs().size()-1,1,2);
-    double m1_3=observables::m(g,g.vs().size()-1,1,3);
-    double m2_1=observables::m(g,g.vs().size()-1,2,1);
-    double m2_2=observables::m(g,g.vs().size()-1,2,2);
-    double m2_3=observables::m(g,g.vs().size()-1,2,3);
-    double m3_1=observables::m(g,g.vs().size()-1,3,1);
-    double m3_2=observables::m(g,g.vs().size()-1,3,2);
-    double m3_3=observables::m(g,g.vs().size()-1,3,3);
-    double m4_1=observables::m(g,g.vs().size()-1,4,1);
-    double m4_2=observables::m(g,g.vs().size()-1,4,2);
-    double m4_3=observables::m(g,g.vs().size()-1,4,3);
+    double m1_1_abs=observables::m(g,g.vs().size()-1,1,1,1);
+    double m1_2_abs=observables::m(g,g.vs().size()-1,1,2,1);
+    // double m1_3_abs=observables::m(g,g.vs().size()-1,1,3,1);
+    double m1_1=observables::m(g,g.vs().size()-1,1,1,0);
+    double m1_2=observables::m(g,g.vs().size()-1,1,2,0);
+    // double m1_3=observables::m(g,g.vs().size()-1,1,3,0);
+    double m2_1=observables::m(g,g.vs().size()-1,2,1,0);
+    double m2_2=observables::m(g,g.vs().size()-1,2,2,0);
+    // double m2_3=observables::m(g,g.vs().size()-1,2,3,0);
+    double m3_1=observables::m(g,g.vs().size()-1,3,1,0);
+    double m3_2=observables::m(g,g.vs().size()-1,3,2,0);
+    // double m3_3=observables::m(g,g.vs().size()-1,3,3,0);
+    double m4_1=observables::m(g,g.vs().size()-1,4,1,0);
+    double m4_2=observables::m(g,g.vs().size()-1,4,2,0);
+    // double m4_3=observables::m(g,g.vs().size()-1,4,3,0);
+    std::cout<<"sum <|si|>: "<<m1_1_abs<<"/"<<n_phys_sites<<" = "<<(m1_1_abs/n_phys_sites)<<"\n";
+    std::cout<<"sum <|si|>^2: "<<m1_2_abs<<"/"<<n_phys_sites<<" = "<<(m1_2_abs/n_phys_sites)<<"\n";
+    // std::cout<<"sum <|si|>^3: "<<m1_3_abs<<"/"<<n_phys_sites<<" = "<<(m1_3_abs/n_phys_sites)<<"\n";
     std::cout<<"sum <si>: "<<m1_1<<"/"<<n_phys_sites<<" = "<<(m1_1/n_phys_sites)<<"\n";
     std::cout<<"sum <si>^2: "<<m1_2<<"/"<<n_phys_sites<<" = "<<(m1_2/n_phys_sites)<<"\n";
-    std::cout<<"sum <si>^3: "<<m1_3<<"/"<<n_phys_sites<<" = "<<(m1_3/n_phys_sites)<<"\n";
+    // std::cout<<"sum <si>^3: "<<m1_3<<"/"<<n_phys_sites<<" = "<<(m1_3/n_phys_sites)<<"\n";
     std::cout<<"sum <si sj>: "<<m2_1<<"/"<<pow(n_phys_sites,2)<<" = "<<(m2_1/pow(n_phys_sites,2))<<"\n";
     std::cout<<"sum <si sj>^2: "<<m2_2<<"/"<<pow(n_phys_sites,2)<<" = "<<(m2_2/pow(n_phys_sites,2))<<"\n";
-    std::cout<<"sum <si sj>^3: "<<m2_3<<"/"<<pow(n_phys_sites,2)<<" = "<<(m2_3/pow(n_phys_sites,2))<<"\n";
+    // std::cout<<"sum <si sj>^3: "<<m2_3<<"/"<<pow(n_phys_sites,2)<<" = "<<(m2_3/pow(n_phys_sites,2))<<"\n";
     std::cout<<"sum <si sj sk>: "<<m3_1<<"/"<<pow(n_phys_sites,3)<<" = "<<(m3_1/pow(n_phys_sites,3))<<"\n";
     std::cout<<"sum <si sj sk>^2: "<<m3_2<<"/"<<pow(n_phys_sites,3)<<" = "<<(m3_2/pow(n_phys_sites,3))<<"\n";
-    std::cout<<"sum <si sj sk>^3: "<<m3_3<<"/"<<pow(n_phys_sites,3)<<" = "<<(m3_3/pow(n_phys_sites,3))<<"\n";
+    // std::cout<<"sum <si sj sk>^3: "<<m3_3<<"/"<<pow(n_phys_sites,3)<<" = "<<(m3_3/pow(n_phys_sites,3))<<"\n";
     std::cout<<"sum <si sj sk sl>: "<<m4_1<<"/"<<pow(n_phys_sites,4)<<" = "<<(m4_1/pow(n_phys_sites,4))<<"\n";
     std::cout<<"sum <si sj sk sl>^2: "<<m4_2<<"/"<<pow(n_phys_sites,4)<<" = "<<(m4_2/pow(n_phys_sites,4))<<"\n";
-    std::cout<<"sum <si sj sk sl>^3: "<<m4_3<<"/"<<pow(n_phys_sites,4)<<" = "<<(m4_3/pow(n_phys_sites,4))<<"\n";
+    // std::cout<<"sum <si sj sk sl>^3: "<<m4_3<<"/"<<pow(n_phys_sites,4)<<" = "<<(m4_3/pow(n_phys_sites,4))<<"\n";
 }
 template void observables::print_moments<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t);
 template void observables::print_moments<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t);
