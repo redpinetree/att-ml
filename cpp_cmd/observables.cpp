@@ -136,6 +136,11 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
     array3d<double> prob_ij(r_i,r_j,r_k);
     array2d<double> prob_i(r_i,r_k);
     array2d<double> prob_j(r_j,r_k);
+    // std::cout<<"p:\n";
+    // for(size_t k=0;k<r_k;k++){
+        // std::cout<<observables::probs[root][k]<<" ";
+    // }
+    // std::cout<<"\n";
     // std::cout<<"f:\n"<<(std::string) (*g.vs()[root].adj().begin()).f()<<"\n";
     // std::cout<<"w:\n"<<(std::string) (*g.vs()[root].adj().begin()).w()<<"\n";
     array2d<size_t> test_f=(*g.vs()[root].adj().begin()).f();
@@ -144,9 +149,12 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
             size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
             double e=(*g.vs()[root].adj().begin()).w().at(i,j);
             // std::cout<<i<<" "<<j<<" "<<k<<" "<<e<<"\n";
-            prob_ij.at(i,j,k)=e;
-            prob_i.at(i,k)+=e; //compute marginals
-            prob_j.at(j,k)+=e; //compute marginals
+            // prob_ij.at(i,j,k)=e;
+            // prob_i.at(i,k)+=e; //compute marginals
+            // prob_j.at(j,k)+=e; //compute marginals
+            prob_ij.at(i,j,k)=e*observables::probs[g.vs()[root].p1()][i]*observables::probs[g.vs()[root].p2()][j];
+            prob_i.at(i,k)+=e*observables::probs[g.vs()[root].p1()][i]; //compute marginals
+            prob_j.at(j,k)+=e*observables::probs[g.vs()[root].p2()][j]; //compute marginals
         }
     }
     
@@ -259,7 +267,6 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
         res+=c_res;
     }
     // if(depth==0){std::cout<<"res :"<<n<<" "<<p<<" "<<root<<" "<<res<<"\n";}
-    // res*=pow((r_k-1)/(double)r_k,p);
     return res;
 }
 template double observables::m<coupling_comparator>(graph<coupling_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,size_t);
@@ -271,7 +278,6 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t p,bool ab
     // std::vector<size_t> c(g.vs()[root].rank(),0);
     // c[0]=p;
     // return observables::m(g,n,p,c);
-    
     size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
     size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
     size_t r_k=g.vs()[root].rank();

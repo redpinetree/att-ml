@@ -210,7 +210,6 @@ void bond::bmi(array2d<double>& w){
                 p_ij.at(i,j)/=sum;
             }
         }
-        w=p_ij; //needed?
     }
     else{
         p_ij=w;
