@@ -268,8 +268,8 @@ int main(int argc,char **argv){
     stopwatch sw,sw_total;
     sw_total.start();
     bool add_suffix=(n_samples==0)?false:true;
-    n_samples=(n_samples==0)?1:n_samples;
-    for(size_t sample=mpi_utils::proc_rank;sample<n_samples;sample+=mpi_utils::proc_num){
+    size_t n_samples_counter=(n_samples==0)?1:n_samples;
+    for(size_t sample=mpi_utils::proc_rank;sample<n_samples_counter;sample+=mpi_utils::proc_num){
         std::string sample_output_fn=output;
         if(n_samples!=0){
             if(verbose>=1){std::cout<<"sample "<<sample<<":\n";}
@@ -293,8 +293,8 @@ int main(int argc,char **argv){
             }
             header1_ls_str+="dist param1 param2";
         }
-        header1_ss<<"idx q d "<<header1_ls_str<<"\n";
-        observables::output_lines.push_back(header1_ss.str());
+        header1_ss<<"idx q d r "<<header1_ls_str<<"\n";
+        // observables::output_lines.push_back(header1_ss.str());
         std::string header1_ls_vals_str;
         if(ls.empty()){
             header1_ls_vals_str+="\""+input+"\"";
@@ -305,13 +305,15 @@ int main(int argc,char **argv){
             }
             header1_ls_vals_str+=dist+" "+std::to_string(dist_param1)+" "+std::to_string(dist_param2);
         }
-        header1_vals_ss<<sample<<" "<<q<<" "<<ls.size()<<" "<<header1_ls_vals_str<<"\n";
-        observables::output_lines.push_back(header1_vals_ss.str());
+        header1_vals_ss<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<"\n";
+        // observables::output_lines.push_back(header1_vals_ss.str());
         if(n_samples!=0){ //hypercubic lattice is used
-            header2_ss<<"beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg\n";
+            // header2_ss<<"beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg\n";
+            header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg\n";
         }
         else{
-            header2_ss<<"beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q\n";
+            // header2_ss<<"beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q\n";
+            header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q\n";
         }
         observables::output_lines.push_back(header2_ss.str());
         while(beta<=max_beta){
@@ -390,10 +392,12 @@ int main(int argc,char **argv){
             //prepare output lines
             std::stringstream output_line_ss;
             if(n_samples!=0){ //hypercubic lattice is used
-                output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
+                // output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
+                output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
             }
             else{
-                output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<"\n";
+                // output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<"\n";
+                output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<"\n";
             }
             observables::output_lines.push_back(output_line_ss.str());
             if(verbose>=2){std::cout<<"Time elapsed for this beta/temp: "<<trial_time<<"ms\n";}
@@ -422,7 +426,7 @@ int main(int argc,char **argv){
     timer_std=sqrt(timer_std);
     if(verbose>=1){std::cout<<"Avg. time/trial: "<<timer_mean<<"ms+/-"<<timer_std<<"ms\n";}
     MPI_Barrier(MPI_COMM_WORLD);
-    if(mpi_utils::root){std::cout<<"Total time: "<<(double) sw_total.elapsed()<<"ms\n";}
+    if(mpi_utils::root&&(verbose>=1)){std::cout<<"Total time: "<<(double) sw_total.elapsed()<<"ms\n";}
     MPI_Finalize();
     return 0;
 }
