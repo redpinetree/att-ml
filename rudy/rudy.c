@@ -814,7 +814,7 @@ x       [V is the cartesian product of V1 and V2, i.e., is the set of\n\
 	      if (j > nnodes)
 		j = j - nnodes;
 	    }
-	    printf("%d %d %1.0f\n", i-1, j-1, cost[k]); //modified from i,j
+	    printf("%d %d %1.0f\n", i-1, j-1, cost[k]*100000); //modified from i,j, cost multiplied by 100000 for consistency with gaussian case
 	  }
 	}
 	free((char *) cost);
