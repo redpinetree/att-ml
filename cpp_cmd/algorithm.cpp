@@ -15,6 +15,7 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
     //graph deformation
     size_t iteration=0;
     while((*(g.es().rbegin())).todo()){
+        // std::cout<<std::string(g)<<"\n";
         // sw1.start();
         bond current=*(g.es().rbegin());
         g.es().erase((++(g.es().rbegin())).base());
@@ -63,7 +64,9 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         // TODO: resolve difference between f_maxent() and f() if possible
         // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
         // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
-        // std::cout<<std::string(f)<<"\n";
+        // std::cout<<std::string(g)<<"\n";
+        // std::cout<<std::string(current.w())<<"\n";
+        // std::cout<<std::string(current.f())<<"\n";
         
         // sw1.split();
         // std::cout<<std::string(current)<<","<<master<<","<<slave<<","<<g.vs()[master].adj().size()<<","<<g.vs()[slave].adj().size()<<"\n";
@@ -187,6 +190,8 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
             std::sort(dupes.begin(),dupes.end());
             for(int i=dupes.size()-1;i>=0;i--){
                 // std::cout<<"merging: "<<std::string(cluster[dupes[i].second])<<"+"<<std::string(cluster[dupes[i].first]);
+                // std::cout<<"\n1st: "<<std::string(cluster[dupes[i].first].w())<<"\n";
+                // std::cout<<"2nd: "<<std::string(cluster[dupes[i].second].w())<<"\n";
                 //faster to do *= and /sum computations in the same nested loops
                 double sum=0;
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
@@ -209,8 +214,9 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
                 }
                 cluster[dupes[i].first].j(q,cluster[dupes[i].first].w()); //only valid for potts models with constant rank
                 cluster[dupes[i].first].bmi(cluster[dupes[i].first].w());
-                // std::cout<<"->"<<std::string(cluster[dupes[i].first])<<"\n";
                 cluster.erase(cluster.begin()+dupes[i].second);
+                // std::cout<<"->"<<std::string(cluster[dupes[i].first])<<"\n";
+                // std::cout<<std::string(cluster[dupes[i].first].w())<<"\n";
             }
             // for(size_t n=0;n<cluster.size();n++){
                 // std::cout<<std::string(cluster[n])<<"\n";
@@ -230,6 +236,7 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         // sw2.split();
         iteration++;
         // std::cout<<std::string(g)<<"\n";
+        // std::cout<<std::string(current.w())<<"\n";
         // exit(1);
     }
     // std::cout<<"volume time: "<<sw1.elapsed()<<"\n";

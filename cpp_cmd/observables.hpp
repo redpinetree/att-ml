@@ -13,8 +13,10 @@
 namespace observables{
     extern std::vector<std::string> output_lines;
     extern std::vector<std::vector<double> > probs;
-    extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> known_factors;
-    extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > known_factors_complex;
+    extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> m_known_factors;
+    extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > m_known_factors_complex;
+    extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> q_known_factors;
+    extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > q_known_factors_complex;
     template<typename cmp>
     void cmd_treeify(graph<cmp>&);
     //calculate real observables
@@ -24,6 +26,12 @@ namespace observables{
     double m(graph<cmp>&,size_t,size_t,size_t,bool);
     template<typename cmp>
     double m(graph<cmp>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>); //bottom-up
+    template<typename cmp>
+    double q(graph<cmp>&,size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,size_t); //top-down
+    template<typename cmp>
+    double q(graph<cmp>&,size_t,size_t,size_t,bool);
+    template<typename cmp>
+    double q(graph<cmp>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>); //bottom-up
     //calculate complex observables (fourier space)
     template<typename cmp>
     std::complex<double> m(graph<cmp>&,size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double>,size_t); //top-down
@@ -33,7 +41,7 @@ namespace observables{
     std::complex<double> m(graph<cmp>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double>); //bottom-up
     
     template<typename cmp>
-    void print_moments(graph<cmp>&,size_t,size_t); //debug
+    void print_moments(graph<cmp>&,size_t); //debug
     void write_output(std::string,std::vector<std::string>&);
     void write_output(std::vector<std::string>&);
     

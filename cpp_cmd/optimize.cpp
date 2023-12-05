@@ -3,13 +3,13 @@
 #include "optimize.hpp"
 
 //DEBUG GLOBALS
-size_t p_prime_ij_opt_count_idx=0;
+/* size_t p_prime_ij_opt_count_idx=0;
 size_t p_prime_ki_opt_count_idx=0;
 std::ofstream ij_ofs("pair_ij_bmi_dump.txt");
 std::ofstream ki_ofs("pair_ki_bmi_dump.txt");
 std::ofstream ij_cost_ofs("pair_ij_cost_dump.txt");
 std::ofstream ki_cost_ofs("pair_ki_cost_dump.txt");
-
+ */
 double vec_add_float(std::vector<double> v){
     std::sort(v.begin(),v.end());
     double sum=0;
@@ -49,7 +49,7 @@ void optimize::potts_renorm(size_t slave,std::vector<bond>& old_cluster,bond& cu
 //TODO: add convergence criteria for both iterative eq and grad desc methods
 //TODO: move weight matrix reinit to dedicated function in ndarray (like expand_dims)
 void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0){
-    std::vector<std::string> ij_bmi_dump_lines;
+    /* std::vector<std::string> ij_bmi_dump_lines;
     std::vector<std::string> ij_cost_dump_lines;
     std::vector<std::string> ki_bmi_dump_lines;
     std::vector<std::string> ki_cost_dump_lines;
@@ -75,7 +75,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
         ij_cost_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<0<<" "<<cost<<"\n";
         ij_cost_dump_lines.push_back(ij_cost_dump_line.str());
-    }
+    } */
     
     //reinitialize weight matrix to correct size if needed on first iteration
     for(size_t n=0;n<cluster.size();n++){
@@ -144,8 +144,9 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         gj[j]=vec_mult_float(gj_factors);
     }
     for(size_t n1=0;n1<max_it;n1++){
-        std::stringstream ij_bmi_dump_line;
-        std::stringstream ij_cost_dump_line;
+        /* std::stringstream ij_bmi_dump_line;
+        std::stringstream ij_cost_dump_line; */
+        // std::cout<<"old current.w():\n"<<(std::string)current.w()<<"\n";
         //calculate P_{ij},P'^{env}_{ij}
         std::vector<double> sum_p_ij_addends;
         std::vector<double> sum_p_prime_ij_env_addends;
@@ -200,7 +201,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                 // }
             }
         }
-        // std::cout<<(std::string)current.f()<<"\n";
+        // std::cout<<(std::string)current.w()<<"\n";
         // std::cout<<(std::string)p_ij<<"\n";
         // std::cout<<(std::string)p_prime_ij_env<<"\n";
 
@@ -210,6 +211,9 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                 if(lr==0){ //lr==0 means use iterative method based on stationarity condition
                     if(fabs(p_prime_ij_env.at(i,j))>1e-10){
                         current.w().at(i,j)=p_ij.at(i,j)/p_prime_ij_env.at(i,j);
+                        if(current.w().at(i,j)<1e-10){
+                            current.w().at(i,j)=1e-10;
+                        }
                     }
                     // final_sum_ij_addends.push_back(current.w().at(i,j));
                 }
@@ -218,7 +222,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                         // current.w().at(i,j)=p_ij.at(i,j)/p_prime_ij_env.at(i,j);
                         // current.w().at(i,j)-=lr*((p_prime_ij_env.at(i,j)*current.w().at(i,j))-p_ij.at(i,j))/current.w().at(i,j);
                         current.w().at(i,j)-=lr*(p_prime_ij_env.at(i,j)-(p_ij.at(i,j)/current.w().at(i,j)));
-                        if(current.w().at(i,j)<0){ //in case the weight is negative, force it to be nonnegative!
+                        if(current.w().at(i,j)<1e-10){ //in case the weight is negative, force it to be nonnegative!
                             current.w().at(i,j)=1e-10;
                         }
                     }
@@ -232,11 +236,10 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                // current.w().at(i,j)/=final_sum_ij;
             // }
         // }
-    
-        // std::cout<<"prefinal current.w():\n"<<(std::string)current.w()<<"\n";
+        
         current.j(current.w().nx(),current.w()); //only valid for potts models with constant rank
         current.bmi(current.w());
-        // std::cout<<"final current.w():\n"<<(std::string)current.w()<<"\n";
+        // std::cout<<"current.w():\n"<<(std::string)current.w()<<"\n";
         
         //DISABLE if using f_alg1, CAUSES INSTABILITY IN OPTIMIZATION
         // current.f()=optimize::f_maxent(sites[current.v1()],sites[current.v2()],current.w(),r_k);
@@ -247,6 +250,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         //p_prime_ki,imu if source==current.v1(), p_prime_kj,jnu if source==current.v2(). wlog, use p_prime_ki and imu.
         //k, the new index, is always second because virtual indices > physical indices.
         for(size_t n=0;n<cluster.size();n++){
+            // std::cout<<"old cluster[n]: "<<(std::string) cluster[n].w()<<"\n";
             //determine whether this bond was connected to site i or to site j
             size_t source;
             if(old_cluster[n].v1()==master||old_cluster[n].v1()==slave){
@@ -256,8 +260,8 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                 source=(old_cluster[n].v2()==master)?master:slave;
             }
         
-            std::stringstream ki_bmi_dump_line;
-            std::stringstream ki_cost_dump_line;
+            /* std::stringstream ki_bmi_dump_line;
+            std::stringstream ki_cost_dump_line; */
             array2d<double> p_ki(cluster[n].w().nx(),cluster[n].w().ny());
             array2d<double> p_prime_ki_env(cluster[n].w().nx(),cluster[n].w().ny());
             
@@ -343,6 +347,8 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
             }
             double sum_p_ki=vec_add_float(sum_p_ki_addends);
             double sum_p_prime_ki_env=vec_add_float(sum_p_prime_ki_env_addends);
+            // std::cout<<"p_ki: "<<(std::string) p_ki<<"\n";
+            // std::cout<<"p_ki_env: "<<(std::string) p_prime_ki_env<<"\n";
             //normalize P_{ki_\mu},P'^{env}_{ki_\mu}
             for(size_t i=0;i<p_ki.nx();i++){
                 for(size_t j=0;j<p_ki.ny();j++){
@@ -361,6 +367,9 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                     if(lr==0){ //lr==0 means use iterative method based on stationarity condition
                         if(fabs(p_prime_ki_env.at(i,j))>1e-10){
                             cluster[n].w().at(i,j)=p_ki.at(i,j)/p_prime_ki_env.at(i,j);
+                            if(cluster[n].w().at(i,j)<1e-10){
+                                cluster[n].w().at(i,j)=1e-10;
+                            }
                         }
                         // final_sum_ki_addends.push_back(cluster[n].w().at(i,j));
                     }
@@ -369,7 +378,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                             // cluster[n].w().at(i,j)=p_ki.at(i,j)/p_prime_ki_env.at(i,j);
                             // cluster[n].w().at(i,j)-=lr*((p_prime_ki_env.at(i,j)*cluster[n].w().at(i,j))-p_ki.at(i,j))/cluster[n].w().at(i,j);
                             cluster[n].w().at(i,j)-=lr*(p_prime_ki_env.at(i,j)-(p_ki.at(i,j)/cluster[n].w().at(i,j)));
-                            if(cluster[n].w().at(i,j)<0){ //in case the weight is negative, force it to be nonnegative!
+                            if(cluster[n].w().at(i,j)<1e-10){ //in case the weight is negative, force it to be nonnegative!
                                 cluster[n].w().at(i,j)=1e-10;
                             }
                         }
@@ -377,6 +386,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                     }
                 }
             }
+            // std::cout<<"cluster[n]: "<<(std::string) cluster[n].w()<<"\n";
     
             // double final_sum_ki=vec_add_float(final_sum_ki_addends);
             // for(size_t i=0;i<cluster[n].w().nx();i++){
@@ -387,24 +397,24 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
             cluster[n].j(cluster[n].w().nx(),cluster[n].w()); //only valid for potts models with constant rank
             cluster[n].bmi(cluster[n].w());
             
-            //DEBUG OUTPUT
+            /* //DEBUG OUTPUT
             ki_bmi_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<(n1+1)<<" "<<cluster[n].bmi()<<"\n";
             // std::cout<<ki_eff_k_dump_lines.size()<<"\n";
             ki_bmi_dump_lines.push_back(ki_bmi_dump_line.str());
             //DEBUG: calculate cost function
             double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
             ki_cost_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
-            ki_cost_dump_lines.push_back(ki_cost_dump_line.str());
+            ki_cost_dump_lines.push_back(ki_cost_dump_line.str()); */
         }
-        //DEBUG OUTPUT
+        /* //DEBUG OUTPUT
         ij_bmi_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<current.bmi()<<"\n";
         ij_bmi_dump_lines.push_back(ij_bmi_dump_line.str());
         //DEBUG: calculate cost function
         double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
         ij_cost_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
-        ij_cost_dump_lines.push_back(ij_cost_dump_line.str());
+        ij_cost_dump_lines.push_back(ij_cost_dump_line.str()); */
     }
-    p_prime_ij_opt_count_idx++;
+    /* p_prime_ij_opt_count_idx++;
     for(size_t i=0;i<ij_bmi_dump_lines.size();i++){
         ij_ofs<<ij_bmi_dump_lines[i];
         ij_cost_ofs<<ij_cost_dump_lines[i];
@@ -413,7 +423,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
     for(size_t i=0;i<ki_bmi_dump_lines.size();i++){
         ki_ofs<<ki_bmi_dump_lines[i];
         ki_cost_ofs<<ki_cost_dump_lines[i];
-    }
+    } */
     // std::cout<<(std::string) current.w()<<"\n";
 }
 
