@@ -35,3 +35,6 @@ bool& site::virt(){return this->virt_;}
 std::pair<size_t,size_t>& site::p(){return this->p_;}
 size_t& site::p1(){return this->p_.first;}
 size_t& site::p2(){return this->p_.second;}
+array3d<double>& site::p_ijk(){return this->p_ijk_;}
+array2d<double>& site::p_ik(){return this->p_ik_;}
+array2d<double>& site::p_jk(){return this->p_jk_;}

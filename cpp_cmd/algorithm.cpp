@@ -242,5 +242,4 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
     // std::cout<<"volume time: "<<sw1.elapsed()<<"\n";
     // std::cout<<"reconnect time: "<<sw2.elapsed()<<"\n";
 }
-template void algorithm::cmd_approx(size_t,graph<coupling_comparator>&,size_t,size_t,double);
 template void algorithm::cmd_approx(size_t,graph<bmi_comparator>&,size_t,size_t,double);

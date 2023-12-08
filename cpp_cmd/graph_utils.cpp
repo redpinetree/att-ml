@@ -62,9 +62,6 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
     g.dims()=ls;
     return g;
 }
-template graph<coupling_comparator> graph_utils::gen_hypercubic<std::normal_distribution<double>,coupling_comparator>(size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
-template graph<coupling_comparator> graph_utils::gen_hypercubic<std::discrete_distribution<int>,coupling_comparator>(size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
-template graph<coupling_comparator> graph_utils::gen_hypercubic<std::uniform_real_distribution<double>,coupling_comparator>(size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
 template graph<bmi_comparator> graph_utils::gen_hypercubic<std::normal_distribution<double>,bmi_comparator>(size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
 template graph<bmi_comparator> graph_utils::gen_hypercubic<std::discrete_distribution<int>,bmi_comparator>(size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
 template graph<bmi_comparator> graph_utils::gen_hypercubic<std::uniform_real_distribution<double>,bmi_comparator>(size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
@@ -83,7 +80,6 @@ void graph_utils::save_graph(std::string fn,graph<cmp>& g){
     }
     ofs.close();
 }
-template void graph_utils::save_graph<coupling_comparator>(std::string,graph<coupling_comparator>&);
 template void graph_utils::save_graph<bmi_comparator>(std::string,graph<bmi_comparator>&);
 
 //only for potts model... should have new format to store weight matrices too
@@ -120,5 +116,4 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
     }
     return graph<cmp>(vs,es);
 }
-template graph<coupling_comparator> graph_utils::load_graph(std::string,size_t,double);
 template graph<bmi_comparator> graph_utils::load_graph(std::string,size_t,double);

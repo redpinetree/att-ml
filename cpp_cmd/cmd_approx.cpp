@@ -23,7 +23,6 @@ void print_usage(){
     std::cerr<<"if <n_samples>!=0, required: -d, -1, -2, forbidden: -i,\n";
     std::cerr<<"if <n_samples>==0, reguired: -i, forbidden: -d, -1, -2, --open-bc\n";
     std::cerr<<"options:\n";
-    std::cerr<<"\t--sort-by-coupling: select active bond based on relative magnitude of coupling instead of bond mutual information.\n";
     std::cerr<<"\t--open-bc: generate graph connectivity with open boundary conditions.\n";
     std::cerr<<"\t--use-t: min_beta, max_beta, and step_beta refer to temperature instead.\n";
     std::cerr<<"\t-h,--help: display this message\n";
@@ -60,29 +59,29 @@ graph<cmp> gen_lattice(size_t q,std::vector<size_t> ls,bool open_bc,std::string 
 }
 
 template<typename cmp>
-void calc_observables(graph<cmp>& g,size_t q,double& m1_1_abs,double& m1_2_abs,double& m2_1,double& m2_2,double& m4_1,double& m4_2,double& q2,double& q4){
+void calc_observables(graph<cmp>& g,size_t q_orig,double& m1_1_abs,double& m1_2_abs,double& m2_1,double& m2_2,double& m4_1,double& m4_2,double& q2,double& q4){
     //use bottom-up approach to compute observables, avoiding stack overflow
-    q2=observables::q(g,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
-    q4=observables::q(g,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
-    m1_1_abs=observables::m(g,g.vs().size()-1,1,1,1)/g.n_phys_sites();
-    m1_2_abs=observables::m(g,g.vs().size()-1,1,2,1)/g.n_phys_sites();
-    m2_1=observables::m(g,g.vs().size()-1,2,1,0)/pow(g.n_phys_sites(),2);
-    m2_2=observables::m(g,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
-    m4_1=observables::m(g,g.vs().size()-1,4,1,0)/pow(g.n_phys_sites(),4);
-    m4_2=observables::m(g,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
+    q2=observables::q(g,q_orig,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
+    q4=observables::q(g,q_orig,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
+    m1_1_abs=observables::m(g,q_orig,g.vs().size()-1,1,1,1)/g.n_phys_sites();
+    m1_2_abs=observables::m(g,q_orig,g.vs().size()-1,1,2,1)/g.n_phys_sites();
+    m2_1=observables::m(g,q_orig,g.vs().size()-1,2,1,0)/pow(g.n_phys_sites(),2);
+    m2_2=observables::m(g,q_orig,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
+    m4_1=observables::m(g,q_orig,g.vs().size()-1,4,1,0)/pow(g.n_phys_sites(),4);
+    m4_2=observables::m(g,q_orig,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
 }
 
 template<typename cmp>
-void calc_observables(graph<cmp>& g,size_t q,double& m1_1_abs,double& m1_2_abs,double& m2_1,double& m2_2,double& m4_1,double& m4_2,double& q2,double& q4,double& k_min,std::complex<double>& m2_2_k){
+void calc_observables(graph<cmp>& g,size_t q_orig,double& m1_1_abs,double& m1_2_abs,double& m2_1,double& m2_2,double& m4_1,double& m4_2,double& q2,double& q4,double& k_min,std::complex<double>& q2_k){
     //use bottom-up approach to compute observables, avoiding stack overflow
-    q2=observables::q(g,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
-    q4=observables::q(g,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
-    m1_1_abs=observables::m(g,g.vs().size()-1,1,1,1)/g.n_phys_sites();
-    m1_2_abs=observables::m(g,g.vs().size()-1,1,2,1)/g.n_phys_sites();
-    m2_1=observables::m(g,g.vs().size()-1,2,1,0)/pow(g.n_phys_sites(),2);
-    m2_2=observables::m(g,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
-    m4_1=observables::m(g,g.vs().size()-1,4,1,0)/pow(g.n_phys_sites(),4);
-    m4_2=observables::m(g,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
+    q2=observables::q(g,q_orig,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
+    q4=observables::q(g,q_orig,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
+    m1_1_abs=observables::m(g,q_orig,g.vs().size()-1,1,1,1)/g.n_phys_sites();
+    m1_2_abs=observables::m(g,q_orig,g.vs().size()-1,1,2,1)/g.n_phys_sites();
+    m2_1=observables::m(g,q_orig,g.vs().size()-1,2,1,0)/pow(g.n_phys_sites(),2);
+    m2_2=observables::m(g,q_orig,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
+    m4_1=observables::m(g,q_orig,g.vs().size()-1,4,1,0)/pow(g.n_phys_sites(),4);
+    m4_2=observables::m(g,q_orig,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
     if(g.dims().size()!=0){
         std::vector<double> k(g.dims().size(),0);
         auto max_it=std::max_element(g.dims().begin(),g.dims().end());
@@ -93,7 +92,7 @@ void calc_observables(graph<cmp>& g,size_t q,double& m1_1_abs,double& m1_2_abs,d
         // std::cout<<observables::m(g,q,1,2,k)<<"\n";
         // std::cout<<observables::m(g,q,2,1,k)<<"\n";
         // std::cout<<observables::m(g,q,2,2,k)<<"\n";
-        m2_2_k=observables::m(g,g.vs().size()-1,2,2,k,0)/pow(g.n_phys_sites(),2);
+        q2_k=observables::q(g,q_orig,g.vs().size()-1,2,2,k,0)/pow(g.n_phys_sites(),2);
     }
 }
 
@@ -101,7 +100,6 @@ int main(int argc,char **argv){
     //mpi init
     mpi_utils::init();
     //argument handling
-    int sort_by_coupling=0;
     int open_bc=0;
     int use_t=0;
     size_t verbose=0;
@@ -118,7 +116,6 @@ int main(int argc,char **argv){
     //option arguments
     while(1){
         static struct option long_opts[]={
-            {"sort-by-coupling",no_argument,&sort_by_coupling,1},
             {"open-bc",no_argument,&open_bc,1},
             {"use-t",no_argument,&use_t,1},
             {"help",no_argument,0,'h'},
@@ -282,7 +279,7 @@ int main(int argc,char **argv){
         sample_output_fn+=".txt";
         double beta=min_beta;
         double m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min;
-        std::complex<double> m2_2_k;
+        std::complex<double> q2_k;
         double q2_var,q2_std,sus_fm,sus_sg,binder_m,binder_q,sus_sg_k,corr_len_sg;
         std::stringstream header1_ss,header1_vals_ss,header2_ss;
         observables::output_lines.clear(); //flush output lines
@@ -328,63 +325,35 @@ int main(int argc,char **argv){
             double trial_time=0; //not including init time
             if(verbose>=2){std::cout<<((use_t)?"temp=":"beta=")<<beta<<"\n";}
             size_t n_phys_sites;
-            if(sort_by_coupling){
-                graph<coupling_comparator> g=input_set?graph_utils::load_graph<coupling_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<coupling_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
-                sw.start();
-                algorithm::cmd_approx(q,g,r_max,iter_max,lr);
-                sw.split();
-                if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
-                trial_time+=sw.elapsed();
-                sw.reset();
-                sw.start();
-                observables::cmd_treeify(g);
-                sw.split();
-                if(verbose>=3){std::cout<<"cmd_treeify time: "<<(double) sw.elapsed()<<"ms\n";}
-                trial_time+=sw.elapsed();
-                sw.start();
-                if(g.dims().size()!=0){
-                    calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min,m2_2_k);
-                }
-                else{
-                    calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4);
-                }
-                sw.split();
-                if(verbose>=3){std::cout<<"m computation time: "<<(double) sw.elapsed()<<"ms\n";}
-                trial_time+=sw.elapsed();
-                sw.reset();
-                if(verbose>=4){observables::print_moments(g,q);}
-                if(verbose>=4){std::cout<<std::string(g);}
-                n_phys_sites=g.n_phys_sites();
+
+            graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
+            sw.start();
+            algorithm::cmd_approx(q,g,r_max,iter_max,lr);
+            sw.split();
+            if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
+            trial_time+=sw.elapsed();
+            sw.reset();
+            sw.start();
+            observables::cmd_treeify(g);
+            sw.split();
+            if(verbose>=3){std::cout<<"cmd_treeify time: "<<(double) sw.elapsed()<<"ms\n";}
+            trial_time+=sw.elapsed();
+            sw.reset();
+            sw.start();
+            if(g.dims().size()!=0){
+                calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min,q2_k);
             }
             else{
-                graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
-                sw.start();
-                algorithm::cmd_approx(q,g,r_max,iter_max,lr);
-                sw.split();
-                if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
-                trial_time+=sw.elapsed();
-                sw.reset();
-                sw.start();
-                observables::cmd_treeify(g);
-                sw.split();
-                if(verbose>=3){std::cout<<"cmd_treeify time: "<<(double) sw.elapsed()<<"ms\n";}
-                trial_time+=sw.elapsed();
-                sw.reset();
-                sw.start();
-                if(g.dims().size()!=0){
-                    calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min,m2_2_k);
-                }
-                else{
-                    calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4);
-                }
-                sw.split();
-                if(verbose>=3){std::cout<<"m computation time: "<<(double) sw.elapsed()<<"ms\n";}
-                trial_time+=sw.elapsed();
-                sw.reset();
-                if(verbose>=4){observables::print_moments(g,q);}
-                if(verbose>=4){std::cout<<std::string(g);}
-                n_phys_sites=g.n_phys_sites();
+                calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4);
             }
+            sw.split();
+            if(verbose>=3){std::cout<<"m computation time: "<<(double) sw.elapsed()<<"ms\n";}
+            trial_time+=sw.elapsed();
+            sw.reset();
+            if(verbose>=4){observables::print_moments(g,q);}
+            if(verbose>=4){std::cout<<std::string(g);}
+            n_phys_sites=g.n_phys_sites();
+            
             //compute output quantities
             // q2_var=m4_2-pow(m2_2,2);
             q2_var=q4-pow(q2,2);
@@ -395,7 +364,7 @@ int main(int argc,char **argv){
             binder_q=0.5*(3-(q4/pow(q2,2)));
             // binder_q=q4/pow(q2,2);
             if(n_samples!=0){ //hypercubic lattice is used
-                sus_sg_k=n_phys_sites*sqrt(std::norm(m2_2_k));
+                sus_sg_k=n_phys_sites*sqrt(std::norm(q2_k));
                 corr_len_sg=sqrt((sus_sg/sus_sg_k)-1)/(2*sin(k_min/2));
             }
             //prepare output lines
