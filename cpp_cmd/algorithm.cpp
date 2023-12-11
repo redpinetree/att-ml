@@ -59,8 +59,8 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         }
         
         //initialize cmd function f()
-        // current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
-        current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
+        // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         // TODO: resolve difference between f_maxent() and f() if possible
         // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
         // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
@@ -225,6 +225,7 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         
         current.order()=g.vs().size()-1;
         current.todo()=false;
+        
         g.es().insert(current);
         //reinsert cluster edges into adjs and edgelist
         for(size_t n=0;n<cluster.size();n++){
@@ -232,6 +233,8 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
             g.vs()[cluster[n].v2()].adj().insert(cluster[n]);
             g.es().insert(cluster[n]);
         }
+        
+        algorithm::calculate_site_probs(g,current);
         
         // sw2.split();
         iteration++;
@@ -243,3 +246,73 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
     // std::cout<<"reconnect time: "<<sw2.elapsed()<<"\n";
 }
 template void algorithm::cmd_approx(size_t,graph<bmi_comparator>&,size_t,size_t,double);
+
+template<typename cmp>
+void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
+    if(!g.vs()[current.v1()].virt()){
+        g.vs()[current.v1()].probs()=std::vector<double>(g.vs()[current.v1()].rank(),pow(g.vs()[current.v1()].rank(),-1));
+    }
+    if(!g.vs()[current.v2()].virt()){
+        g.vs()[current.v2()].probs()=std::vector<double>(g.vs()[current.v2()].rank(),pow(g.vs()[current.v2()].rank(),-1));
+    }
+    double sum=0;
+    size_t r_i=g.vs()[current.v1()].rank();
+    size_t r_j=g.vs()[current.v2()].rank();
+    size_t r_k=g.vs()[current.order()].rank();
+    array3d<double> p_ijk(r_i,r_j,r_k);
+    array2d<double> p_ik(r_i,r_k);
+    array2d<double> p_jk(r_j,r_k);
+    std::vector<double> p_k(r_k,0);
+    for(size_t i=0;i<r_i;i++){
+        for(size_t j=0;j<r_j;j++){
+            double k=current.f().at(i,j);
+            double e=current.w().at(i,j);
+            p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
+            p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
+            p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals
+            p_k[k]+=p_ijk.at(i,j,k);
+            sum+=p_ijk.at(i,j,k);
+        }
+    }
+    for(size_t k=0;k<p_k.size();k++){
+        p_k[k]/=sum;
+    }
+    for(size_t k=0;k<r_k;k++){
+        double sum_ij=0;
+        for(size_t i=0;i<r_i;i++){
+            for(size_t j=0;j<r_j;j++){
+                sum_ij+=p_ijk.at(i,j,k);
+            }
+        }
+        if(sum_ij>1e-8){
+            for(size_t i=0;i<r_i;i++){
+                for(size_t j=0;j<r_j;j++){
+                    p_ijk.at(i,j,k)/=sum_ij;
+                }
+            }
+        }
+        double sum_i=0;
+        for(size_t i=0;i<r_i;i++){
+            sum_i+=p_ik.at(i,k);
+        }
+        if(sum_i>1e-8){
+            for(size_t i=0;i<r_i;i++){
+                p_ik.at(i,k)/=sum_i;
+            }
+        }
+        double sum_j=0;
+        for(size_t j=0;j<r_j;j++){
+            sum_j+=p_jk.at(j,k);
+        }
+        if(sum_j>1e-8){
+            for(size_t j=0;j<r_j;j++){
+                p_jk.at(j,k)/=sum_j;
+            }
+        }
+    }
+    g.vs()[current.order()].probs()=p_k;
+    g.vs()[current.order()].p_ijk()=p_ijk;
+    g.vs()[current.order()].p_ik()=p_ik;
+    g.vs()[current.order()].p_jk()=p_jk;
+}
+template void algorithm::calculate_site_probs(graph<bmi_comparator>&,bond&);

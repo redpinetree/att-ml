@@ -35,6 +35,7 @@ public:
     std::pair<size_t,size_t>& p();
     size_t& p1();
     size_t& p2();
+    std::vector<double>& probs();
     array3d<double>& p_ijk();
     array2d<double>& p_ik();
     array2d<double>& p_jk();
@@ -47,6 +48,7 @@ private:
     //only used in observable computation
     bool virt_;
     std::pair<size_t,size_t> p_;
+    std::vector<double> probs_;
     array3d<double> p_ijk_;
     array2d<double> p_ik_;
     array2d<double> p_jk_;

@@ -87,7 +87,7 @@ double q_prefactor(size_t n_target,size_t r_k){
 }
 
 std::vector<std::string> observables::output_lines;
-std::vector<std::vector<double> > observables::probs;
+// std::vector<std::vector<double> > observables::probs;
 std::map<std::tuple<size_t,size_t,size_t>,std::vector<double> > observables::m_vec_cache;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::m_known_factors;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::m_known_factors_complex;
@@ -98,82 +98,8 @@ template<typename cmp>
 void observables::cmd_treeify(graph<cmp>& g){
     for(auto it=g.es().begin();it!=g.es().end();++it){
         //keep track of bonds associated with each virtual site
+        //can't be done in cmd_approx method, must be done after the tree approx is computed
         g.vs()[(*it).order()].adj().insert(*it);
-    }
-    
-    //calculate probs
-    observables::probs=std::vector<std::vector<double> >(g.vs().size());
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        if(!g.vs()[(*it).v1()].virt()){
-            observables::probs[(*it).v1()]=std::vector<double>(g.vs()[(*it).v1()].rank(),pow(g.vs()[(*it).v1()].rank(),-1));
-        }
-        if(!g.vs()[(*it).v2()].virt()){
-            observables::probs[(*it).v2()]=std::vector<double>(g.vs()[(*it).v2()].rank(),pow(g.vs()[(*it).v2()].rank(),-1));
-        }
-        double sum=0;
-        size_t r_i=g.vs()[(*it).v1()].rank();
-        size_t r_j=g.vs()[(*it).v2()].rank();
-        size_t r_k=g.vs()[(*it).order()].rank();
-        array3d<double> p_ijk(r_i,r_j,r_k);
-        array2d<double> p_ik(r_i,r_k);
-        array2d<double> p_jk(r_j,r_k);
-        std::vector<double> p_k(r_k,0);
-        for(size_t i=0;i<r_i;i++){
-            for(size_t j=0;j<r_j;j++){
-                double k=(*it).f().at(i,j);
-                double e=(*it).w().at(i,j);
-                // double p=observables::probs[(*it).v1()][i]*observables::probs[(*it).v2()][j]*e;
-                // sum+=p;
-                // p_k[k]+=p;
-                p_ijk.at(i,j,k)=e*observables::probs[(*it).v1()][i]*observables::probs[(*it).v2()][j];
-                p_ik.at(i,k)+=e*observables::probs[(*it).v1()][i]; //compute marginals
-                p_jk.at(j,k)+=e*observables::probs[(*it).v2()][j]; //compute marginals
-                sum+=p_ijk.at(i,j,k);
-                p_k[k]+=p_ijk.at(i,j,k);
-            }
-        }
-        for(size_t k=0;k<p_k.size();k++){
-            p_k[k]/=sum;
-        }
-        for(size_t k=0;k<r_k;k++){
-            double sum_ij=0;
-            for(size_t i=0;i<r_i;i++){
-                for(size_t j=0;j<r_j;j++){
-                    sum_ij+=p_ijk.at(i,j,k);
-                }
-            }
-            if(sum_ij>1e-8){
-                for(size_t i=0;i<r_i;i++){
-                    for(size_t j=0;j<r_j;j++){
-                        p_ijk.at(i,j,k)/=sum_ij;
-                    }
-                }
-            }
-        }
-        for(size_t k=0;k<r_k;k++){
-            double sum_i=0;
-            for(size_t i=0;i<r_i;i++){
-                sum_i+=p_ik.at(i,k);
-            }
-            if(sum_i>1e-8){
-                for(size_t i=0;i<r_i;i++){
-                    p_ik.at(i,k)/=sum_i;
-                }
-            }
-            double sum_j=0;
-            for(size_t j=0;j<r_j;j++){
-                sum_j+=p_jk.at(j,k);
-            }
-            if(sum_j>1e-8){
-                for(size_t j=0;j<r_j;j++){
-                    p_jk.at(j,k)/=sum_j;
-                }
-            }
-        }
-        g.vs()[(*it).order()].p_ijk()=p_ijk;
-        g.vs()[(*it).order()].p_ik()=p_ik;
-        g.vs()[(*it).order()].p_jk()=p_jk;
-        observables::probs[(*it).order()]=p_k;
     }
     
     //TEST MVEC
@@ -185,7 +111,7 @@ void observables::cmd_treeify(graph<cmp>& g){
         // std::vector<double> res(r_k-1,0);
         // size_t c=combos[idx][0];
         // for(size_t i=0;i<r_combos.size();i++){
-            // double prob_factor=observables::probs[root][c];
+            // double prob_factor=g.vs()[root].probs()[c];
             // std::vector<double> contrib=observables::m_vec(g,root,r_combos[i][0],c,0);
             // for(size_t j=0;j<contrib.size();j++){
                 // res[j]+=prob_factor*contrib[j];
@@ -400,7 +326,7 @@ double observables::m(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
         double prob_factor=1;
         for(size_t i=0;i<c.size();i++){
             // prob_factor*=p_k[c[i]];
-            prob_factor*=observables::probs[root][c[i]];
+            prob_factor*=g.vs()[root].probs()[c[i]];
         }
         double sub_res=0;
         for(size_t i=0;i<r_combos.size();i++){
@@ -572,8 +498,8 @@ double observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
     // }
     // std::cout<<"\n";
     // std::cout<<"PROBS: ";
-    // for(size_t j=0;j<observables::probs[root].size();j++){
-        // std::cout<<observables::probs[root][j]<<" ";
+    // for(size_t j=0;j<g.vs()[root].probs().size();j++){
+        // std::cout<<g.vs()[root].probs()[j]<<" ";
     // }
     // std::cout<<"\n";
     
@@ -588,7 +514,7 @@ double observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
             double prob_factor=1;
             for(size_t i=0;i<c.size();i++){
                 // prob_factor*=p_k[c[i]];
-                prob_factor*=observables::probs[root][c[i]];
+                prob_factor*=g.vs()[root].probs()[c[i]];
             }
             double sub_res=0;
             for(size_t i=0;i<r_combos.size();i++){
@@ -783,7 +709,7 @@ std::complex<double> observables::m(graph<cmp>& g,size_t q_orig,size_t root,size
         double prob_factor=1;
         for(size_t i=0;i<c.size();i++){
             // prob_factor*=p_k[c[i]];
-            prob_factor*=observables::probs[root][c[i]];
+            prob_factor*=g.vs()[root].probs()[c[i]];
         }
         std::complex<double> sub_res=0;
         for(size_t i=0;i<r_combos.size();i++){
@@ -962,7 +888,7 @@ std::complex<double> observables::q(graph<cmp>& g,size_t q_orig,size_t root,size
             std::vector<size_t> c=combos[idx];
             double prob_factor=1;
             for(size_t i=0;i<c.size();i++){
-                prob_factor*=observables::probs[root][c[i]];
+                prob_factor*=g.vs()[root].probs()[c[i]];
             }
             std::complex<double> sub_res=0;
             for(size_t i=0;i<r_combos.size();i++){
