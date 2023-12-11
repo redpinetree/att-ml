@@ -17,8 +17,6 @@ namespace observables{
     extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > m_known_factors_complex;
     extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> q_known_factors;
     extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > q_known_factors_complex;
-    template<typename cmp>
-    void cmd_treeify(graph<cmp>&);
     //calculate real observables
     template<typename cmp>
     std::vector<double> m_vec(graph<cmp>&,size_t,size_t,size_t,size_t); //top-down, for the vector magnetization
@@ -52,8 +50,6 @@ namespace observables{
     void print_moments(graph<cmp>&,size_t); //debug
     void write_output(std::string,std::vector<std::string>&);
     void write_output(std::vector<std::string>&);
-    
-    
 }
 
 #endif

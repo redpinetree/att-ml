@@ -7,50 +7,9 @@
 
 #include "observables.hpp"
 #include "ndarray.hpp"
+#include "utils.hpp"
 
 using namespace std::complex_literals;
-
-//default cmd function (alg. 1)
-size_t f(site v_i,size_t s_i,site v_j,size_t s_j){
-    return (v_i.vol()>=v_j.vol())?s_i:s_j;
-}
-
-//potts weight
-double w(size_t q,size_t i,size_t j,double k){
-    return (i==j)?1/(q+(q*(q-1)*exp(-k))):1/((q*exp(k))+(q*(q-1)));
-}
-
-//cartesian product of identical vectors [0,...,q-1], p times
-std::vector<std::vector<size_t> > spin_cart_prod(size_t q, size_t p){
-    std::vector<std::vector<size_t> > cart_prod;
-    std::vector<size_t> term(p,0);
-    size_t total=1;
-    for(size_t i=0;i<p;i++){
-        total*=q;
-    }
-    for(size_t i=0;i<total;i++){
-        size_t i_cpy=i;
-        for(size_t j=0;j<p;j++){
-            term[p-1-j]=i_cpy%q;
-            i_cpy/=q;
-        }
-        cart_prod.push_back(term);
-    }
-    return cart_prod;
-}
-
-//binomial coefficient
-size_t binom(size_t n,size_t k){
-    if(k==0){
-        return 1;
-    }
-    std::vector<size_t> cache(k);
-    cache[0]=n-k+1;
-    for(size_t i=1;i<k;i++){
-        cache[i]=cache[i-1]*(cache[0]+i)/(i+1);
-    }
-    return cache[k-1];
-}
 
 //prefactor for each local quantity
 double m_prefactor(size_t n_target,size_t r_k){
@@ -94,38 +53,6 @@ std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::q_known_factors;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::q_known_factors_complex;
 
-template<typename cmp>
-void observables::cmd_treeify(graph<cmp>& g){
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        //keep track of bonds associated with each virtual site
-        //can't be done in cmd_approx method, must be done after the tree approx is computed
-        g.vs()[(*it).order()].adj().insert(*it);
-    }
-    
-    //TEST MVEC
-    // size_t root=g.vs().size()-1;
-    // size_t r_k=g.vs()[root].rank();
-    // std::vector<std::vector<size_t> > combos=spin_cart_prod(r_k,1);
-    // std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,1);
-    // for(size_t idx=0;idx<combos.size();idx++){
-        // std::vector<double> res(r_k-1,0);
-        // size_t c=combos[idx][0];
-        // for(size_t i=0;i<r_combos.size();i++){
-            // double prob_factor=g.vs()[root].probs()[c];
-            // std::vector<double> contrib=observables::m_vec(g,root,r_combos[i][0],c,0);
-            // for(size_t j=0;j<contrib.size();j++){
-                // res[j]+=prob_factor*contrib[j];
-            // }
-        // }
-        // std::cout<<"c="<<c<<" ";
-        // for(size_t i=0;i<res.size();i++){
-            // std::cout<<res[i]<<" ";
-        // }
-        // std::cout<<"\n";
-    // }
-}
-template void observables::cmd_treeify<bmi_comparator>(graph<bmi_comparator>&);
-
 //this m function calculates using a top-down approach. theoretically, this is sufficient to calculate observables, but due to stack size limitations, a segfault occurs with a stack overflow for large lattices.
 template<typename cmp>
 std::vector<double> observables::m_vec(graph<cmp>& g,size_t root,size_t r,size_t c,size_t depth){
@@ -168,8 +95,8 @@ std::vector<double> observables::m_vec(graph<cmp>& g,size_t root,size_t r,size_t
         return res;
     }
     std::vector<double> res(r_k-1,0);
-    size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
+    size_t r_i=g.vs()[root].p_bond().w().nx();
+    size_t r_j=g.vs()[root].p_bond().w().ny();
     //subtree contributions
     std::vector<std::vector<std::vector<size_t> > > spin_combos;
     spin_combos.push_back(spin_cart_prod(r_i,1));
@@ -220,8 +147,8 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
         return res;
     }
     double res=0;
-    size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
+    size_t r_i=g.vs()[root].p_bond().w().nx();
+    size_t r_j=g.vs()[root].p_bond().w().ny();
     //subtree contributions
     double c_res=0;
     std::vector<std::vector<std::vector<size_t> > > spin_combos;
@@ -393,8 +320,8 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
         return res;
     }
     double res=0;
-    size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
+    size_t r_i=g.vs()[root].p_bond().w().nx();
+    size_t r_j=g.vs()[root].p_bond().w().ny();
     //subtree contributions
     double c_res=0;
     std::vector<std::vector<std::vector<size_t> > > spin_combos;
@@ -599,8 +526,8 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n_target,si
         return res;
     }
     std::complex<double> res=0;
-    size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
+    size_t r_i=g.vs()[root].p_bond().w().nx();
+    size_t r_j=g.vs()[root].p_bond().w().ny();
     //subtree contributions
     std::complex<double> c_res=0;
     // std::vector<std::vector<size_t> > spin_combos=spin_cart_prod(r_k,p);
@@ -779,8 +706,8 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
         return res;
     }
     std::complex<double> res=0;
-    size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
+    size_t r_i=g.vs()[root].p_bond().w().nx();
+    size_t r_j=g.vs()[root].p_bond().w().ny();
     // std::cout<<r_i<<" "<<r_j<<" "<<r_k<<" "<<c.size()<<"\n";
     //subtree contributions
     std::complex<double> c_res=0;

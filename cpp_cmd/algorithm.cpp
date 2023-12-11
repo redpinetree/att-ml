@@ -4,10 +4,12 @@
 #include <fstream>
 
 #include "algorithm.hpp"
+#include "observables.hpp"
 #include "optimize.hpp"
 #include "bond.hpp"
 #include "site.hpp"
 #include "stopwatch.hpp"
+#include "utils.hpp"
 
 template<typename cmp>
 void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,double lr){
@@ -310,9 +312,31 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
             }
         }
     }
+    g.vs()[current.order()].p_bond()=current;
     g.vs()[current.order()].probs()=p_k;
     g.vs()[current.order()].p_ijk()=p_ijk;
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
+    
+    g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
+    std::vector<std::vector<size_t> > combos=spin_cart_prod(r_k,1);
+    std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,1);
+    for(size_t idx=0;idx<combos.size();idx++){
+        std::vector<double> res(r_k-1,0);
+        size_t c=combos[idx][0];
+        for(size_t i=0;i<r_combos.size();i++){
+            double prob_factor=g.vs()[current.order()].probs()[c];
+            std::vector<double> contrib=observables::m_vec(g,current.order(),r_combos[i][0],c,0);
+            for(size_t j=0;j<contrib.size();j++){
+                res[j]+=prob_factor*contrib[j];
+            }
+        }
+        g.vs()[current.order()].m_vec().push_back(res);
+        // std::cout<<"c="<<c<<" ";
+        // for(size_t i=0;i<res.size();i++){
+            // std::cout<<res[i]<<" ";
+        // }
+        // std::cout<<"\n";
+    }
 }
 template void algorithm::calculate_site_probs(graph<bmi_comparator>&,bond&);

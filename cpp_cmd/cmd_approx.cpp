@@ -333,9 +333,6 @@ int main(int argc,char **argv){
             if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
-            sw.start();
-            observables::cmd_treeify(g);
-            sw.split();
             if(verbose>=3){std::cout<<"cmd_treeify time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
