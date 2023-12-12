@@ -335,6 +335,7 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
         // std::cout<<"c="<<c<<" ";
         // for(size_t i=0;i<res.size();i++){
             // std::cout<<res[i]<<" ";
+            // std::cout<<(res[i]/(double)g.vs()[current.order()].vol())<<" ";
         // }
         // std::cout<<"\n";
     }

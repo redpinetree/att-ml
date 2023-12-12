@@ -59,4 +59,38 @@ inline size_t binom(size_t n,size_t k){
     return cache[k-1];
 }
 
+//reference potts vectors
+inline std::vector<std::vector<double> > potts_ref_vecs(size_t q){
+    std::vector<std::vector<double> > v;
+    if(q<2){
+        return v;
+    }
+    for(size_t i=0;i<q;i++){
+        v.push_back(std::vector<double>(q-1,0));
+    }
+    for(size_t i=0;i<(q-1);i++){
+        double sum=0;
+        for(size_t j=0;j<v[i].size();j++){
+            sum+=v[i][j]*v[i][j];
+        }
+        v[i][i]=sqrt(1-sum);
+        for(size_t j=i+1;j<q;j++){
+            double dot=0;
+            for(size_t k=0;k<v[i].size();k++){
+                dot+=v[i][k]*v[j][k];
+            }
+            v[j][i]=(-(1/(double)(q-1))-dot)/v[i][i];
+        }
+    }
+    // for(size_t i=0;i<v.size();i++){
+        // std::cout<<"[";
+        // for(size_t j=0;j<v[i].size();j++){
+            // std::cout<<v[i][j]<<" ";
+        // }
+        // std::cout<<"]\n";
+    // }
+    // std::cout<<"\n";
+    return v;
+}
+
 #endif

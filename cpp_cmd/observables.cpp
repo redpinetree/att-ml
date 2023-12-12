@@ -48,6 +48,7 @@ double q_prefactor(size_t n_target,size_t r_k){
 std::vector<std::string> observables::output_lines;
 // std::vector<std::vector<double> > observables::probs;
 std::map<std::tuple<size_t,size_t,size_t>,std::vector<double> > observables::m_vec_cache;
+std::map<size_t,std::vector<std::vector<double> > > observables::m_vec_ref_cache;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::m_known_factors;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::m_known_factors_complex;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::q_known_factors;
@@ -62,32 +63,13 @@ std::vector<double> observables::m_vec(graph<cmp>& g,size_t root,size_t r,size_t
     if(!g.vs()[root].virt()){
         //determine potts basis vectors
         std::vector<std::vector<double> > v;
-        for(size_t i=0;i<r_k;i++){
-            v.push_back(std::vector<double>(r_k-1,0));
+        try{
+            v=observables::m_vec_ref_cache.at(r_k);
         }
-        for(size_t i=0;i<(r_k-1);i++){
-            double sum=0;
-            for(size_t j=0;j<v[i].size();j++){
-                sum+=v[i][j]*v[i][j];
-            }
-            v[i][i]=sqrt(1-sum);
-            for(size_t j=i+1;j<r_k;j++){
-                double dot=0;
-                for(size_t k=0;k<v[i].size();k++){
-                    dot+=v[i][k]*v[j][k];
-                }
-                v[j][i]=(-(1/(double)(r_k-1))-dot)/v[i][i];
-            }
+        catch(const std::out_of_range& oor){
+            v=potts_ref_vecs(r_k);
+            observables::m_vec_ref_cache[r_k]=v;
         }
-        // for(size_t i=0;i<v.size();i++){
-            // std::cout<<"[";
-            // for(size_t j=0;j<v[i].size();j++){
-                // std::cout<<v[i][j]<<" ";
-            // }
-            // std::cout<<"]\n";
-        // }
-        // std::cout<<"\n";
-        
         std::vector<double> res(r_k-1,0);
         if(c==r){
             res=v[c];

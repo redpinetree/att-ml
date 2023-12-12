@@ -45,7 +45,6 @@ void optimize::potts_renorm(size_t slave,std::vector<bond>& old_cluster,bond& cu
 }
 
 //debug ver
-//TODO: make consistent ndarray addressing like (x,y) (currently, (y,x))
 //TODO: add convergence criteria for both iterative eq and grad desc methods
 //TODO: move weight matrix reinit to dedicated function in ndarray (like expand_dims)
 void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0){
