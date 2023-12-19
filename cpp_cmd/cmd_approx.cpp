@@ -18,8 +18,8 @@
 #define PI 3.14159265358979323846
 
 void print_usage(){
-    std::cerr<<"usage: tree_approx_potts [--options] <q> <n_samples> <d> <{l|l0,l1,...}> <min_beta> <max_beta> <step_beta>\n";
-    std::cerr<<"usage: tree_approx_potts [--options] <q> 0 <min_beta> <max_beta> <step_beta>\n";
+    std::cerr<<"usage: cmd_approx [--options] <q> <n_samples> <d> <{l|l0,l1,...}> <min_beta> <max_beta> <step_beta>\n";
+    std::cerr<<"usage: cmd_approx [--options] <q> 0 <min_beta> <max_beta> <step_beta>\n";
     std::cerr<<"if <n_samples>!=0, required: -d, -1, -2, forbidden: -i,\n";
     std::cerr<<"if <n_samples>==0, reguired: -i, forbidden: -d, -1, -2, --open-bc\n";
     std::cerr<<"options:\n";
@@ -38,7 +38,7 @@ void print_usage(){
 }
 
 template<typename cmp>
-graph<cmp> gen_lattice(size_t q,std::vector<size_t> ls,bool open_bc,std::string dist_type,double dist_param1,double dist_param2,double beta){//transformations are done to counteract the transformations in gen_hypercubic
+graph<cmp> gen_lattice(size_t q,std::vector<size_t> ls,bool open_bc,std::string dist_type,double dist_param1,double dist_param2,double beta){ //transformations are done to counteract the transformations in gen_hypercubic
     graph<cmp> g;
     if(dist_type=="gaussian"){
         //dist_param1=mean, dist_param2=std
@@ -331,9 +331,6 @@ int main(int argc,char **argv){
             algorithm::cmd_approx(q,g,r_max,iter_max,lr);
             sw.split();
             if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
-            trial_time+=sw.elapsed();
-            sw.reset();
-            if(verbose>=3){std::cout<<"cmd_treeify time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
             sw.start();

@@ -1,6 +1,7 @@
 #include <fstream>
 
 #include "optimize.hpp"
+#include "observables.hpp"
 
 //DEBUG GLOBALS
 /* size_t p_prime_ij_opt_count_idx=0;
@@ -116,6 +117,13 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
             cluster[n].bmi(cluster[n].w());
             // std::cout<<(std::string) new_w<<"\n";
         }
+    }
+    
+    //convergence check variables
+    array2d<double> prev_current=current.w();
+    std::vector<array2d<double> > prev_cluster;
+    for(size_t n=0;n<cluster.size();n++){
+        prev_cluster.push_back(cluster[n].w());
     }
     
     //precompute intermediate quantities for weight optimization
@@ -412,6 +420,32 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
         ij_cost_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
         ij_cost_dump_lines.push_back(ij_cost_dump_line.str()); */
+        
+        //check for convergence
+        double diff=0;
+        for(size_t i=0;i<current.w().nx();i++){
+            for(size_t j=0;j<current.w().ny();j++){
+                diff+=fabs(current.w().at(i,j)-prev_current.at(i,j));
+            }
+        }
+        for(size_t n=0;n<cluster.size();n++){
+            for(size_t i=0;i<cluster[n].w().nx();i++){
+                for(size_t j=0;j<cluster[n].w().ny();j++){
+                    diff+=fabs(cluster[n].w().at(i,j)-prev_cluster[n].at(i,j));
+                }
+            }
+        }
+        if(diff<1e-10){
+            // std::cout<<"converged after "<<(n1+1)<<" iterations\n";
+            break;
+        }
+        
+        //update convergence check variables
+        prev_current=current.w();
+        for(size_t n=0;n<cluster.size();n++){
+            prev_cluster[n]=cluster[n].w();
+        }
+        
     }
     /* p_prime_ij_opt_count_idx++;
     for(size_t i=0;i<ij_bmi_dump_lines.size();i++){
@@ -431,7 +465,7 @@ array2d<size_t> optimize::f_alg1(site v_i,site v_j){
     array2d<size_t> f_res(v_i.rank(),v_j.rank());
     for(size_t s_i=0;s_i<v_i.rank();s_i++){
         for(size_t s_j=0;s_j<v_j.rank();s_j++){
-            f_res.at(s_i,s_j)=(v_i.vol()>=v_j.vol())?s_i:s_j;
+            f_res.at(s_i,s_j)=(v_i.vol()>v_j.vol())?s_i:s_j;
             // f_res.at(s_i,s_j)=s_i;
         }
     }
@@ -455,6 +489,131 @@ array2d<size_t> optimize::f_maxent(site v_i,site v_j,array2d<double> w,size_t r_
         w.at(i,j)=-1; //weights can never be negative so this element will never be the max. also, w is passed by value so no change to original.
         f_res.at(i,j)=k;
     }
+    // double S=0;
+    // for(size_t n=0;n<w_sums.size();n++){
+        // S-=w_sums[n]*log(w_sums[n]);
+    // }
+    // std::cout<<"entropy S="<<S<<"\n";
+    return f_res;
+}
+
+//cmd function that maximizes the similarity between vector magnetizations of the downstream sites and the vector magnetization of the reference potts basis vectors upstream
+array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t r_k){
+    size_t r_i=v_i.rank();
+    size_t r_j=v_j.rank();
+    array2d<size_t> f_res(r_i,r_j);
+    //TODO
+    //calculate dot product
+    std::vector<double> w_sums(r_k,0);
+    std::vector<std::pair<size_t,size_t> > done_ij_pairs; //for part that ensures surjectivity
+    array3d<double> c(r_i,r_j,r_k);
+    for(size_t i=0;i<r_i;i++){
+        for(size_t j=0;j<r_j;j++){
+            //get sum of m_vecs
+            std::vector<double> m_i=v_i.m_vec()[i];
+            std::vector<double> m_j=v_j.m_vec()[j];
+            if(r_i>r_j){
+                while(m_i.size()!=m_j.size()){
+                    m_j.push_back(0);
+                }
+            }
+            if(r_i<r_j){
+                while(m_i.size()!=m_j.size()){
+                    m_i.push_back(0);
+                }
+            }
+            std::vector<double> m_i_m_j_sum((r_i>r_j)?r_i:r_j,0);
+            for(size_t idx=0;idx<m_i_m_j_sum.size();idx++){
+                m_i_m_j_sum[idx]=m_i[idx]+m_j[idx];
+            }
+            //get reference potts basis
+            std::vector<std::vector<double> > v;
+            try{
+                v=observables::m_vec_ref_cache.at(r_k);
+            }
+            catch(const std::out_of_range& oor){
+                v=potts_ref_vecs(r_k);
+                observables::m_vec_ref_cache[r_k]=v;
+            }
+            //populate c
+            for(size_t k=0;k<r_k;k++){
+                std::vector<double> e_k=v[k];
+                if(m_i_m_j_sum.size()>e_k.size()){
+                    while(m_i_m_j_sum.size()!=e_k.size()){
+                        e_k.push_back(0);
+                    }
+                }
+                if(m_i_m_j_sum.size()<e_k.size()){
+                    while(m_i_m_j_sum.size()!=e_k.size()){
+                        m_i_m_j_sum.push_back(0);
+                    }
+                }
+                double dot=0;
+                std::vector<double> dot_addends;
+                for(size_t idx=0;idx<m_i_m_j_sum.size();idx++){
+                    dot+=m_i_m_j_sum[idx]*e_k[idx];
+                    dot_addends.push_back(m_i_m_j_sum[idx]*e_k[idx]);
+                }
+                dot=vec_add_float(dot_addends);
+                c.at(i,j,k)=dot;
+                // c.at(i,j,k)=dot*w.at(i,j);
+            }
+        }
+    }
+    //satisfy surjectivity
+    /* for(size_t k=0;k<r_k;k++){
+        size_t max_c_idx_i=0;
+        size_t max_c_idx_j=0;
+        double max_c=c.at(0,0,k)-(1e-10*w_sums[k]);
+        // std::cout<<(c.at(0,0,k)-(1e-10*w_sums[k]))<<" "<<max_c<<"\n";
+        for(size_t i=0;i<r_i;i++){
+            for(size_t j=0;j<r_j;j++){
+                //skip if i,j in done_ij_pairs
+                auto it=std::find(done_ij_pairs.begin(),done_ij_pairs.end(),std::make_pair(i,j));
+                if(it!=done_ij_pairs.end()){
+                    continue;
+                }
+                // std::cout<<(c.at(i,j,k)-(1e-10*w_sums[k]))<<" "<<max_c<<"\n";
+                if((c.at(i,j,k)-(1e-10*w_sums[k]))>max_c){
+                    max_c_idx_i=i;
+                    max_c_idx_j=j;
+                    max_c=c.at(i,j,k)-(1e-10*w_sums[k]);
+                }
+            }
+        }
+        f_res.at(max_c_idx_i,max_c_idx_j)=k;
+        w_sums[k]+=w.at(max_c_idx_i,max_c_idx_j);
+        done_ij_pairs.push_back(std::make_pair(max_c_idx_i,max_c_idx_j));
+    } */
+    //determine rest of f
+    for(size_t i=0;i<r_i;i++){
+        for(size_t j=0;j<r_j;j++){
+            //skip if i,j in done_ij_pairs
+            auto it=std::find(done_ij_pairs.begin(),done_ij_pairs.end(),std::make_pair(i,j));
+            if(it!=done_ij_pairs.end()){
+                continue;
+            }
+            size_t max_c_idx=0;
+            double max_c=c.at(i,j,0)-(1e-10*w_sums[0]);
+            // std::cout<<(c.at(i,j,0)-(1e-10*w_sums[0]))<<" "<<max_c<<"\n";
+            for(size_t k=1;k<r_k;k++){
+                // std::cout<<(c.at(i,j,k)-(1e-10*w_sums[k]))<<" "<<max_c<<"\n";
+                if((c.at(i,j,k)-(1e-10*w_sums[k]))>max_c){
+                    max_c_idx=k;
+                    max_c=c.at(i,j,k)-(1e-10*w_sums[k]);
+                }
+            }
+            f_res.at(i,j)=max_c_idx;
+            w_sums[max_c_idx]+=w.at(i,j);
+            // for(size_t i=0;i<w_sums.size();i++){
+                // std::cout<<w_sums[i]<<" ";
+            // }
+            // std::cout<<"\n";
+        }
+    }
+    // std::cout<<(std::string)w<<"\n";
+    // std::cout<<(std::string)c<<"\n";
+    // std::cout<<"new: "<<(std::string)f_res<<"\n";
     // double S=0;
     // for(size_t n=0;n<w_sums.size();n++){
         // S-=w_sums[n]*log(w_sums[n]);

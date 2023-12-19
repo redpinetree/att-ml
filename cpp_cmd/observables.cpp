@@ -24,7 +24,7 @@ double m_prefactor(size_t n_target,size_t r_k){
     if(denom_factor==0){
         return 1;
     }
-    double res=pow(pow(r_k-1,n_target)/(r_k*denom_factor),1/(double)n_target);
+    double res=pow(r_k,n_target-1)/denom_factor;
     return res;
 }
 
@@ -124,7 +124,8 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
             if(r[i]>=r_k){return 0;} //ignore when reference rank exceeds rank of spin
             // res*=pow(m_prefactor(n_target,r_k)*((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
             // res*=pow(m_prefactor(n_target,r_k)*((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n%2);
-            res*=pow(((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
+            // res*=pow(((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
+            res*=pow((c[i]==r[i])-(1/(double) r_k),n);
         }
         return res;
     }
@@ -260,7 +261,12 @@ double observables::m(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
         }
         res+=sub_res*prob_factor;
     }
-    res*=pow(m_prefactor(n_target,q_orig),n_target*p);
+    if(abs_flag){
+        res*=pow(q_orig/(double) (q_orig-1),p);
+    }
+    else{
+        res*=pow(m_prefactor(n_target,q_orig),p);
+    }
     return res;
 }
 template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,bool);
@@ -411,11 +417,14 @@ double observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
         // std::cout<<g.vs()[root].probs()[j]<<" ";
     // }
     // std::cout<<"\n";
+    // std::cout<<(std::string) g.vs()[root].p_bond().w()<<"\n";
+    // std::cout<<g.vs()[root].p_bond().w().sum_over_all()<<"\n";
+    // std::cout<<(std::string) g.vs()[root].p_bond().f()<<"\n";
     
     size_t r_k=g.vs()[root].rank();
     double res=0;
+    std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
     for(size_t n=2;n<=n_target;n++){
-        std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
         std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,n);
         double n_res=0;
         for(size_t idx=0;idx<combos.size();idx++){
@@ -443,23 +452,19 @@ double observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
                         // std::cout<<c[j]<<" ";
                     // }
                     // std::cout<<"\n";
-                    // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<prob_factor<<"\n";
+                    // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<sub_res<<" "<<prob_factor<<"\n";
                 // }
             }
             n_res+=sub_res*prob_factor;
+            // std::cout<<"n_res: " <<sub_res<<" "<<prob_factor<<" "<<(sub_res*prob_factor)<<"\n";
         }
-        // std::cout<<n_target<<" "<<n<<" "<<binom(n_target,n_target-n)<<" "<<pow(2,(double) n_target-n)<<" "<<pow(g.n_phys_sites(),n_target-n)<<" "<<n_res<<"\n";
-        // std::cout<<(binom(n_target,n_target-n)*pow(2,(double) n-n_target)*pow(-1,(double) n))<<"\n";
-        // std::cout<<(binom(n_target,n_target-n)*pow(2,(double) n-n_target)*pow(-1,(double) n)*n_res)<<"\n";
-        // std::cout<<(binom(n_target,n_target-n)*pow(2,(double) n-n_target)*pow(-1,(double) n)*n_res)<<" "<<pow(g.n_phys_sites(),n_target-n)<<"\n";
         res+=pow(-1,(double) n)*binom(n_target,n_target-n)*pow(q_orig,(double) n-n_target)*pow(g.n_phys_sites(),n_target-n)*n_res;
     }
     //normalize so that perfect correlation is 1
-    // std::cout<<"\n";
-    // std::cout<<pow(-1,(double) n_target-1)<<" "<<(n_target-1)<<" "<<pow(2,-(double) n_target)<<" "<<pow(g.n_phys_sites(),n_target)<<"\n";
-    // std::cout<<pow(-1,(double) n_target-1)*(n_target-1)*pow(2,-(double) n_target)*pow(g.n_phys_sites(),n_target)<<"\n\n";
     res+=pow(-1,(double) n_target-1)*(n_target-1)*pow(q_orig,-(double) n_target)*pow(g.n_phys_sites(),n_target);
+    // std::cout<<res<<"\n";
     res*=pow(q_prefactor(n_target,q_orig),p-1);
+    // std::cout<<res<<"\n";
     // std::cout<<"final_res: "<<res<<"\n";
     return res;
 }
@@ -496,7 +501,8 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n_target,si
         for(size_t i=0;i<p;i++){
             if(r[i]>=r_k){return 0;} //ignore when reference rank exceeds rank of spin
             // res*=pow(m_prefactor(n_target,r_k)*((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
-            res*=pow(((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
+            // res*=pow(((double)(r_k*(c[i]==r[i]))-1)/(double)(r_k-1),n);
+            res*=pow((c[i]==r[i])-(1/(double) r_k),n);
         }
         //compute ft
         double dot=0;
@@ -639,7 +645,12 @@ std::complex<double> observables::m(graph<cmp>& g,size_t q_orig,size_t root,size
             // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<prob_factor<<"\n";
         // }
     }
-    res*=pow(m_prefactor(n_target,q_orig),n_target*p);
+    if(abs_flag){
+        res*=pow(q_orig/(double) (q_orig-1),p);
+    }
+    else{
+        res*=pow(m_prefactor(n_target,q_orig),p);
+    }
     return res;
 }
 template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,std::vector<double>,bool);
@@ -788,9 +799,9 @@ std::complex<double> observables::q(graph<cmp>& g,size_t q_orig,size_t root,size
     // }
     
     size_t r_k=g.vs()[root].rank();
+    std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
     std::complex<double> res=0;
     for(size_t n=2;n<=n_target;n++){
-        std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
         std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,n);
         std::complex<double> n_res=0;
         for(size_t idx=0;idx<combos.size();idx++){

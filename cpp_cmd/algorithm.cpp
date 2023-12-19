@@ -21,6 +21,50 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         // sw1.start();
         bond current=*(g.es().rbegin());
         g.es().erase((++(g.es().rbegin())).base());
+        size_t r_k=fmin(g.vs()[current.v1()].rank()*g.vs()[current.v2()].rank(),r_max);
+        
+        //if v1 and v2 are real sites, assign default probs and m_vecs
+        if(!g.vs()[current.v1()].virt()){
+            g.vs()[current.v1()].probs()=std::vector<double>(g.vs()[current.v1()].rank(),pow(g.vs()[current.v1()].rank(),-1));
+            for(size_t idx=0;idx<g.vs()[current.v1()].rank();idx++){
+                std::vector<double> res(g.vs()[current.v1()].rank()-1,0);
+                double prob_factor=g.vs()[current.v1()].probs()[idx];
+                for(size_t i=0;i<g.vs()[current.v1()].rank();i++){
+                    std::vector<double> contrib=observables::m_vec(g,current.v1(),i,idx,0);
+                    for(size_t j=0;j<contrib.size();j++){
+                        res[j]+=prob_factor*contrib[j];
+                    }
+                }
+                g.vs()[current.v1()].m_vec().push_back(res);
+            }
+        }
+        if(!g.vs()[current.v2()].virt()){
+            g.vs()[current.v2()].probs()=std::vector<double>(g.vs()[current.v2()].rank(),pow(g.vs()[current.v2()].rank(),-1));
+            for(size_t idx=0;idx<g.vs()[current.v2()].rank();idx++){
+                std::vector<double> res(g.vs()[current.v2()].rank()-1,0);
+                double prob_factor=g.vs()[current.v2()].probs()[idx];
+                for(size_t i=0;i<g.vs()[current.v2()].rank();i++){
+                    std::vector<double> contrib=observables::m_vec(g,current.v2(),i,idx,0);
+                    for(size_t j=0;j<contrib.size();j++){
+                        res[j]+=prob_factor*contrib[j];
+                    }
+                }
+                g.vs()[current.v2()].m_vec().push_back(res);
+            }
+        }
+        
+        //initialize cmd function f()
+        // current.f()=optimize::f_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
+        // std::cout<<std::string(optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]))<<"\n";
+        // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        // std::cout<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
+        // TODO: resolve difference between f_maxent() and f() if possible
+        // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
+        // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
+        // std::cout<<std::string(g)<<"\n";
+        // std::cout<<std::string(current.w())<<"\n";
+        // std::cout<<std::string(current.f())<<"\n";
         
         //determine master and slave node
         size_t master,slave;
@@ -46,7 +90,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         }
         g.vs()[master].vol()+=g.vs()[slave].vol();
         //create new virtual site
-        size_t r_k=fmin(g.vs()[master].rank()*g.vs()[slave].rank(),r_max);
         g.vs().push_back(site(r_k,g.vs()[master].vol(),current.v1(),current.v2()));
         size_t virtual_idx=g.vs().size()-1;
         //update volume of relevant downstream sites associated with new virtual site for algorithm 1
@@ -59,16 +102,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
                 g.vs()[next_site].vol()=g.vs()[current_site].vol();
             }
         }
-        
-        //initialize cmd function f()
-        current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
-        // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
-        // TODO: resolve difference between f_maxent() and f() if possible
-        // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
-        // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
-        // std::cout<<std::string(g)<<"\n";
-        // std::cout<<std::string(current.w())<<"\n";
-        // std::cout<<std::string(current.f())<<"\n";
         
         // sw1.split();
         // std::cout<<std::string(current)<<","<<master<<","<<slave<<","<<g.vs()[master].adj().size()<<","<<g.vs()[slave].adj().size()<<"\n";
@@ -251,12 +284,6 @@ template void algorithm::cmd_approx(size_t,graph<bmi_comparator>&,size_t,size_t,
 
 template<typename cmp>
 void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
-    if(!g.vs()[current.v1()].virt()){
-        g.vs()[current.v1()].probs()=std::vector<double>(g.vs()[current.v1()].rank(),pow(g.vs()[current.v1()].rank(),-1));
-    }
-    if(!g.vs()[current.v2()].virt()){
-        g.vs()[current.v2()].probs()=std::vector<double>(g.vs()[current.v2()].rank(),pow(g.vs()[current.v2()].rank(),-1));
-    }
     double sum=0;
     size_t r_i=g.vs()[current.v1()].rank();
     size_t r_j=g.vs()[current.v2()].rank();
@@ -319,25 +346,25 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     g.vs()[current.order()].p_jk()=p_jk;
     
     g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
-    std::vector<std::vector<size_t> > combos=spin_cart_prod(r_k,1);
-    std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,1);
-    for(size_t idx=0;idx<combos.size();idx++){
+    for(size_t idx=0;idx<r_k;idx++){
         std::vector<double> res(r_k-1,0);
-        size_t c=combos[idx][0];
-        for(size_t i=0;i<r_combos.size();i++){
-            double prob_factor=g.vs()[current.order()].probs()[c];
-            std::vector<double> contrib=observables::m_vec(g,current.order(),r_combos[i][0],c,0);
+        double prob_factor=g.vs()[current.order()].probs()[idx];
+        for(size_t i=0;i<r_k;i++){
+            std::vector<double> contrib=observables::m_vec(g,current.order(),i,idx,0);
             for(size_t j=0;j<contrib.size();j++){
                 res[j]+=prob_factor*contrib[j];
             }
         }
         g.vs()[current.order()].m_vec().push_back(res);
-        // std::cout<<"c="<<c<<" ";
-        // for(size_t i=0;i<res.size();i++){
-            // std::cout<<res[i]<<" ";
-            // std::cout<<(res[i]/(double)g.vs()[current.order()].vol())<<" ";
+    }
+    // std::cout<<"site "<<current.order()<<"\n";
+    // for(size_t idx=0;idx<r_k;idx++){
+        // std::cout<<"idx="<<idx<<" ";
+        // for(size_t i=0;i<g.vs()[current.order()].m_vec().size();i++){
+            // std::cout<<g.vs()[current.order()].m_vec()[idx][i]<<" ";
+            // std::cout<<(g.vs()[current.order()].m_vec()[idx][i]/(double)g.vs()[current.order()].vol())<<" ";
         // }
         // std::cout<<"\n";
-    }
+    // }
 }
 template void algorithm::calculate_site_probs(graph<bmi_comparator>&,bond&);
