@@ -13,6 +13,8 @@ namespace optimize{
     array2d<size_t> f_alg1(site,site);
     array2d<size_t> f_maxent(site,site,array2d<double>,size_t);
     array2d<size_t> f_mvec_sim(site,site,array2d<double>,size_t);
+    array2d<size_t> f_hybrid_maxent(site,site,array2d<double>,size_t);
+    array2d<size_t> f_hybrid_mvec_sim(site,site,array2d<double>,size_t);
     double renorm_coupling(size_t,double,double);
     double kl_div(std::vector<site>,bond,std::vector<bond>,bond,std::vector<bond>);
 };

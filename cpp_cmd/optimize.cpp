@@ -622,6 +622,26 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
     return f_res;
 }
 
+//cmd function that uses maxent for mismatched triplets and alg1 when r_i=r_j=r_k
+array2d<size_t> optimize::f_hybrid_maxent(site v_i,site v_j,array2d<double> w,size_t r_k){
+    if((v_i.rank()==v_j.rank())&&(v_i.rank()==r_k)){
+        return f_alg1(v_i,v_j);
+    }
+    else{
+        return f_maxent(v_i,v_j,w,r_k);
+    }
+}
+
+//cmd function that uses mvec_sim for mismatched triplets and alg1 when r_i=r_j=r_k
+array2d<size_t> optimize::f_hybrid_mvec_sim(site v_i,site v_j,array2d<double> w,size_t r_k){
+    if((v_i.rank()==v_j.rank())&&(v_i.rank()==r_k)){
+        return f_alg1(v_i,v_j);
+    }
+    else{
+        return f_mvec_sim(v_i,v_j,w,r_k);
+    }
+}
+
 double optimize::renorm_coupling(size_t q,double k1,double k2){
     double num=exp(k1+k2)+(q-1);
     double denom=exp(k1)+exp(k2)+(q-2);

@@ -55,9 +55,11 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         
         //initialize cmd function f()
         // current.f()=optimize::f_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
-        current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
+        // current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
         // std::cout<<std::string(optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]))<<"\n";
         // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        // current.f()=optimize::f_hybrid_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        current.f()=optimize::f_hybrid_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         // std::cout<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
         // TODO: resolve difference between f_maxent() and f() if possible
         // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
