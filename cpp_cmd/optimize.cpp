@@ -31,15 +31,16 @@ double vec_mult_float(std::vector<double> v){
 
 void optimize::potts_renorm(size_t slave,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster){
     size_t q=current.w().nx(); //assumption is that rank(=q) is constant!
+    double current_j=-log(((1/current.w().at(0,0))-current.w().nx())/(double) (current.w().nx()*(current.w().nx()-1)));
     for(size_t n=0;n<cluster.size();n++){
         if((old_cluster[n].v1()==slave)||(old_cluster[n].v2()==slave)){
-            cluster[n].j()=renorm_coupling(q,cluster[n].j(),current.j()); //update bond weight
+            double cluster_n_j=-log(((1/cluster[n].w().at(0,0))-cluster[n].w().nx())/(double) (cluster[n].w().nx()*(cluster[n].w().nx()-1)));
+            cluster_n_j=renorm_coupling(q,cluster_n_j,current_j); //update bond weight
             for(size_t i=0;i<q;i++){
                 for(size_t j=0;j<q;j++){
-                    cluster[n].w().at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-cluster[n].j())))):(1/((q*exp(cluster[n].j()))+(q*(q-1))));
+                    cluster[n].w().at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-cluster_n_j)))):(1/((q*exp(cluster_n_j))+(q*(q-1))));
                 }
             }
-            cluster[n].j(q,cluster[n].w());
             cluster[n].bmi(cluster[n].w());
         }
     }
@@ -244,7 +245,6 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
             // }
         // }
         
-        current.j(current.w().nx(),current.w()); //only valid for potts models with constant rank
         current.bmi(current.w());
         // std::cout<<"current.w():\n"<<(std::string)current.w()<<"\n";
         
@@ -401,7 +401,6 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                     // cluster[n].w().at(i,j)/=final_sum_ki;
                 // }
             // }
-            cluster[n].j(cluster[n].w().nx(),cluster[n].w()); //only valid for potts models with constant rank
             cluster[n].bmi(cluster[n].w());
             
             /* //DEBUG OUTPUT
@@ -522,7 +521,7 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
                     m_i.push_back(0);
                 }
             }
-            std::vector<double> m_i_m_j_sum((r_i>r_j)?r_i:r_j,0);
+            std::vector<double> m_i_m_j_sum((r_i>r_j)?r_i-1:r_j-1,0);
             for(size_t idx=0;idx<m_i_m_j_sum.size();idx++){
                 m_i_m_j_sum[idx]=m_i[idx]+m_j[idx];
             }
@@ -551,7 +550,7 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
                 double dot=0;
                 std::vector<double> dot_addends;
                 for(size_t idx=0;idx<m_i_m_j_sum.size();idx++){
-                    dot+=m_i_m_j_sum[idx]*e_k[idx];
+                    // dot+=m_i_m_j_sum[idx]*e_k[idx];
                     dot_addends.push_back(m_i_m_j_sum[idx]*e_k[idx]);
                 }
                 dot=vec_add_float(dot_addends);

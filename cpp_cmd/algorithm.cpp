@@ -60,7 +60,7 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
         // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         // current.f()=optimize::f_hybrid_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         current.f()=optimize::f_hybrid_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
-        // std::cout<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
+        // std::cout<<std::string(current.f())<<"\n";
         // TODO: resolve difference between f_maxent() and f() if possible
         // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
         // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
@@ -249,7 +249,6 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
                 else{
                     cluster[dupes[i].first].v2_orig()=(current.v1()==master)?current.v1_orig():current.v2_orig();
                 }
-                cluster[dupes[i].first].j(q,cluster[dupes[i].first].w()); //only valid for potts models with constant rank
                 cluster[dupes[i].first].bmi(cluster[dupes[i].first].w());
                 cluster.erase(cluster.begin()+dupes[i].second);
                 // std::cout<<"->"<<std::string(cluster[dupes[i].first])<<"\n";

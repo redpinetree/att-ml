@@ -92,7 +92,8 @@ void calc_observables(graph<cmp>& g,size_t q_orig,double& m1_1_abs,double& m1_2_
         // std::cout<<observables::m(g,q,1,2,k)<<"\n";
         // std::cout<<observables::m(g,q,2,1,k)<<"\n";
         // std::cout<<observables::m(g,q,2,2,k)<<"\n";
-        q2_k=observables::q(g,q_orig,g.vs().size()-1,2,2,k,0)/pow(g.n_phys_sites(),2);
+        // q2_k=observables::q(g,q_orig,g.vs().size()-1,2,2,k,0)/pow(g.n_phys_sites(),2);
+        q2_k=observables::m(g,q_orig,g.vs().size()-1,2,2,k,0)/pow(g.n_phys_sites(),2);
     }
 }
 
@@ -357,13 +358,14 @@ int main(int argc,char **argv){
             binder_m=0.5*(3-(m4_1/pow(m2_1,2)));
             binder_q=0.5*(3-(q4/pow(q2,2)));
             // binder_q=q4/pow(q2,2);
-            if(n_samples!=0){ //hypercubic lattice is used
+            if(add_suffix){ //hypercubic lattice is used
                 sus_sg_k=n_phys_sites*sqrt(std::norm(q2_k));
+                std::cout<<q2_k<<" "<<sus_sg_k<<" "<<sus_sg<<"\n";
                 corr_len_sg=sqrt((sus_sg/sus_sg_k)-1)/(2*sin(k_min/2));
             }
             //prepare output lines
             std::stringstream output_line_ss;
-            if(n_samples!=0){ //hypercubic lattice is used
+            if(add_suffix){ //hypercubic lattice is used
                 // output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
                 output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
             }

@@ -66,22 +66,6 @@ template graph<bmi_comparator> graph_utils::gen_hypercubic<std::normal_distribut
 template graph<bmi_comparator> graph_utils::gen_hypercubic<std::discrete_distribution<int>,bmi_comparator>(size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
 template graph<bmi_comparator> graph_utils::gen_hypercubic<std::uniform_real_distribution<double>,bmi_comparator>(size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
 
-template<typename cmp>
-void graph_utils::save_graph(std::string fn,graph<cmp>& g){
-    std::ofstream ofs;
-    ofs.open(fn);
-    ofs<<g.vs().size()<<" "<<g.es().size();
-    std::multiset<bond,cmp> es=g.es();
-    for(auto it=es.begin();it!=es.end();++it){
-        if(it!=es.end()){
-            ofs<<"\n";
-        }
-        ofs<<(*it).v1()<<" "<<(*it).v2()<<" "<<round((*it).j()*1e5);
-    }
-    ofs.close();
-}
-template void graph_utils::save_graph<bmi_comparator>(std::string,graph<bmi_comparator>&);
-
 //only for potts model... should have new format to store weight matrices too
 template<typename cmp>
 graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
