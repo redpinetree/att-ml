@@ -10,8 +10,8 @@
 class bond{
 public:
     bond();
-    bond(size_t,size_t,array2d<double>);
-    bond(std::pair<size_t,size_t>,array2d<double>);
+    bond(size_t,size_t,array3d<double>);
+    bond(std::pair<size_t,size_t>,array3d<double>);
     operator std::string() const;
     friend std::ostream& operator<<(std::ostream&,const bond&);
     std::pair<size_t,size_t> v() const;
@@ -21,8 +21,7 @@ public:
     size_t v1_orig() const;
     size_t v2_orig() const;
     size_t virt_count() const;
-    array2d<double> w() const;
-    array2d<size_t> f() const;
+    array3d<double> w() const;
     double bmi() const;
     size_t order() const;
     bool todo() const;
@@ -33,19 +32,16 @@ public:
     size_t& v1_orig();
     size_t& v2_orig();
     size_t& virt_count();
-    array2d<double>& w();
-    array2d<size_t>& f();
+    array3d<double>& w();
     double& bmi();
     size_t& order();
     bool& todo();
-    void j(size_t,array2d<double>&);
-    void bmi(array2d<double>&);
+    void bmi(array3d<double>&);
 private:
     std::pair<size_t,size_t> v_;
     std::pair<size_t,size_t> v_orig_;
     size_t virt_count_;
-    array2d<double> w_;
-    array2d<size_t> f_;
+    array3d<double> w_; //if not yet processed, todo=1 and array3d size must have nz=1
     double bmi_;
     size_t order_; //in observable computation, this is the upstream site
     bool todo_;

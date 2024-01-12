@@ -5,20 +5,18 @@
 #include "bond.hpp"
 
 bond::bond(){}
-bond::bond(size_t v1,size_t v2,array2d<double> w):w_(w),virt_count_(0),order_(0),todo_(true){
+bond::bond(size_t v1,size_t v2,array3d<double> w):w_(w),virt_count_(0),order_(0),todo_(true){
     this->v_=(v1<v2)?std::pair<size_t,size_t>(v1,v2):std::pair<size_t,size_t>(v2,v1);
     this->v_orig_=this->v();
-    this->f_=array2d<size_t>(1,1);
     this->bmi(w);
 }
 
-bond::bond(std::pair<size_t,size_t> v,array2d<double> w):v_(v),v_orig_(v),virt_count_(0),w_(w),order_(0),todo_(true){
-    this->f_=array2d<size_t>(1,1);
+bond::bond(std::pair<size_t,size_t> v,array3d<double> w):v_(v),v_orig_(v),virt_count_(0),w_(w),order_(0),todo_(true){
     this->bmi(w);
 }
 
 bond::operator std::string() const{
-    return "[("+std::to_string(this->v1())+","+std::to_string(this->v2())+"),("+std::to_string(this->w().nx())+","+std::to_string(this->w().ny())+"),"+std::to_string(this->bmi())+","+std::to_string(this->order())+","+std::to_string(this->todo())+"]";
+    return "[("+std::to_string(this->v1())+","+std::to_string(this->v2())+"),("+std::to_string(this->w().nx())+","+std::to_string(this->w().ny())+","+std::to_string(this->w().nz())+"),"+std::to_string(this->bmi())+","+std::to_string(this->order())+","+std::to_string(this->todo())+"]";
 }
 
 std::ostream& operator<<(std::ostream& os,const bond& e){
@@ -34,8 +32,7 @@ size_t bond::v2() const{return this->v_.second;}
 size_t bond::v1_orig() const{return this->v_orig_.first;}
 size_t bond::v2_orig() const{return this->v_orig_.second;}
 size_t bond::virt_count() const{return this->virt_count_;}
-array2d<double> bond::w() const{return this->w_;}
-array2d<size_t> bond::f() const{return this->f_;}
+array3d<double> bond::w() const{return this->w_;}
 double bond::bmi() const{return this->bmi_;}
 size_t bond::order() const{return this->order_;}
 bool bond::todo() const{return this->todo_;}
@@ -47,21 +44,20 @@ size_t& bond::v2(){return this->v_.second;}
 size_t& bond::v1_orig(){return this->v_orig_.first;}
 size_t& bond::v2_orig(){return this->v_orig_.second;}
 size_t& bond::virt_count(){return this->virt_count_;}
-array2d<double>& bond::w(){return this->w_;}
-array2d<size_t>& bond::f(){return this->f_;}
+array3d<double>& bond::w(){return this->w_;}
 double& bond::bmi(){return this->bmi_;}
 size_t& bond::order(){return this->order_;}
 bool& bond::todo(){return this->todo_;}
 
-void bond::bmi(array2d<double>& w){
+void bond::bmi(array3d<double>& w){
     size_t max_it=100;
-    array2d<double> p_ij(w.nx(),w.ny());
+    array3d<double> p_ij(w.nx(),w.ny(),1);
     std::vector<double> sum_ax0(w.nx());
     std::vector<double> sum_ax1(w.ny());
     for(size_t i=0;i<w.nx();i++){
         for(size_t j=0;j<w.ny();j++){
-            sum_ax0[i]+=w.at(i,j);
-            sum_ax1[j]+=w.at(i,j);
+            sum_ax0[i]+=w.at(i,j,0);
+            sum_ax1[j]+=w.at(i,j,0);
         }
     }
     size_t nonzero_sum_ax0=0;
@@ -131,9 +127,9 @@ void bond::bmi(array2d<double>& w){
                 for(size_t j=0;j<w.ny();j++){
                     double e2=0;
                     for(size_t k=0;k<x.size();k++){
-                        e2+=w.at(k,j)*x_old[k];
+                        e2+=w.at(k,j,0)*x_old[k];
                     }
-                    e1+=(e2!=0)?w.at(i,j)*(1/e2):0;
+                    e1+=(e2!=0)?w.at(i,j,0)*(1/e2):0;
                 }
                 x[i]=(e1!=0)?((double) nonzero_sum_ax1/(double) nonzero_sum_ax0)*(1/e1):0;
             }
@@ -167,9 +163,9 @@ void bond::bmi(array2d<double>& w){
                 for(size_t j=0;j<w.nx();j++){
                     double e2=0;
                     for(size_t k=0;k<y.size();k++){
-                        e2+=w.at(j,k)*y_old[k];
+                        e2+=w.at(j,k,0)*y_old[k];
                     }
-                    e1+=(e2!=0)?w.at(j,i)*(1/e2):0;
+                    e1+=(e2!=0)?w.at(j,i,0)*(1/e2):0;
                 }
                 y[i]=(e1!=0)?((double) nonzero_sum_ax0/(double) nonzero_sum_ax1)*(1/e1):0;
             }
@@ -185,13 +181,13 @@ void bond::bmi(array2d<double>& w){
         double sum=0;
         for(size_t i=0;i<p_ij.nx();i++){
             for(size_t j=0;j<p_ij.ny();j++){
-                p_ij.at(i,j)=x[i]*w.at(i,j)*y[j];
-                sum+=p_ij.at(i,j);
+                p_ij.at(i,j,0)=x[i]*w.at(i,j,0)*y[j];
+                sum+=p_ij.at(i,j,0);
             }
         }
         for(size_t i=0;i<p_ij.nx();i++){
             for(size_t j=0;j<p_ij.ny();j++){
-                p_ij.at(i,j)/=sum;
+                p_ij.at(i,j,0)/=sum;
             }
         }
     }
@@ -213,8 +209,8 @@ void bond::bmi(array2d<double>& w){
     std::vector<double> p_j(p_ij.ny());
     for(size_t i=0;i<p_ij.nx();i++){
         for(size_t j=0;j<p_ij.ny();j++){
-            p_i[i]+=p_ij.at(i,j);
-            p_j[j]+=p_ij.at(i,j);
+            p_i[i]+=p_ij.at(i,j,0);
+            p_j[j]+=p_ij.at(i,j,0);
         }
     }
     // for(size_t i=0;i<p_i.size();i++){
@@ -230,7 +226,7 @@ void bond::bmi(array2d<double>& w){
     double S_j=0;
     for(size_t i=0;i<p_ij.nx();i++){
         for(size_t j=0;j<p_ij.ny();j++){
-            S_ij-=(p_ij.at(i,j)==0)?0:(p_ij.at(i,j)*log(p_ij.at(i,j)));
+            S_ij-=(p_ij.at(i,j,0)==0)?0:(p_ij.at(i,j,0)*log(p_ij.at(i,j,0)));
         }
     }
     for(size_t i=0;i<p_ij.nx();i++){

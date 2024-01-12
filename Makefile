@@ -4,7 +4,7 @@ CXXFLAGS = -O3 -ffloat-store -ffp-contract=off -march=native -pipe -std=c++17
 # CXXFLAGS = -O0
 
 TARGET = ./bin/tree_approx_potts
-TARGET_CMD = ./bin/cmd_approx
+TARGET_CMD = ./bin/renyi_approx
 TARGET_OLD = ./bin/tree_approx_potts_old
 SRC = ./cpp/tree_approx_potts.cpp ./cpp/observables.cpp ./cpp/algorithm.cpp ./cpp/graph_utils.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/bond_utils.cpp ./cpp/mpi_utils.cpp
 SRC_CMD = ./cpp_cmd/cmd_approx.cpp ./cpp_cmd/observables.cpp ./cpp_cmd/algorithm.cpp ./cpp_cmd/optimize.cpp ./cpp_cmd/graph_utils.cpp ./cpp_cmd/site.cpp ./cpp_cmd/bond.cpp ./cpp_cmd/mpi_utils.cpp
