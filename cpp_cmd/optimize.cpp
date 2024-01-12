@@ -80,28 +80,8 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
     
     //reinitialize weight matrix to correct size if needed on first iteration
     for(size_t n=0;n<cluster.size();n++){
-        array2d<double> p_ki(cluster[n].w().nx(),cluster[n].w().ny());
-        array2d<double> p_prime_ki_env(cluster[n].w().nx(),cluster[n].w().ny());
-        //determine whether this bond was connected to site i or to site j
-        size_t source;
-        if(old_cluster[n].v1()==master||old_cluster[n].v1()==slave){
-            source=(old_cluster[n].v1()==master)?master:slave;
-        }
-        else{
-            source=(old_cluster[n].v2()==master)?master:slave;
-        }
-        { //if first iteration, resize p_prime_ki
-            if(source==current.v1()){
-                p_ki=array2d<double>((current.v1()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-                p_prime_ki_env=array2d<double>((current.v1()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-            }
-            else{
-                p_ki=array2d<double>((current.v2()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-                p_prime_ki_env=array2d<double>((current.v2()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-            }
-        }
-        if((p_ki.nx()!=cluster[n].w().nx())||(p_ki.ny()!=cluster[n].w().ny())){
-            array2d<double> new_w(p_ki.nx(),p_ki.ny());
+        if((cluster[n].w().nx()!=sites[cluster[n].v1()].rank())||(cluster[n].w().ny()!=r_k)){
+            array2d<double> new_w(sites[cluster[n].v1()].rank(),r_k);
             for(size_t i=0;i<new_w.nx();i++){
                 for(size_t j=0;j<new_w.ny();j++){
                     if((i<cluster[n].w().nx())&&(j<cluster[n].w().ny())){
