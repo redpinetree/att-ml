@@ -4,12 +4,12 @@
 #include <fstream>
 
 #include "algorithm.hpp"
-#include "observables.hpp"
+#include "../observables.hpp"
 #include "optimize.hpp"
 #include "bond.hpp"
-#include "site.hpp"
-#include "stopwatch.hpp"
-#include "utils.hpp"
+#include "../site.hpp"
+#include "../stopwatch.hpp"
+#include "../utils.hpp"
 
 template<typename cmp>
 void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,double lr){
@@ -53,8 +53,20 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
             }
         }
         
+        //initialize cmd function f()
+        // current.f()=optimize::f_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        // current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
+        // std::cout<<std::string(optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]))<<"\n";
+        // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        // current.f()=optimize::f_hybrid_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        current.f()=optimize::f_hybrid_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
+        // std::cout<<std::string(current.f())<<"\n";
+        // TODO: resolve difference between f_maxent() and f() if possible
+        // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
+        // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
         // std::cout<<std::string(g)<<"\n";
         // std::cout<<std::string(current.w())<<"\n";
+        // std::cout<<std::string(current.f())<<"\n";
         
         //determine master and slave node
         size_t master,slave;
@@ -217,27 +229,17 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                 // std::cout<<"merging: "<<std::string(cluster[dupes[i].second])<<"+"<<std::string(cluster[dupes[i].first]);
                 // std::cout<<"\n1st: "<<std::string(cluster[dupes[i].first].w())<<"\n";
                 // std::cout<<"2nd: "<<std::string(cluster[dupes[i].second].w())<<"\n";
-                //check if same size
-                bool same_nx=cluster[dupes[i].first].w().nx()==cluster[dupes[i].second].w().nx();
-                bool same_ny=cluster[dupes[i].first].w().ny()==cluster[dupes[i].second].w().ny();
-                bool same_nz=cluster[dupes[i].first].w().nz()==cluster[dupes[i].second].w().nz();
-                if(!(same_nx&&same_ny&&same_nz)){
-                    std::cout<<"warning: merging bonds with different sizes!\n";
-                }
                 //faster to do *= and /sum computations in the same nested loops
                 double sum=0;
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
-                        cluster[dupes[i].first].w().at(x,y,0)*=cluster[dupes[i].second].w().at(x,y,0); //bonds still as weight matrix
-                        sum+=cluster[dupes[i].first].w().at(x,y,0);
+                        cluster[dupes[i].first].w().at(x,y)*=cluster[dupes[i].second].w().at(x,y);
+                        sum+=cluster[dupes[i].first].w().at(x,y);
                     }
                 }
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
-                        cluster[dupes[i].first].w().at(x,y,0)/=sum;
-                        if(cluster[dupes[i].first].w().at(x,y,0)<1e-10){
-                            cluster[dupes[i].first].w().at(x,y,0)=1e-10;
-                        }
+                        cluster[dupes[i].first].w().at(x,y)/=sum;
                     }
                 }
                 cluster[dupes[i].first].virt_count()=g.vs()[cluster[dupes[i].first].v1()].virt()+g.vs()[cluster[dupes[i].first].v2()].virt();
@@ -293,14 +295,13 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     std::vector<double> p_k(r_k,0);
     for(size_t i=0;i<r_i;i++){
         for(size_t j=0;j<r_j;j++){
-            for(size_t k=0;k<r_k;k++){
-                double e=current.w().at(i,j,k);
-                p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
-                p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
-                p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals
-                p_k[k]+=p_ijk.at(i,j,k);
-                sum+=p_ijk.at(i,j,k);
-            }
+            double k=current.f().at(i,j);
+            double e=current.w().at(i,j);
+            p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
+            p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
+            p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals
+            p_k[k]+=p_ijk.at(i,j,k);
+            sum+=p_ijk.at(i,j,k);
         }
     }
     for(size_t k=0;k<p_k.size();k++){

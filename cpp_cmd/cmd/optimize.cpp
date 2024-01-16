@@ -1,117 +1,29 @@
 #include <fstream>
 
+#include "../mpi_utils.hpp"
 #include "optimize.hpp"
-#include "observables.hpp"
+#include "../observables.hpp"
 
-//DEBUG GLOBALS
-/* size_t p_prime_ij_opt_count_idx=0;
-size_t p_prime_ki_opt_count_idx=0;
-std::ofstream ij_ofs("pair_ij_bmi_dump.txt");
-std::ofstream ki_ofs("pair_ki_bmi_dump.txt");
-std::ofstream ij_cost_ofs("pair_ij_cost_dump.txt");
-std::ofstream ki_cost_ofs("pair_ki_cost_dump.txt");
- */
-double vec_add_float(std::vector<double> v){
-    std::sort(v.begin(),v.end());
-    double sum=0;
-    for(size_t i=0;i<v.size();i++){
-        sum+=v[i];
-    }
-    return sum;
-}
-
-double vec_mult_float(std::vector<double> v){
-    std::sort(v.begin(),v.end());
-    double prod=1;
-    for(size_t i=0;i<v.size();i++){
-        prod*=v[i];
-    }
-    return prod;
-}
-
-void optimize::potts_renorm(size_t slave,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster){
-    size_t q=current.w().nx(); //assumption is that rank(=q) is constant!
-    double current_j=-log(((1/current.w().at(0,0))-current.w().nx())/(double) (current.w().nx()*(current.w().nx()-1)));
-    for(size_t n=0;n<cluster.size();n++){
-        if((old_cluster[n].v1()==slave)||(old_cluster[n].v2()==slave)){
-            double cluster_n_j=-log(((1/cluster[n].w().at(0,0))-cluster[n].w().nx())/(double) (cluster[n].w().nx()*(cluster[n].w().nx()-1)));
-            cluster_n_j=renorm_coupling(q,cluster_n_j,current_j); //update bond weight
-            for(size_t i=0;i<q;i++){
-                for(size_t j=0;j<q;j++){
-                    cluster[n].w().at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-cluster_n_j)))):(1/((q*exp(cluster_n_j))+(q*(q-1))));
-                }
-            }
-            cluster[n].bmi(cluster[n].w());
-        }
-    }
-}
-
-//debug ver
-//TODO: add convergence criteria for both iterative eq and grad desc methods
-//TODO: move weight matrix reinit to dedicated function in ndarray (like expand_dims)
-void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0){
-    /* std::vector<std::string> ij_bmi_dump_lines;
-    std::vector<std::string> ij_cost_dump_lines;
-    std::vector<std::string> ki_bmi_dump_lines;
-    std::vector<std::string> ki_cost_dump_lines;
-    
-    //DEBUG OUTPUT
-    {
-        for(size_t n=0;n<cluster.size();n++){
-            std::stringstream ki_bmi_dump_line;
-            std::stringstream ki_cost_dump_line;
-            ki_bmi_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<0<<" "<<cluster[n].bmi()<<"\n";
-            // std::cout<<ki_eff_k_dump_lines.size()<<"\n";
-            ki_bmi_dump_lines.push_back(ki_bmi_dump_line.str());
-            //DEBUG: calculate cost function
-            double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
-            ki_cost_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<0<<" "<<cost<<"\n";
-            ki_cost_dump_lines.push_back(ki_cost_dump_line.str());
-        }
-        std::stringstream ij_bmi_dump_line;
-        std::stringstream ij_cost_dump_line;
-        ij_bmi_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<0<<" "<<current.bmi()<<"\n";
-        ij_bmi_dump_lines.push_back(ij_bmi_dump_line.str());
-        //DEBUG: calculate cost function
-        double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
-        ij_cost_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<0<<" "<<cost<<"\n";
-        ij_cost_dump_lines.push_back(ij_cost_dump_line.str());
-    } */
-    
+void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0){
+    std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     //reinitialize weight matrix to correct size if needed on first iteration
     for(size_t n=0;n<cluster.size();n++){
-        array2d<double> p_ki(cluster[n].w().nx(),cluster[n].w().ny());
-        array2d<double> p_prime_ki_env(cluster[n].w().nx(),cluster[n].w().ny());
-        //determine whether this bond was connected to site i or to site j
-        size_t source;
-        if(old_cluster[n].v1()==master||old_cluster[n].v1()==slave){
-            source=(old_cluster[n].v1()==master)?master:slave;
-        }
-        else{
-            source=(old_cluster[n].v2()==master)?master:slave;
-        }
-        { //if first iteration, resize p_prime_ki
-            if(source==current.v1()){
-                p_ki=array2d<double>((current.v1()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-                p_prime_ki_env=array2d<double>((current.v1()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
+        if((cluster[n].w().nx()!=sites[cluster[n].v1()].rank())||(cluster[n].w().ny()!=r_k)){
+            array2d<double> new_w(sites[cluster[n].v1()].rank(),r_k);
+            double sum=0;
+            for(size_t i=0;i<new_w.nx();i++){
+                for(size_t j=i;j<new_w.ny();j++){
+                    new_w.at(i,j)=unif_dist(mpi_utils::prng);
+                    sum+=new_w.at(i,j);
+                    if(j!=i){
+                        new_w.at(j,i)=new_w.at(i,j);
+                        sum+=new_w.at(j,i);
+                    }
+                }
             }
-            else{
-                p_ki=array2d<double>((current.v2()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-                p_prime_ki_env=array2d<double>((current.v2()==old_cluster[n].v1())?cluster[n].w().ny():cluster[n].w().nx(),r_k);
-            }
-        }
-        if((p_ki.nx()!=cluster[n].w().nx())||(p_ki.ny()!=cluster[n].w().ny())){
-            array2d<double> new_w(p_ki.nx(),p_ki.ny());
             for(size_t i=0;i<new_w.nx();i++){
                 for(size_t j=0;j<new_w.ny();j++){
-                    if((i<cluster[n].w().nx())&&(j<cluster[n].w().ny())){
-                        new_w.at(i,j)=cluster[n].w().at(i,j)*(cluster[n].w().nx()*cluster[n].w().ny())/(double) (new_w.nx()*new_w.ny());
-                        // new_w.at(i,j)=cluster[n].w().at(i,j);
-                    }
-                    else{
-                        new_w.at(i,j)=1/(double) (new_w.nx()*new_w.ny());
-                        // new_w.at(i,j)=0;
-                    }
+                    new_w.at(i,j)/=sum;
                 }
             }
             cluster[n].w()=new_w;
@@ -152,9 +64,6 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         gj[j]=vec_mult_float(gj_factors);
     }
     for(size_t n1=0;n1<max_it;n1++){
-        /* std::stringstream ij_bmi_dump_line;
-        std::stringstream ij_cost_dump_line; */
-        // std::cout<<"old current.w():\n"<<(std::string)current.w()<<"\n";
         //calculate P_{ij},P'^{env}_{ij}
         std::vector<double> sum_p_ij_addends;
         std::vector<double> sum_p_prime_ij_env_addends;
@@ -201,12 +110,8 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         double sum_p_prime_ij_env=vec_add_float(sum_p_prime_ij_env_addends);
         for(size_t i=0;i<p_ij.nx();i++){
             for(size_t j=0;j<p_ij.ny();j++){
-                // if(fabs(sum_p_ij)>1e-10){
                     p_ij.at(i,j)/=sum_p_ij;
-                // }
-                // if(fabs(sum_p_prime_ij_env)>1e-10){
                     p_prime_ij_env.at(i,j)/=sum_p_prime_ij_env;
-                // }
             }
         }
         // std::cout<<(std::string)current.w()<<"\n";
@@ -257,7 +162,6 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         //p_prime_ki,imu if source==current.v1(), p_prime_kj,jnu if source==current.v2(). wlog, use p_prime_ki and imu.
         //k, the new index, is always second because virtual indices > physical indices.
         for(size_t n=0;n<cluster.size();n++){
-            // std::cout<<"old cluster[n]: "<<(std::string) cluster[n].w()<<"\n";
             //determine whether this bond was connected to site i or to site j
             size_t source;
             if(old_cluster[n].v1()==master||old_cluster[n].v1()==slave){
@@ -266,9 +170,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
             else{
                 source=(old_cluster[n].v2()==master)?master:slave;
             }
-        
-            /* std::stringstream ki_bmi_dump_line;
-            std::stringstream ki_cost_dump_line; */
+            
             array2d<double> p_ki(cluster[n].w().nx(),cluster[n].w().ny());
             array2d<double> p_prime_ki_env(cluster[n].w().nx(),cluster[n].w().ny());
             
@@ -402,23 +304,7 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
                 // }
             // }
             cluster[n].bmi(cluster[n].w());
-            
-            /* //DEBUG OUTPUT
-            ki_bmi_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<(n1+1)<<" "<<cluster[n].bmi()<<"\n";
-            // std::cout<<ki_eff_k_dump_lines.size()<<"\n";
-            ki_bmi_dump_lines.push_back(ki_bmi_dump_line.str());
-            //DEBUG: calculate cost function
-            double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
-            ki_cost_dump_line<<(p_prime_ki_opt_count_idx+n)<<" "<<cluster[n].v1()<<" "<<cluster[n].v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
-            ki_cost_dump_lines.push_back(ki_cost_dump_line.str()); */
         }
-        /* //DEBUG OUTPUT
-        ij_bmi_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<current.bmi()<<"\n";
-        ij_bmi_dump_lines.push_back(ij_bmi_dump_line.str());
-        //DEBUG: calculate cost function
-        double cost=optimize::kl_div(sites,old_current,old_cluster,current,cluster);
-        ij_cost_dump_line<<p_prime_ij_opt_count_idx<<" "<<current.v1()<<" "<<current.v2()<<" "<<(n1+1)<<" "<<cost<<"\n";
-        ij_cost_dump_lines.push_back(ij_cost_dump_line.str()); */
         
         //check for convergence
         double diff=0;
@@ -446,16 +332,6 @@ void optimize::kl_iterative(size_t master,size_t slave,size_t r_k,std::vector<si
         }
         
     }
-    /* p_prime_ij_opt_count_idx++;
-    for(size_t i=0;i<ij_bmi_dump_lines.size();i++){
-        ij_ofs<<ij_bmi_dump_lines[i];
-        ij_cost_ofs<<ij_cost_dump_lines[i];
-    }
-    p_prime_ki_opt_count_idx+=cluster.size();
-    for(size_t i=0;i<ki_bmi_dump_lines.size();i++){
-        ki_ofs<<ki_bmi_dump_lines[i];
-        ki_cost_ofs<<ki_cost_dump_lines[i];
-    } */
     // std::cout<<(std::string) current.w()<<"\n";
 }
 
@@ -639,12 +515,6 @@ array2d<size_t> optimize::f_hybrid_mvec_sim(site v_i,site v_j,array2d<double> w,
     else{
         return f_mvec_sim(v_i,v_j,w,r_k);
     }
-}
-
-double optimize::renorm_coupling(size_t q,double k1,double k2){
-    double num=exp(k1+k2)+(q-1);
-    double denom=exp(k1)+exp(k2)+(q-2);
-    return log(num/denom);
 }
 
 double optimize::kl_div(std::vector<site> sites,bond old_current,std::vector<bond> old_cluster,bond current,std::vector<bond> cluster){

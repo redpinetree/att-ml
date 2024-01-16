@@ -116,6 +116,87 @@ public:
         }
         return str.str();
     }
+    std::vector<T> sum_over_axis(size_t ax0,size_t ax1){
+        if(ax0>2){
+            std::cerr<<"Attempted to sum over non-existent axes "<<ax0<<" in array3d. Aborting...\n";
+            exit(1);
+        }
+        if(ax1>2){
+            std::cerr<<"Attempted to sum over non-existent axes "<<ax1<<" in array3d. Aborting...\n";
+            exit(1);
+        }
+        std::vector<T> res;
+        //TODO: shewchuk summation
+        if(((ax0==0)&&(ax1==2))||((ax0==2)&&(ax1==0))){
+            for(size_t j=0;j<this->ny();j++){
+                T e=0;
+                // for(size_t i=0;i<this->nx();i++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t i=0;i<this->nx();i++){
+                    for(size_t k=0;k<this->nz();k++){
+                        v.push_back(this->at(i,j,k));
+                    }
+                }
+                std::sort(v.begin(),v.end());
+                for(size_t i=0;i<v.size();i++){
+                    e+=v[i];
+                }
+                res.push_back(e);
+            }
+        }
+        else if(((ax0==1)&&(ax1==2))||((ax0==2)&&(ax1==1))){
+            for(size_t i=0;i<this->nx();i++){
+                T e=0;
+                // for(size_t j=0;j<this->ny();j++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t j=0;j<this->ny();j++){
+                    for(size_t k=0;k<this->nz();k++){
+                        v.push_back(this->at(i,j,k));
+                    }
+                }
+                std::sort(v.begin(),v.end());
+                for(size_t j=0;j<v.size();j++){
+                    e+=v[j];
+                }
+                res.push_back(e);
+            }
+        }
+        else if(((ax0==0)&&(ax1==1))||((ax0==1)&&(ax1==0))){
+            for(size_t k=0;k<this->nz();k++){
+                T e=0;
+                // for(size_t j=0;j<this->ny();j++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t i=0;i<this->nx();i++){
+                    for(size_t j=0;j<this->ny();j++){
+                        v.push_back(this->at(i,j,k));
+                    }
+                }
+                std::sort(v.begin(),v.end());
+                for(size_t j=0;j<v.size();j++){
+                    e+=v[j];
+                }
+                res.push_back(e);
+            }
+        }
+        return res;
+    }
+    T sum_over_all(){ //TODO: sum after sorting
+        T res=0;
+        for(size_t i=0;i<this->nx();i++){
+            for(size_t j=0;j<this->ny();j++){
+                for(size_t k=0;k<this->nz();k++){
+                    res+=this->at(i,j,k);
+                }
+            }
+        }
+        return res;
+    }
     size_t nx() const{return this->nx_;}
     size_t ny() const{return this->ny_;}
     size_t nz() const{return this->nz_;}

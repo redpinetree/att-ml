@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 
-#include "ndarray.hpp"
+#include "../ndarray.hpp"
 
 class bond{
 public:
@@ -38,13 +38,12 @@ public:
     double& bmi();
     size_t& order();
     bool& todo();
-    void j(size_t,array2d<double>&);
     void bmi(array2d<double>&);
 private:
     std::pair<size_t,size_t> v_;
     std::pair<size_t,size_t> v_orig_;
     size_t virt_count_;
-    array2d<double> w_;
+    array2d<double> w_; //if not yet processed, todo=1
     array2d<size_t> f_;
     double bmi_;
     size_t order_; //in observable computation, this is the upstream site

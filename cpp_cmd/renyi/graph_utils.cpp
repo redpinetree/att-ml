@@ -5,8 +5,8 @@
 #include <chrono>
 
 #include "graph_utils.hpp"
-#include "mpi_utils.hpp"
-#include "site.hpp"
+#include "../mpi_utils.hpp"
+#include "../site.hpp"
 #include "bond.hpp"
 
 template<typename distribution,typename cmp>
@@ -47,10 +47,10 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
             //input distributions should be scaled appropriately!
             double k=(2*dist(mpi_utils::prng))-1;
             k*=beta;
-            array2d<double> w(q,q);
+            array3d<double> w(q,q,1); //bond is still as weight matrix
             for(size_t i=0;i<q;i++){
                 for(size_t j=0;j<q;j++){
-                    w.at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1))));
+                    w.at(i,j,0)=(i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1))));
                 }
             }
             es.insert(bond(v1,v2,w));
@@ -88,10 +88,10 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
         line_ss>>v1>>v2>>k;
         k/=1e5;
         k*=beta;
-        array2d<double> w(q,q);
+        array3d<double> w(q,q,1); //bond is still as weight matrix
         for(size_t i=0;i<q;i++){
             for(size_t j=0;j<q;j++){
-                w.at(i,j)=(i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1))));
+                w.at(i,j,0)=(i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1))));
             }
         }
         es.insert(bond(v1,v2,w));

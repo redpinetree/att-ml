@@ -4,7 +4,7 @@
 #include <string>
 #include <random>
 
-#include "graph.hpp"
+#include "../graph.hpp"
 
 namespace graph_utils{
     template<typename distribution,typename cmp>

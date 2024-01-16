@@ -8,12 +8,10 @@ bond::bond(){}
 bond::bond(size_t v1,size_t v2,array2d<double> w):w_(w),virt_count_(0),order_(0),todo_(true){
     this->v_=(v1<v2)?std::pair<size_t,size_t>(v1,v2):std::pair<size_t,size_t>(v2,v1);
     this->v_orig_=this->v();
-    this->f_=array2d<size_t>(1,1);
     this->bmi(w);
 }
 
 bond::bond(std::pair<size_t,size_t> v,array2d<double> w):v_(v),v_orig_(v),virt_count_(0),w_(w),order_(0),todo_(true){
-    this->f_=array2d<size_t>(1,1);
     this->bmi(w);
 }
 

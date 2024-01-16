@@ -4,12 +4,12 @@
 #include <fstream>
 
 #include "algorithm.hpp"
-#include "observables.hpp"
+#include "../observables.hpp"
 #include "optimize.hpp"
 #include "bond.hpp"
-#include "site.hpp"
-#include "stopwatch.hpp"
-#include "utils.hpp"
+#include "../site.hpp"
+#include "../stopwatch.hpp"
+#include "../utils.hpp"
 
 template<typename cmp>
 void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,double lr){
