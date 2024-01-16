@@ -186,6 +186,17 @@ public:
         }
         return res;
     }
+    T sum_over_all(){ //TODO: sum after sorting
+        T res=0;
+        for(size_t i=0;i<this->nx();i++){
+            for(size_t j=0;j<this->ny();j++){
+                for(size_t k=0;k<this->nz();k++){
+                    res+=this->at(i,j,k);
+                }
+            }
+        }
+        return res;
+    }
     size_t nx() const{return this->nx_;}
     size_t ny() const{return this->ny_;}
     size_t nz() const{return this->nz_;}

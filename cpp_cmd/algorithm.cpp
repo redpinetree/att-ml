@@ -12,7 +12,7 @@
 #include "utils.hpp"
 
 template<typename cmp>
-void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,double lr){
+void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,double lr){
     r_max=(r_max==0)?q:r_max;
     //graph deformation
     size_t iteration=0;
@@ -235,6 +235,9 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
                         cluster[dupes[i].first].w().at(x,y,0)/=sum;
+                        if(cluster[dupes[i].first].w().at(x,y,0)<1e-10){
+                            cluster[dupes[i].first].w().at(x,y,0)=1e-10;
+                        }
                     }
                 }
                 cluster[dupes[i].first].virt_count()=g.vs()[cluster[dupes[i].first].v1()].virt()+g.vs()[cluster[dupes[i].first].v2()].virt();
@@ -276,7 +279,7 @@ void algorithm::cmd_approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,d
     // std::cout<<"volume time: "<<sw1.elapsed()<<"\n";
     // std::cout<<"reconnect time: "<<sw2.elapsed()<<"\n";
 }
-template void algorithm::cmd_approx(size_t,graph<bmi_comparator>&,size_t,size_t,double);
+template void algorithm::approx(size_t,graph<bmi_comparator>&,size_t,size_t,double);
 
 template<typename cmp>
 void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
@@ -341,6 +344,10 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     g.vs()[current.order()].p_ijk()=p_ijk;
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
+    // for(size_t k=0;k<g.vs()[current.order()].probs().size();k++){
+        // std::cout<<g.vs()[current.order()].probs()[k]<<" ";
+    // }
+    // std::cout<<"\n";
     
     g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
     for(size_t idx=0;idx<r_k;idx++){

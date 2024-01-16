@@ -18,8 +18,8 @@
 #define PI 3.14159265358979323846
 
 void print_usage(){
-    std::cerr<<"usage: cmd_approx [--options] <q> <n_samples> <d> <{l|l0,l1,...}> <min_beta> <max_beta> <step_beta>\n";
-    std::cerr<<"usage: cmd_approx [--options] <q> 0 <min_beta> <max_beta> <step_beta>\n";
+    std::cerr<<"usage: renyi_approx [--options] <q> <n_samples> <d> <{l|l0,l1,...}> <min_beta> <max_beta> <step_beta>\n";
+    std::cerr<<"usage: renyi_approx [--options] <q> 0 <min_beta> <max_beta> <step_beta>\n";
     std::cerr<<"if <n_samples>!=0, required: -d, -1, -2, forbidden: -i,\n";
     std::cerr<<"if <n_samples>==0, reguired: -i, forbidden: -d, -1, -2, --open-bc\n";
     std::cerr<<"options:\n";
@@ -329,9 +329,9 @@ int main(int argc,char **argv){
 
             graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
             sw.start();
-            algorithm::cmd_approx(q,g,r_max,iter_max,lr);
+            algorithm::approx(q,g,r_max,iter_max,lr);
             sw.split();
-            if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
+            if(verbose>=3){std::cout<<"approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
             sw.start();
@@ -342,7 +342,7 @@ int main(int argc,char **argv){
                 calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4);
             }
             sw.split();
-            if(verbose>=3){std::cout<<"m computation time: "<<(double) sw.elapsed()<<"ms\n";}
+            if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
             if(verbose>=4){observables::print_moments(g,q);}

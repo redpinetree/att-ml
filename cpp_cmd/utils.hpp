@@ -27,6 +27,26 @@ struct bmi_comparator{
 };
 
 //functions must be inline to avoid repeated compilation
+//sorted float add
+inline double vec_add_float(std::vector<double> v){
+    std::sort(v.begin(),v.end());
+    double sum=0;
+    for(size_t i=0;i<v.size();i++){
+        sum+=v[i];
+    }
+    return sum;
+}
+
+//sorted float mult
+inline double vec_mult_float(std::vector<double> v){
+    std::sort(v.begin(),v.end());
+    double prod=1;
+    for(size_t i=0;i<v.size();i++){
+        prod*=v[i];
+    }
+    return prod;
+}
+
 //cartesian product of identical vectors [0,...,q-1], p times
 inline std::vector<std::vector<size_t> > spin_cart_prod(size_t q, size_t p){
     std::vector<std::vector<size_t> > cart_prod;
