@@ -11,6 +11,6 @@
 !/py_cmd/
 !/rudy/
 !/cpp/
-!/cpp_cmd/
 !/cpp_old/
+!/cpp_old_old/
 !Makefile

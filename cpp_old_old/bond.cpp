@@ -2,12 +2,12 @@
 
 #include "bond.hpp"
 
-bond::bond(size_t q,size_t v1,size_t v2,double j):q_(q),j_(j),order_(0),todo_(true){
+bond::bond(size_t q,size_t v1,size_t v2,double j): q_(q),j_(j),order_(0),todo_(true){
     this->v_=(v1<v2)?std::pair<size_t,size_t>(v1,v2):std::pair<size_t,size_t>(v2,v1);
     this->bmi(q,j);
 }
 
-bond::bond(size_t q,std::pair<size_t,size_t> v,double j):q_(q),v_(v),j_(j),order_(0),todo_(true){
+bond::bond(size_t q,std::pair<size_t,size_t> v,double j): q_(q),v_(v),j_(j),order_(0),todo_(true){
     this->bmi(q,j);
 }
 

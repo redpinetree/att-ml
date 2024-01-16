@@ -4,8 +4,7 @@
 #include "graph.hpp"
 
 namespace algorithm{
-    template<typename cmp>
-    void tree_approx(size_t,graph<cmp>&);
+    void tree_approx_old(size_t,graph_old&,bool);
 };
 
 #endif

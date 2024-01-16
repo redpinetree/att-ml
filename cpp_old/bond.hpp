@@ -33,7 +33,7 @@ private:
     std::pair<size_t,size_t> v_;
     double j_;
     double bmi_;
-    size_t order_;
+    size_t order_; //in observable computation, this is the upstream site
     bool todo_;
 };
 

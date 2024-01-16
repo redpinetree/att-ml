@@ -12,8 +12,12 @@
 template<typename cmp>
 class graph{
 public:
-    graph(){}
-    graph(std::vector<site> vs,std::multiset<bond,cmp> es):vs_(vs),es_(es){};
+    graph(){
+        this->n_phys_sites_=this->vs().size();
+    }
+    graph(std::vector<site> vs,std::multiset<bond,cmp> es):vs_(vs),es_(es){
+        this->n_phys_sites_=this->vs().size();
+    };
     operator std::string() const{
         std::ostringstream vs_ss,es_ss;
         for(size_t i=0;i<this->vs().size();i++){
@@ -35,13 +39,16 @@ public:
     }
     std::vector<site> vs() const{return this->vs_;};
     std::multiset<bond,cmp> es() const{return this->es_;};
+    size_t n_phys_sites() const{return this->n_phys_sites_;};
     std::vector<size_t> dims() const{return this->dims_;};
     std::vector<site>& vs(){return this->vs_;};
     std::multiset<bond,cmp>& es(){return this->es_;};
+    size_t& n_phys_sites(){return this->n_phys_sites_;};
     std::vector<size_t>& dims(){return this->dims_;};
 private:
     std::vector<site> vs_;
     std::multiset<bond,cmp> es_;
+    size_t n_phys_sites_;
     //only nonempty if regular lattice
     std::vector<size_t> dims_;
 };
