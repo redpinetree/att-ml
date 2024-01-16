@@ -41,7 +41,7 @@ private:
     std::pair<size_t,size_t> v_;
     std::pair<size_t,size_t> v_orig_;
     size_t virt_count_;
-    array3d<double> w_; //if not yet processed, todo=1 and array3d size must have nz=1
+    array3d<double> w_; //if not yet processed, todo=1
     double bmi_;
     size_t order_; //in observable computation, this is the upstream site
     bool todo_;

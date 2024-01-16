@@ -1,10 +1,10 @@
 #include <fstream>
 
-#include "mpi_utils.hpp"
+#include "../mpi_utils.hpp"
 #include "optimize.hpp"
-#include "observables.hpp"
+#include "../observables.hpp"
 
-void optimize::renyi_opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0){
+void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     
     double best_cost=1e300;

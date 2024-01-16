@@ -192,7 +192,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         // optimize::potts_renorm(slave,old_cluster,current,cluster);
         
         // std::cout<<"HERE\n";
-        optimize::renyi_opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,lr);
+        optimize::opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,lr);
         // std::cout<<"HERE DONE\n";
         
         // std::cout<<"current: "<<(std::string)current<<"\n";
