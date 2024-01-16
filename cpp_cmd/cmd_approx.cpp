@@ -329,7 +329,7 @@ int main(int argc,char **argv){
 
             graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
             sw.start();
-            algorithm::cmd_approx(q,g,r_max,iter_max,lr);
+            algorithm::approx(q,g,r_max,iter_max,lr);
             sw.split();
             if(verbose>=3){std::cout<<"cmd_approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
