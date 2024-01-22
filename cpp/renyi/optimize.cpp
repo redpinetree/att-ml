@@ -122,7 +122,7 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
         }
         
         //nadam variables
-        double alpha=0.001;
+        double alpha=0.0001;
         double beta1=0.9;
         double beta2=0.999;
         double epsilon=1e-10;

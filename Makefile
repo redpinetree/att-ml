@@ -3,8 +3,8 @@ CXX = g++
 CXXFLAGS = -O3 -ffloat-store -ffp-contract=off -march=native -pipe -std=c++17
 # CXXFLAGS = -O0
 
-TARGET_OLD_OLD = ./bin/tree_approx_potts_old_OLD
-TARGET_OLD = ./bin/tree_approx_potts_OLD
+TARGET_OLD_OLD = ./bin/tree_approx_potts_old_old
+TARGET_OLD = ./bin/tree_approx_potts_old
 TARGET_CMD = ./bin/cmd_approx
 TARGET_RENYI = ./bin/renyi_approx
 SRC_OLD_OLD = ./cpp_old_old/tree_approx_potts.cpp ./cpp_old_old/algorithm.cpp ./cpp_old_old/graph.cpp ./cpp_old_old/graph_utils.cpp ./cpp_old_old/site.cpp ./cpp_old_old/bond.cpp ./cpp_old_old/bond_utils.cpp
@@ -14,14 +14,21 @@ SRC_CMD = ./cpp/cmd/graph_utils.cpp ./cpp/cmd/algorithm.cpp ./cpp/cmd/optimize.c
 SRC_RENYI = ./cpp/renyi/graph_utils.cpp ./cpp/renyi/algorithm.cpp ./cpp/renyi/optimize.cpp ./cpp/renyi/bond.cpp
 OBJ_OLD_OLD = $(SRC_OLD_OLD:%.cpp=%.o)
 OBJ_OLD = $(SRC_OLD:%.cpp=%.o)
-OBJ_COMMON = $(SRC_COMMON:%.cpp=%.o)
+OBJ_COMMON_CMD = $(SRC_COMMON:%.cpp=%_cmd.o)
+OBJ_COMMON_RENYI = $(SRC_COMMON:%.cpp=%_renyi.o)
 OBJ_CMD = $(SRC_CMD:%.cpp=%.o)
 OBJ_RENYI = $(SRC_RENYI:%.cpp=%.o)
 
 .PHONY: clean
 .SUFFIXES: .cpp .hpp .o
 
-all: $(TARGET_CMD) $(TARGET_RENYI)
+all: 
+	$(MAKE) $(TARGET_CMD)
+	$(MAKE) $(TARGET_RENYI)
+renyi: $(TARGET_RENYI)
+	$(MAKE) $(TARGET_RENYI)
+cmd: $(TARGET_CMD)
+	$(MAKE) $(TARGET_CMD)
 # all: $(TARGET_OLD) $(TARGET_CMD) $(TARGET_RENYI)
 # all: $(TARGET_OLD_OLD) $(TARGET_OLD) $(TARGET_CMD) $(TARGET_RENYI)
 
@@ -31,13 +38,11 @@ $(TARGET_OLD_OLD): $(OBJ_OLD_OLD)
 $(TARGET_OLD): $(OBJ_OLD)
 	$(MPICXX) $(OBJ_OLD) -o $(TARGET_OLD) $(CXXFLAGS)
 
-$(TARGET_CMD): INCLUDE_PATH = ./cpp/cmd
-$(TARGET_CMD): $(OBJ_COMMON) $(OBJ_CMD)
-	$(MPICXX) $(OBJ_COMMON) $(OBJ_CMD) -o $(TARGET_CMD) $(CXXFLAGS)
+$(TARGET_CMD): $(OBJ_COMMON_CMD) $(OBJ_CMD)
+	$(MPICXX) $(OBJ_COMMON_CMD) $(OBJ_CMD) -o $(TARGET_CMD) $(CXXFLAGS)
 
-$(TARGET_RENYI): INCLUDE_PATH = ./cpp/renyi
-$(TARGET_RENYI): $(OBJ_COMMON) $(OBJ_RENYI)
-	$(MPICXX) $(OBJ_COMMON) $(OBJ_RENYI) -o $(TARGET_RENYI) $(CXXFLAGS)
+$(TARGET_RENYI): $(OBJ_COMMON_RENYI) $(OBJ_RENYI)
+	$(MPICXX) $(OBJ_COMMON_RENYI) $(OBJ_RENYI) -o $(TARGET_RENYI) $(CXXFLAGS)
 
 $(OBJ_OLD_OLD): $(@:%.o=%.cpp)
 	$(MPICXX) -c $(@:%.o=%.cpp) -o $@ $(CXXFLAGS)
@@ -45,8 +50,11 @@ $(OBJ_OLD_OLD): $(@:%.o=%.cpp)
 $(OBJ_OLD): $(@:%.o=%.cpp)
 	$(MPICXX) -c $(@:%.o=%.cpp) -o $@ $(CXXFLAGS)
 
-$(OBJ_COMMON): $(@:%.o=%.cpp)
-	$(MPICXX) -I $(INCLUDE_PATH) -c $(@:%.o=%.cpp) -o $@ $(CXXFLAGS)
+$(OBJ_COMMON_CMD): $(@:%_cmd.o=%.cpp)
+	$(MPICXX) -I ./cpp/cmd -c $(@:%_cmd.o=%.cpp) -o $@ $(CXXFLAGS)
+
+$(OBJ_COMMON_RENYI): $(@:%_renyi.o=%.cpp)
+	$(MPICXX) -I ./cpp/renyi -c $(@:%_renyi.o=%.cpp) -o $@ $(CXXFLAGS)
 
 $(OBJ_CMD): $(@:%.o=%.cpp)
 	$(MPICXX) -I ./cpp/cmd -c $(@:%.o=%.cpp) -o $@ $(CXXFLAGS)
