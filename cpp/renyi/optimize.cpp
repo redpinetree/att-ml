@@ -4,17 +4,12 @@
 #include "optimize.hpp"
 #include "../observables.hpp"
 
-void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0){
+void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0,size_t max_restarts=10){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
-    
     double best_cost=1e300;
-    // std::cout<<"old_current.w():\n"<<(std::string)old_current.w()<<"\n";
-    // std::cout<<"old_current.w() sum:\n"<<old_current.w().sum_over_all()<<"\n";
     bond best_current=current;
     std::vector<bond> best_cluster;
     for(size_t n=0;n<cluster.size();n++){
-        // std::cout<<"old_cluster.w(): "<<(std::string)old_cluster[n].w()<<"\n";
-        // std::cout<<"old_cluster.w() sum: "<<old_cluster[n].w().sum_over_all()<<"\n";
         best_cluster.push_back(cluster[n]);
     }
     
@@ -47,25 +42,14 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
             z+=old_current.w().at(i,j,0)*gi[i]*gj[j];
         }
     }
-    // std::cout<<"gi:";
-    // for(size_t i=0;i<gi.size();i++){
-        // std::cout<<gi[i]<<" ";
-    // }
-    // std::cout<<"\n";
-    // std::cout<<"gj:";
-    // for(size_t j=0;j<gj.size();j++){
-        // std::cout<<gj[j]<<" ";
-    // }
-    // std::cout<<"\n";
-    // std::cout<<"z:"<<z<<"\n";
     
-    for(size_t restarts=1;restarts<11;restarts++){
+    for(size_t restarts=1;restarts<max_restarts+1;restarts++){
         bond trial_current=current;
         std::vector<bond> trial_cluster;
         for(size_t n=0;n<cluster.size();n++){
             trial_cluster.push_back(cluster[n]);
         }
-        //reinitialize weight matrix to correct size if needed on first iteration
+        //reinitialize weight matrix to correct size on first iteration
         array3d<double> new_w(trial_current.w().nx(),trial_current.w().ny(),r_k);
         double sum=0;
         for(size_t i=0;i<new_w.nx();i++){
@@ -91,16 +75,6 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
         // std::cout<<(std::string) new_w<<"\n";
         for(size_t n=0;n<trial_cluster.size();n++){
             array3d<double> new_w(sites[trial_cluster[n].v1()].rank(),r_k,1);
-            for(size_t i=0;i<new_w.nx();i++){
-                for(size_t j=0;j<new_w.ny();j++){
-                    if((i<trial_cluster[n].w().nx())&&(j<trial_cluster[n].w().ny())){
-                        new_w.at(i,j,0)=trial_cluster[n].w().at(i,j,0)*(trial_cluster[n].w().nx()*trial_cluster[n].w().ny())/(double) (new_w.nx()*new_w.ny());
-                    }
-                    else{
-                        new_w.at(i,j,0)=1/(double) (new_w.nx()*new_w.ny());
-                    }
-                }
-            }
             double sum=0;
             for(size_t i=0;i<new_w.nx();i++){
                 for(size_t j=i;j<new_w.ny();j++){
@@ -174,16 +148,6 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
                 gi_prime[k]=vec_mult_float(gi_prime_factors);
                 gj_prime[k]=vec_mult_float(gj_prime_factors);
             }
-            // std::cout<<"gi_prime:";
-            // for(size_t i=0;i<gi_prime.size();i++){
-                // std::cout<<gi_prime[i]<<" ";
-            // }
-            // std::cout<<"\n";
-            // std::cout<<"gj_prime:";
-            // for(size_t j=0;j<gj_prime.size();j++){
-                // std::cout<<gj_prime[j]<<" ";
-            // }
-            // std::cout<<"\n";
             //calculate F'_i(S_i,S_k,S_k',a) and F'_j(S_j,S_k,S_k',a)
             array3d<double> fi_prime(trial_current.w().nx(),r_k,r_k);
             array3d<double> fj_prime(trial_current.w().ny(),r_k,r_k);
@@ -374,16 +338,6 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
                     gi_prime[k]=vec_mult_float(gi_prime_factors);
                     gj_prime[k]=vec_mult_float(gj_prime_factors);
                 }
-                // std::cout<<"gi_prime:";
-                // for(size_t i=0;i<gi_prime.size();i++){
-                    // std::cout<<gi_prime[i]<<" ";
-                // }
-                // std::cout<<"\n";
-                // std::cout<<"gj_prime:";
-                // for(size_t j=0;j<gj_prime.size();j++){
-                    // std::cout<<gj_prime[j]<<" ";
-                // }
-                // std::cout<<"\n";
                 //calculate F'_i(S_i,S_k,S_k',a) and F'_j(S_j,S_k,S_k',a) and keep F factors
                 std::vector<array3d<double> > f_factors;
                 array3d<double> fi_prime(trial_current.w().nx(),r_k,r_k);
@@ -622,8 +576,8 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
                 prev_cluster[n]=trial_cluster[n].w();
             }
         }
-                    std::cout<<"final cost: "<<cost<<"\n";
-                    // std::cout<<"final diff: "<<diff<<"\n";
+        std::cout<<"final cost: "<<cost<<"\n";
+        // std::cout<<"final diff: "<<diff<<"\n";
                     
         if(cost<best_cost){
             std::cout<<"cost improved. replacing...\n";
