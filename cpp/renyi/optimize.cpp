@@ -530,14 +530,16 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
                 trial_cluster[n].bmi(trial_cluster[n].w());
             }
             
+            //NOTE: convergence check is after the variables have been modified. the assumption is that C=0 means there is no/little change in the parameters
             //check for convergence if after first iteration (since trial_current must be resized)
+            cost=log(cost);
             // if(cost>1e3){ //if too large, reinitialize, doesn't count
                 // std::cout<<"cost too large. discarding result.\n";
                 // restarts--;
                 // break;
             // }
-            if(cost<1){ //if too small, reinitialize, doesn't count
-                std::cout<<"cost less than 1. discarding result.\n";
+            if((fabs(cost)>=1e-6)&&(cost<0)){ //if too small, reinitialize, doesn't count
+                std::cout<<"cost less than 0. discarding result.\n";
                 restarts--;
                 break;
             }
@@ -561,8 +563,8 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
                     std::cout<<"converged after "<<(t+1)<<" iterations (diff==0)\n";
                     break;
                 }
-                if(fabs(cost-1)<1e-6){
-                    std::cout<<"converged after "<<(t+1)<<" iterations (cost==1)\n";
+                if(fabs(cost)<1e-6){
+                    std::cout<<"converged after "<<(t+1)<<" iterations (cost==0)\n";
                     break;
                 }
                 if(t==max_it-1){
@@ -576,6 +578,9 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
                 prev_cluster[n]=trial_cluster[n].w();
             }
         }
+        if((fabs(cost)>=1e-6)&&(cost<0)){
+            continue;
+        }
         std::cout<<"final cost: "<<cost<<"\n";
         // std::cout<<"final diff: "<<diff<<"\n";
                     
@@ -587,7 +592,7 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
                 best_cluster[n]=trial_cluster[n];
             }
         }
-        if(fabs(best_cost-1)<1e-6){
+        if(fabs(best_cost)<1e-6){
             std::cout<<"identical distribution obtained. stopping optimization.\n";
             break;
         }
