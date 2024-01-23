@@ -35,6 +35,7 @@ void print_usage(){
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-n,--iter-max: maximum number of optimization iterations\n";
     std::cerr<<"\t-l,--learning-rate: learning rate. if nonzero, the optimization method will be gradient descent instead of iterative optimization.\n";
+    std::cerr<<"\t-R,--restarts: maximum number of restarts\n";
 }
 
 template<typename cmp>
@@ -114,6 +115,7 @@ int main(int argc,char **argv){
     size_t r_max=0;
     size_t iter_max=100; //default is 100 iterations max
     double lr=0;
+    size_t restarts=10;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -129,10 +131,11 @@ int main(int argc,char **argv){
             {"r-max",required_argument,0,'r'},
             {"iter-max",required_argument,0,'n'},
             {"learning-rate",required_argument,0,'l'},
+            {"restarts",required_argument,0,'R'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -149,6 +152,7 @@ int main(int argc,char **argv){
             case 'r': r_max=(size_t) atoi(optarg); break;
             case 'n': iter_max=(size_t) atoi(optarg); break;
             case 'l': lr=(double) atof(optarg); break;
+            case 'R': restarts=(size_t) atoi(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -310,11 +314,11 @@ int main(int argc,char **argv){
         // observables::output_lines.push_back(header1_vals_ss.str());
         if(n_samples!=0){ //hypercubic lattice is used
             // header2_ss<<"beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg\n";
-            header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg\n";
+            header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg total_c\n";
         }
         else{
             // header2_ss<<"beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q\n";
-            header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q\n";
+            header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q total_c\n";
         }
         observables::output_lines.push_back(header2_ss.str());
         while(beta<=max_beta){
@@ -329,7 +333,7 @@ int main(int argc,char **argv){
 
             graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
             sw.start();
-            algorithm::approx(q,g,r_max,iter_max,lr);
+            algorithm::approx(q,g,r_max,iter_max,lr,restarts);
             sw.split();
             if(verbose>=3){std::cout<<"approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
@@ -349,6 +353,11 @@ int main(int argc,char **argv){
             if(verbose>=4){std::cout<<std::string(g);}
             n_phys_sites=g.n_phys_sites();
             
+            //compute cumulative cost
+            double total_cost=0;
+            for (auto it=g.es().begin();it!=g.es().end();++it){
+                total_cost+=(*it).cost();
+            }
             //compute output quantities
             // q2_var=m4_2-pow(m2_2,2);
             q2_var=q4-pow(q2,2);
@@ -367,11 +376,11 @@ int main(int argc,char **argv){
             std::stringstream output_line_ss;
             if(add_suffix){ //hypercubic lattice is used
                 // output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
-                output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
+                output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<" "<<total_cost<<"\n";
             }
             else{
                 // output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<"\n";
-                output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<"\n";
+                output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<total_cost<<"\n";
             }
             observables::output_lines.push_back(output_line_ss.str());
             if(verbose>=2){std::cout<<"Time elapsed for this beta/temp: "<<trial_time<<"ms\n";}

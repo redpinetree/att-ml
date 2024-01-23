@@ -23,6 +23,7 @@ public:
     size_t virt_count() const;
     array3d<double> w() const;
     double bmi() const;
+    double cost() const;
     size_t order() const;
     bool todo() const;
     std::pair<size_t,size_t>& v();
@@ -34,6 +35,7 @@ public:
     size_t& virt_count();
     array3d<double>& w();
     double& bmi();
+    double& cost();
     size_t& order();
     bool& todo();
     void bmi(array3d<double>&);
@@ -43,6 +45,7 @@ private:
     size_t virt_count_;
     array3d<double> w_; //if not yet processed, todo=1
     double bmi_;
+    double cost_;
     size_t order_; //in observable computation, this is the upstream site
     bool todo_;
 };

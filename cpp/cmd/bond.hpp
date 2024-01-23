@@ -24,6 +24,7 @@ public:
     array2d<double> w() const;
     array2d<size_t> f() const;
     double bmi() const;
+    double cost() const;
     size_t order() const;
     bool todo() const;
     std::pair<size_t,size_t>& v();
@@ -36,6 +37,7 @@ public:
     array2d<double>& w();
     array2d<size_t>& f();
     double& bmi();
+    double& cost();
     size_t& order();
     bool& todo();
     void bmi(array2d<double>&);
@@ -46,6 +48,7 @@ private:
     array2d<double> w_; //if not yet processed, todo=1
     array2d<size_t> f_;
     double bmi_;
+    double cost_;
     size_t order_; //in observable computation, this is the upstream site
     bool todo_;
 };

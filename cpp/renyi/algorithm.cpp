@@ -12,7 +12,7 @@
 #include "../utils.hpp"
 
 template<typename cmp>
-void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,double lr){
+void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,double lr,size_t restarts){
     r_max=(r_max==0)?q:r_max;
     //graph deformation
     size_t iteration=0;
@@ -192,7 +192,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         // optimize::potts_renorm(slave,old_cluster,current,cluster);
         
         // std::cout<<"HERE\n";
-        optimize::opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,lr,10);
+        current.cost()=optimize::opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,lr,restarts);
         // std::cout<<"HERE DONE\n";
         
         // std::cout<<"current: "<<(std::string)current<<"\n";
@@ -279,7 +279,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
     // std::cout<<"volume time: "<<sw1.elapsed()<<"\n";
     // std::cout<<"reconnect time: "<<sw2.elapsed()<<"\n";
 }
-template void algorithm::approx(size_t,graph<bmi_comparator>&,size_t,size_t,double);
+template void algorithm::approx(size_t,graph<bmi_comparator>&,size_t,size_t,double,size_t);
 
 template<typename cmp>
 void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){

@@ -4,7 +4,7 @@
 #include "optimize.hpp"
 #include "../observables.hpp"
 
-void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0,size_t max_restarts=10){
+double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0,size_t max_restarts=10){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     double best_cost=1e300;
     bond best_current=current;
@@ -476,6 +476,7 @@ void optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites
     for(size_t n=0;n<cluster.size();n++){
         cluster[n]=best_cluster[n];
     }
+    return best_cost;
 }
 
 //cmd function mimicking alg. 1. this assumes and results in a fixed rank.
