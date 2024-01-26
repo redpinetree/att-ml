@@ -58,8 +58,8 @@ void bond::bmi(array3d<double>& w){
     std::vector<double> sum_ax1(w.ny());
     for(size_t i=0;i<w.nx();i++){
         for(size_t j=0;j<w.ny();j++){
-            sum_ax0[i]+=w.at(i,j,0);
-            sum_ax1[j]+=w.at(i,j,0);
+            sum_ax0[i]+=exp(w.at(i,j,0));
+            sum_ax1[j]+=exp(w.at(i,j,0));
         }
     }
     size_t nonzero_sum_ax0=0;
@@ -129,9 +129,9 @@ void bond::bmi(array3d<double>& w){
                 for(size_t j=0;j<w.ny();j++){
                     double e2=0;
                     for(size_t k=0;k<x.size();k++){
-                        e2+=w.at(k,j,0)*x_old[k];
+                        e2+=exp(w.at(k,j,0))*x_old[k];
                     }
-                    e1+=(e2!=0)?w.at(i,j,0)*(1/e2):0;
+                    e1+=(e2!=0)?exp(w.at(i,j,0))*(1/e2):0;
                 }
                 x[i]=(e1!=0)?((double) nonzero_sum_ax1/(double) nonzero_sum_ax0)*(1/e1):0;
             }
@@ -165,9 +165,9 @@ void bond::bmi(array3d<double>& w){
                 for(size_t j=0;j<w.nx();j++){
                     double e2=0;
                     for(size_t k=0;k<y.size();k++){
-                        e2+=w.at(j,k,0)*y_old[k];
+                        e2+=exp(w.at(j,k,0))*y_old[k];
                     }
-                    e1+=(e2!=0)?w.at(j,i,0)*(1/e2):0;
+                    e1+=(e2!=0)?exp(w.at(j,i,0))*(1/e2):0;
                 }
                 y[i]=(e1!=0)?((double) nonzero_sum_ax0/(double) nonzero_sum_ax1)*(1/e1):0;
             }
@@ -183,7 +183,7 @@ void bond::bmi(array3d<double>& w){
         double sum=0;
         for(size_t i=0;i<p_ij.nx();i++){
             for(size_t j=0;j<p_ij.ny();j++){
-                p_ij.at(i,j,0)=x[i]*w.at(i,j,0)*y[j];
+                p_ij.at(i,j,0)=x[i]*exp(w.at(i,j,0))*y[j];
                 sum+=p_ij.at(i,j,0);
             }
         }
@@ -194,7 +194,11 @@ void bond::bmi(array3d<double>& w){
         }
     }
     else{
-        p_ij=w;
+        for(size_t i=0;i<w.nx();i++){
+            for(size_t j=0;j<w.ny();j++){
+                p_ij.at(i,j,0)=exp(w.at(i,j,0));
+            }
+        }
     }
     // std::cout<<"post bmi:\n"<<(std::string) w<<"\n";
         // row_sum=w.sum_over_axis(0);

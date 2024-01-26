@@ -225,19 +225,17 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                     std::cout<<"warning: merging bonds with different sizes!\n";
                 }
                 //faster to do *= and /sum computations in the same nested loops
-                double sum=0;
+                std::vector<double> sum_addends;
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
-                        cluster[dupes[i].first].w().at(x,y,0)*=cluster[dupes[i].second].w().at(x,y,0); //bonds still as weight matrix
-                        sum+=cluster[dupes[i].first].w().at(x,y,0);
+                        cluster[dupes[i].first].w().at(x,y,0)+=cluster[dupes[i].second].w().at(x,y,0); //bonds still as weight matrix, log domain means mult is add
+                        sum_addends.push_back(cluster[dupes[i].first].w().at(x,y,0));
                     }
                 }
+                double sum=lse(sum_addends);
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
-                        cluster[dupes[i].first].w().at(x,y,0)/=sum;
-                        if(cluster[dupes[i].first].w().at(x,y,0)<1e-10){
-                            cluster[dupes[i].first].w().at(x,y,0)=1e-10;
-                        }
+                        cluster[dupes[i].first].w().at(x,y,0)-=sum;
                     }
                 }
                 cluster[dupes[i].first].virt_count()=g.vs()[cluster[dupes[i].first].v1()].virt()+g.vs()[cluster[dupes[i].first].v2()].virt();
@@ -294,7 +292,7 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     for(size_t i=0;i<r_i;i++){
         for(size_t j=0;j<r_j;j++){
             for(size_t k=0;k<r_k;k++){
-                double e=current.w().at(i,j,k);
+                double e=exp(current.w().at(i,j,k));
                 p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
                 p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
                 p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals

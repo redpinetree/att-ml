@@ -228,17 +228,24 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                 // std::cout<<"merging: "<<std::string(cluster[dupes[i].second])<<"+"<<std::string(cluster[dupes[i].first]);
                 // std::cout<<"\n1st: "<<std::string(cluster[dupes[i].first].w())<<"\n";
                 // std::cout<<"2nd: "<<std::string(cluster[dupes[i].second].w())<<"\n";
+                //check if same size
+                bool same_nx=cluster[dupes[i].first].w().nx()==cluster[dupes[i].second].w().nx();
+                bool same_ny=cluster[dupes[i].first].w().ny()==cluster[dupes[i].second].w().ny();
+                if(!(same_nx&&same_ny)){
+                    std::cout<<"warning: merging bonds with different sizes!\n";
+                }
                 //faster to do *= and /sum computations in the same nested loops
-                double sum=0;
+                std::vector<double> sum_addends;
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
-                        cluster[dupes[i].first].w().at(x,y)*=cluster[dupes[i].second].w().at(x,y);
-                        sum+=cluster[dupes[i].first].w().at(x,y);
+                        cluster[dupes[i].first].w().at(x,y)+=cluster[dupes[i].second].w().at(x,y); //log domain means mult is add
+                        sum_addends.push_back(cluster[dupes[i].first].w().at(x,y));
                     }
                 }
+                double sum=lse(sum_addends);
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
-                        cluster[dupes[i].first].w().at(x,y)/=sum;
+                        cluster[dupes[i].first].w().at(x,y)-=sum;
                     }
                 }
                 cluster[dupes[i].first].virt_count()=g.vs()[cluster[dupes[i].first].v1()].virt()+g.vs()[cluster[dupes[i].first].v2()].virt();
@@ -295,7 +302,7 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     for(size_t i=0;i<r_i;i++){
         for(size_t j=0;j<r_j;j++){
             double k=current.f().at(i,j);
-            double e=current.w().at(i,j);
+            double e=exp(current.w().at(i,j));
             p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
             p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
             p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals

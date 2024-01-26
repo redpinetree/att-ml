@@ -46,8 +46,8 @@ public:
                     v.push_back(this->at(i,j));
                 }
                 std::sort(v.begin(),v.end());
-                for(size_t i=0;i<v.size();i++){
-                    e+=v[i];
+                for(size_t n=0;n<v.size();n++){
+                    e+=v[n];
                 }
                 res.push_back(e);
             }
@@ -63,9 +63,56 @@ public:
                     v.push_back(this->at(i,j));
                 }
                 std::sort(v.begin(),v.end());
-                for(size_t j=0;j<v.size();j++){
-                    e+=v[j];
+                for(size_t n=0;n<v.size();n++){
+                    e+=v[n];
                 }
+                res.push_back(e);
+            }
+        }
+        return res;
+    }
+    std::vector<T> lse_over_axis(size_t ax){
+        if(ax>1){
+            std::cerr<<"Attempted to sum over non-existent axis "<<ax<<" in array2d. Aborting...\n";
+            exit(1);
+        }
+        std::vector<T> res;
+        //TODO: shewchuk summation
+        if(ax==0){
+            for(size_t j=0;j<this->ny();j++){
+                T e=0;
+                // for(size_t i=0;i<this->nx();i++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t i=0;i<this->nx();i++){
+                    v.push_back(this->at(i,j));
+                }
+                std::sort(v.begin(),v.end());
+                double max=*(std::max_element(v.begin(),v.end()));
+                for(size_t n=0;n<v.size();n++){
+                    e+=exp(v[n]-max);
+                }
+                e=max+log(e);
+                res.push_back(e);
+            }
+        }
+        else if(ax==1){
+            for(size_t i=0;i<this->nx();i++){
+                T e=0;
+                // for(size_t j=0;j<this->ny();j++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t j=0;j<this->ny();j++){
+                    v.push_back(this->at(i,j));
+                }
+                std::sort(v.begin(),v.end());
+                double max=*(std::max_element(v.begin(),v.end()));
+                for(size_t n=0;n<v.size();n++){
+                    e+=exp(v[n]-max);
+                }
+                e=max+log(e);
                 res.push_back(e);
             }
         }
@@ -140,8 +187,8 @@ public:
                     }
                 }
                 std::sort(v.begin(),v.end());
-                for(size_t i=0;i<v.size();i++){
-                    e+=v[i];
+                for(size_t n=0;n<v.size();n++){
+                    e+=v[n];
                 }
                 res.push_back(e);
             }
@@ -159,8 +206,8 @@ public:
                     }
                 }
                 std::sort(v.begin(),v.end());
-                for(size_t j=0;j<v.size();j++){
-                    e+=v[j];
+                for(size_t n=0;n<v.size();n++){
+                    e+=v[n];
                 }
                 res.push_back(e);
             }
@@ -178,9 +225,84 @@ public:
                     }
                 }
                 std::sort(v.begin(),v.end());
-                for(size_t j=0;j<v.size();j++){
-                    e+=v[j];
+                for(size_t n=0;n<v.size();n++){
+                    e+=v[n];
                 }
+                res.push_back(e);
+            }
+        }
+        return res;
+    }
+    std::vector<T> lse_over_axis(size_t ax0,size_t ax1){
+        if(ax0>2){
+            std::cerr<<"Attempted to sum over non-existent axes "<<ax0<<" in array3d. Aborting...\n";
+            exit(1);
+        }
+        if(ax1>2){
+            std::cerr<<"Attempted to sum over non-existent axes "<<ax1<<" in array3d. Aborting...\n";
+            exit(1);
+        }
+        std::vector<T> res;
+        //TODO: shewchuk summation
+        if(((ax0==0)&&(ax1==2))||((ax0==2)&&(ax1==0))){
+            for(size_t j=0;j<this->ny();j++){
+                T e=0;
+                // for(size_t i=0;i<this->nx();i++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t i=0;i<this->nx();i++){
+                    for(size_t k=0;k<this->nz();k++){
+                        v.push_back(this->at(i,j,k));
+                    }
+                }
+                std::sort(v.begin(),v.end());
+                double max=*(std::max_element(v.begin(),v.end()));
+                for(size_t n=0;n<v.size();n++){
+                    e+=exp(v[n]-max);
+                }
+                e=max+log(e);
+                res.push_back(e);
+            }
+        }
+        else if(((ax0==1)&&(ax1==2))||((ax0==2)&&(ax1==1))){
+            for(size_t i=0;i<this->nx();i++){
+                T e=0;
+                // for(size_t j=0;j<this->ny();j++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t j=0;j<this->ny();j++){
+                    for(size_t k=0;k<this->nz();k++){
+                        v.push_back(this->at(i,j,k));
+                    }
+                }
+                std::sort(v.begin(),v.end());
+                double max=*(std::max_element(v.begin(),v.end()));
+                for(size_t n=0;n<v.size();n++){
+                    e+=exp(v[n]-max);
+                }
+                e=max+log(e);
+                res.push_back(e);
+            }
+        }
+        else if(((ax0==0)&&(ax1==1))||((ax0==1)&&(ax1==0))){
+            for(size_t k=0;k<this->nz();k++){
+                T e=0;
+                // for(size_t j=0;j<this->ny();j++){
+                    // e+=this->at(i,j);
+                // }
+                std::vector<T> v;
+                for(size_t i=0;i<this->nx();i++){
+                    for(size_t j=0;j<this->ny();j++){
+                        v.push_back(this->at(i,j,k));
+                    }
+                }
+                double max=*(std::max_element(v.begin(),v.end()));
+                for(size_t n=0;n<v.size();n++){
+                    e+=exp(v[n]-max);
+                }
+                e=max+log(e);
                 res.push_back(e);
             }
         }

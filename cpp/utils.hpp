@@ -27,6 +27,20 @@ struct bmi_comparator{
 };
 
 //functions must be inline to avoid repeated compilation
+//logsumexp
+inline double lse(double a,double b){
+    return (a>b)?a+log(exp(b-a)):b+log(exp(a-b));
+}
+inline double lse(std::vector<double> v){
+    double max=*(std::max_element(v.begin(),v.end()));
+    double sum=0;
+    for(size_t i=0;i<v.size();i++){
+        sum+=exp(v[i]-max);
+    }
+    sum=max+log(sum);
+    return sum;
+}
+
 //sorted float add
 inline double vec_add_float(std::vector<double> v){
     std::sort(v.begin(),v.end());

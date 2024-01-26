@@ -50,7 +50,7 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
             array3d<double> w(q,q,1); //bond is still as weight matrix
             for(size_t i=0;i<q;i++){
                 for(size_t j=0;j<q;j++){
-                    w.at(i,j,0)=(i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1))));
+                    w.at(i,j,0)=log((i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1)))));
                 }
             }
             es.insert(bond(v1,v2,w));
@@ -91,7 +91,7 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
         array3d<double> w(q,q,1); //bond is still as weight matrix
         for(size_t i=0;i<q;i++){
             for(size_t j=0;j<q;j++){
-                w.at(i,j,0)=(i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1))));
+                w.at(i,j,0)=log((i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1)))));
             }
         }
         es.insert(bond(v1,v2,w));
