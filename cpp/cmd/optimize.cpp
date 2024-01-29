@@ -126,7 +126,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         double ewma_cost=prev_cost;
         size_t window_size=10;
         //nadam variables
-        double alpha=0.0001;
+        double alpha=0.0005;
         double beta1=0.9;
         double beta2=0.999;
         double epsilon=1e-10;
@@ -144,6 +144,11 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         std::vector<array2d<double> > g_cluster;
         for(size_t n=0;n<trial_cluster.size();n++){
             g_cluster.push_back(array2d<double>(trial_cluster[n].w().nx(),trial_cluster[n].w().ny()));
+        }
+        array2d<double> x_current(trial_current.w().nx(),trial_current.w().ny());
+        std::vector<array2d<double> > x_cluster;
+        for(size_t n=0;n<trial_cluster.size();n++){
+            x_cluster.push_back(array2d<double>(trial_cluster[n].w().nx(),trial_cluster[n].w().ny()));
         }
         
         //convergence check variables
@@ -207,37 +212,41 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             // std::cout<<(std::string)p_ij<<"\n";
             // std::cout<<(std::string)p_prime_ij_env<<"\n";
 
-            double sum=0;
+            std::vector<double> sum_addends;
             for(size_t i=0;i<p_ij.nx();i++){
                 for(size_t j=0;j<p_ij.ny();j++){
                     if(lr==0){ //lr==0 means use iterative method based on stationarity condition
                         trial_current.w().at(i,j)=p_ij.at(i,j)-p_prime_ij_env.at(i,j);
                     }
                     else{ //lr!=0 means use gradient descent with lr
-                        double grad=exp(p_prime_ij_env.at(i,j))-exp(p_ij.at(i,j)-trial_current.w().at(i,j));
-                        grad*=exp(trial_current.w().at(i,j)); //get gradient of ln(w_ijk)
+                        // double grad=exp(p_prime_ij_env.at(i,j))-exp(p_ij.at(i,j)-trial_current.w().at(i,j));
+                        // grad*=exp(trial_current.w().at(i,j)); //get gradient of ln(w_ijk)
+                        double a=p_prime_ij_env.at(i,j)+trial_current.w().at(i,j);
+                        double b=p_ij.at(i,j);
+                        double grad=(a>=b)?exp(a+log(1-exp(b-a))):-exp(b+log(1-exp(a-b))); //gradient can be negative, must be done in normal space, of ln(w_ijk)
                         g_current.at(i,j)=grad;
                         m_current.at(i,j)=(t==0)?g_current.at(i,j):(beta1*m_current.at(i,j))+((1-beta1)*g_current.at(i,j));
                         v_current.at(i,j)=(t==0)?pow(g_current.at(i,j),2.0):(beta2*v_current.at(i,j))+((1-beta2)*pow(g_current.at(i,j),2.0));
                         double bias_corrected_m=m_current.at(i,j)/(1-pow(beta1,(double) t+1));
                         double bias_corrected_v=v_current.at(i,j)/(1-pow(beta2,(double) t+1));
-                        trial_current.w().at(i,j)=((1-(alpha*0.01))*exp(trial_current.w().at(i,j)))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon)));
-                        // trial_current.w().at(i,j)=pow(sqrt(trial_current.w().at(i,j))-(lr*grad),2.0);
-                        if(trial_current.w().at(i,j)<1e-100){ //in case the weight is negative, force it to be nonnegative!
-                            trial_current.w().at(i,j)=1e-100;
-                        }
-                        sum+=trial_current.w().at(i,j);
+                        // trial_current.w().at(i,j)=((1-(alpha*0.01))*trial_current.w().at(i,j))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
+                        double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
+                        double reckless_alpha=2*alpha; //win-adamw
+                        double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*0.01)); //win-adamw
+                        x_current.at(i,j)=(1/(1+(alpha*0.01)))*(trial_current.w().at(i,j)-(alpha*u)); //win-adamw
+                        trial_current.w().at(i,j)=(reckless_alpha*tau*x_current.at(i,j))+((alpha*tau)*(trial_current.w().at(i,j)-(reckless_alpha*u))); //win-adamw
+                        sum_addends.push_back(trial_current.w().at(i,j));
                     }
                 }
             }
+            double sum=lse(sum_addends);
             if(lr!=0){
                 for(size_t i=0;i<trial_current.w().nx();i++){
                     for(size_t j=0;j<trial_current.w().ny();j++){
-                        trial_current.w().at(i,j)/=sum;
-                        if(trial_current.w().at(i,j)<1e-100){ //in case the weight is negative, force it to be nonnegative!
-                            trial_current.w().at(i,j)=1e-100;
+                        trial_current.w().at(i,j)-=sum;
+                        if(trial_current.w().at(i,j)<log(1e-100)){ //in case the weight is negative, force it to be nonnegative!
+                            trial_current.w().at(i,j)=log(1e-100);
                         }
-                        trial_current.w().at(i,j)=log(trial_current.w().at(i,j));
                     }
                 }
             }
@@ -346,37 +355,41 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     }
                 }
                 
-                double sum=0;
+                std::vector<double> sum_addends;
                 for(size_t imu=0;imu<p_ki.nx();imu++){
                     for(size_t k=0;k<p_ki.ny();k++){
                         if(lr==0){ //lr==0 means use iterative method based on stationarity condition
-                            trial_cluster[n].w().at(imu,k)=p_ki.at(imu,k)/p_prime_ki_env.at(imu,k);
+                            trial_cluster[n].w().at(imu,k)=p_ki.at(imu,k)-p_prime_ki_env.at(imu,k);
                         }
                         else{ //lr!=0 means use gradient descent with lr
-                            double grad=exp(p_prime_ki_env.at(imu,k))-exp(p_ki.at(imu,k)-trial_cluster[n].w().at(imu,k));
-                            grad*=exp(trial_cluster[n].w().at(imu,k)); //get gradient of ln(w_kimu)
+                            // double grad=exp(p_prime_ki_env.at(imu,k))-exp(p_ki.at(imu,k)-trial_cluster[n].w().at(imu,k));
+                            // grad*=exp(trial_cluster[n].w().at(imu,k)); //get gradient of ln(w_kimu)
+                            double a=p_prime_ki_env.at(imu,k)+trial_cluster[n].w().at(imu,k);
+                            double b=p_ki.at(imu,k);
+                            double grad=(a>=b)?exp(a+log(1-exp(b-a))):-exp(b+log(1-exp(a-b))); //gradient can be negative, must be done in normal space, of ln(w_ijk)
                             g_cluster[n].at(imu,k)=grad;
                             m_cluster[n].at(imu,k)=(t==0)?g_cluster[n].at(imu,k):(beta1*m_cluster[n].at(imu,k))+((1-beta1)*g_cluster[n].at(imu,k));
                             v_cluster[n].at(imu,k)=(t==0)?pow(g_cluster[n].at(imu,k),2.0):(beta2*v_cluster[n].at(imu,k))+((1-beta2)*pow(g_cluster[n].at(imu,k),2.0));
                             double bias_corrected_m=m_cluster[n].at(imu,k)/(1-pow(beta1,(double) t+1));
                             double bias_corrected_v=v_cluster[n].at(imu,k)/(1-pow(beta2,(double) t+1));
-                            trial_cluster[n].w().at(imu,k)=((1-(alpha*0.01))*exp(trial_cluster[n].w().at(imu,k)))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon)));
-                            if(trial_cluster[n].w().at(imu,k)<1e-100){ //in case the weight is negative, force it to be nonnegative!
-                                trial_cluster[n].w().at(imu,k)=1e-100;
-                            }
-                            sum+=trial_cluster[n].w().at(imu,k);
+                            // trial_cluster[n].w().at(imu,k)=((1-(alpha*0.01))*trial_cluster[n].w().at(imu,k))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
+                            double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
+                            double reckless_alpha=2*alpha; //win-adamw
+                            double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*0.01)); //win-adamw
+                            x_cluster[n].at(imu,k)=(1/(1+(alpha*0.01)))*(trial_cluster[n].w().at(imu,k)-(alpha*u)); //win-adamw
+                            trial_cluster[n].w().at(imu,k)=(reckless_alpha*tau*x_cluster[n].at(imu,k))+((alpha*tau)*(trial_cluster[n].w().at(imu,k)-(reckless_alpha*u))); //win-adamw
+                            sum_addends.push_back(trial_cluster[n].w().at(imu,k));
                         }
                     }
                 }
-                // std::cout<<"trial_cluster[n]: "<<(std::string) trial_cluster[n].w()<<"\n";
+                double sum=lse(sum_addends);
                 if(lr!=0){
                     for(size_t imu=0;imu<trial_cluster[n].w().nx();imu++){
                         for(size_t k=0;k<trial_cluster[n].w().ny();k++){
-                            trial_cluster[n].w().at(imu,k)/=sum;
-                            if(trial_cluster[n].w().at(imu,k)<1e-100){ //in case the weight is negative, force it to be nonnegative!
-                                trial_cluster[n].w().at(imu,k)=1e-100;
+                            trial_cluster[n].w().at(imu,k)-=sum;
+                            if(trial_cluster[n].w().at(imu,k)<log(1e-100)){ //in case the weight is negative, force it to be nonnegative!
+                                trial_cluster[n].w().at(imu,k)=log(1e-100);
                             }
-                            trial_cluster[n].w().at(imu,k)=log(trial_cluster[n].w().at(imu,k));
                         }
                     }
                 }

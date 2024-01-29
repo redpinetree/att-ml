@@ -236,6 +236,9 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
                         cluster[dupes[i].first].w().at(x,y,0)-=sum;
+                        if(cluster[dupes[i].first].w().at(x,y,0)<log(1e-100)){ //in case the weight is negative, force it to be nonnegative!
+                            cluster[dupes[i].first].w().at(x,y,0)=log(1e-100);
+                        }
                     }
                 }
                 cluster[dupes[i].first].virt_count()=g.vs()[cluster[dupes[i].first].v1()].virt()+g.vs()[cluster[dupes[i].first].v2()].virt();

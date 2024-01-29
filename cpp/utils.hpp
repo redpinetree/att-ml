@@ -29,9 +29,12 @@ struct bmi_comparator{
 //functions must be inline to avoid repeated compilation
 //logsumexp
 inline double lse(double a,double b){
-    return (a>b)?a+log(exp(b-a)):b+log(exp(a-b));
+    return (a>b)?a+log(1+exp(b-a)):b+log(exp(a-b)+1);
 }
 inline double lse(std::vector<double> v){
+    if(v.size()==0){
+        return 0;
+    }
     double max=*(std::max_element(v.begin(),v.end()));
     double sum=0;
     for(size_t i=0;i<v.size();i++){
