@@ -54,14 +54,10 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         array3d<double> new_w(trial_current.w().nx(),trial_current.w().ny(),r_k);
         double sum=0;
         for(size_t i=0;i<new_w.nx();i++){
-            for(size_t j=i;j<new_w.ny();j++){
+            for(size_t j=0;j<new_w.ny();j++){
                 for(size_t k=0;k<new_w.nz();k++){
                     new_w.at(i,j,k)=unif_dist(mpi_utils::prng);
                     sum+=new_w.at(i,j,k);
-                    if(j!=i){
-                        new_w.at(j,i,k)=new_w.at(i,j,k);
-                        sum+=new_w.at(j,i,k);
-                    }
                 }
             }
         }
@@ -79,13 +75,9 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             array3d<double> new_w(sites[trial_cluster[n].v1()].rank(),r_k,1);
             double sum=0;
             for(size_t i=0;i<new_w.nx();i++){
-                for(size_t j=i;j<new_w.ny();j++){
+                for(size_t j=0;j<new_w.ny();j++){
                     new_w.at(i,j,0)=unif_dist(mpi_utils::prng);
                     sum+=new_w.at(i,j,0);
-                    if(j!=i){
-                        new_w.at(j,i,0)=new_w.at(i,j,0);
-                        sum+=new_w.at(j,i,0);
-                    }
                 }
             }
             for(size_t i=0;i<new_w.nx();i++){
@@ -268,38 +260,39 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     for(size_t k=0;k<p_prime_ijk_env.nz();k++){
                         if(lr==0){ //lr==0 means use iterative method based on stationarity condition
                             trial_current.w().at(i,j,k)=ij_factors.at(i,j,k)-(sum_ij_factors+p_prime_ijk_env.at(i,j,k));
+                            sum_addends.push_back(trial_current.w().at(i,j,k));
                         }
                         else{ //lr!=0 means use gradient descent with lr
                             // double grad=2*(exp(ij_factors.at(i,j,k)-trial_current.w().at(i,j,k))-exp(p_prime_ijk_env.at(i,j,k)+sum_ij_factors)); //gradient can be negative, must be done in normal space
                             // grad*=exp(trial_current.w().at(i,j,k)); //get gradient of ln(w_ijk)
                             double a=ij_factors.at(i,j,k);
                             double b=p_prime_ijk_env.at(i,j,k)+sum_ij_factors+trial_current.w().at(i,j,k);
-                            double grad=(a>=b)?2*exp(a+log(1-exp(b-a))):-2*exp(b+log(1-exp(a-b))); //gradient can be negative, must be done in normal space, of ln(w_ijk)
-                            g_current.at(i,j,k)=grad;
-                            m_current.at(i,j,k)=(t==0)?g_current.at(i,j,k):(beta1*m_current.at(i,j,k))+((1-beta1)*g_current.at(i,j,k));
-                            v_current.at(i,j,k)=(t==0)?pow(g_current.at(i,j,k),2.0):(beta2*v_current.at(i,j,k))+((1-beta2)*pow(g_current.at(i,j,k),2.0));
-                            double bias_corrected_m=m_current.at(i,j,k)/(1-pow(beta1,(double) t+1));
-                            double bias_corrected_v=v_current.at(i,j,k)/(1-pow(beta2,(double) t+1));
-                            // trial_current.w().at(i,j,k)=((1-(alpha*0.01))*trial_current.w().at(i,j,k))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
-                            double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
-                            double reckless_alpha=2*alpha; //win-adamw
-                            double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*0.01)); //win-adamw
-                            x_current.at(i,j,k)=(1/(1+(alpha*0.01)))*(trial_current.w().at(i,j,k)-(alpha*u)); //win-adamw
-                            trial_current.w().at(i,j,k)=(reckless_alpha*tau*x_current.at(i,j,k))+((alpha*tau)*(trial_current.w().at(i,j,k)-(reckless_alpha*u))); //win-adamw
+                            if(a!=b){ //a==b means grad C is 0, so no change to params
+                                double grad=(a>b)?2*exp(a+log(1-exp(b-a))):-2*exp(b+log(1-exp(a-b))); //gradient can be negative, must be done in normal space, of ln(w_ijk)
+                                g_current.at(i,j,k)=grad;
+                                m_current.at(i,j,k)=(t==0)?g_current.at(i,j,k):(beta1*m_current.at(i,j,k))+((1-beta1)*g_current.at(i,j,k));
+                                v_current.at(i,j,k)=(t==0)?pow(g_current.at(i,j,k),2.0):(beta2*v_current.at(i,j,k))+((1-beta2)*pow(g_current.at(i,j,k),2.0));
+                                double bias_corrected_m=m_current.at(i,j,k)/(1-pow(beta1,(double) t+1));
+                                double bias_corrected_v=v_current.at(i,j,k)/(1-pow(beta2,(double) t+1));
+                                // trial_current.w().at(i,j,k)=((1-(alpha*0.01))*trial_current.w().at(i,j,k))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
+                                double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
+                                double reckless_alpha=2*alpha; //win-adamw
+                                double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*0.01)); //win-adamw
+                                x_current.at(i,j,k)=(1/(1+(alpha*0.01)))*(trial_current.w().at(i,j,k)-(alpha*u)); //win-adamw
+                                trial_current.w().at(i,j,k)=(reckless_alpha*tau*x_current.at(i,j,k))+((alpha*tau)*(trial_current.w().at(i,j,k)-(reckless_alpha*u))); //win-adamw
+                            }
                             sum_addends.push_back(trial_current.w().at(i,j,k));
                         }
                     }
                 }
             }
             double sum=lse(sum_addends);
-            if(lr!=0){ //lr==0 means use iterative method based on stationarity condition
-                for(size_t i=0;i<p_prime_ijk_env.nx();i++){
-                    for(size_t j=0;j<p_prime_ijk_env.ny();j++){
-                        for(size_t k=0;k<p_prime_ijk_env.nz();k++){
-                            trial_current.w().at(i,j,k)-=sum;
-                            if(trial_current.w().at(i,j,k)<log(1e-100)){ //in case the weight is negative, force it to be nonnegative!
-                                trial_current.w().at(i,j,k)=log(1e-100);
-                            }
+            for(size_t i=0;i<p_prime_ijk_env.nx();i++){
+                for(size_t j=0;j<p_prime_ijk_env.ny();j++){
+                    for(size_t k=0;k<p_prime_ijk_env.nz();k++){
+                        trial_current.w().at(i,j,k)-=sum;
+                        if(trial_current.w().at(i,j,k)<log(1e-100)){ //in case the weight is negative, force it to be nonnegative!
+                            trial_current.w().at(i,j,k)=log(1e-100);
                         }
                     }
                 }
@@ -492,36 +485,37 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     for(size_t k=0;k<p_prime_ki_env.ny();k++){
                         if(lr==0){ //lr==0 means use iterative method based on stationarity condition
                             trial_cluster[n].w().at(imu,k,0)=ki_factors.at(imu,k)-(sum_ki_factors+p_prime_ki_env.at(imu,k,0));
+                            sum_addends.push_back(trial_cluster[n].w().at(imu,k,0));
                         }
                         else{ //lr!=0 means use gradient descent with lr
                             // double grad=2*(exp(ki_factors.at(imu,k)-trial_cluster[n].w().at(imu,k,0))-exp(p_prime_ki_env.at(imu,k,0)+sum_ki_factors));
                             // grad*=exp(trial_cluster[n].w().at(imu,k,0)); //get gradient of ln(w_kimu)
                             double a=ki_factors.at(imu,k);
                             double b=p_prime_ki_env.at(imu,k,0)+sum_ki_factors+trial_cluster[n].w().at(imu,k,0);
-                            double grad=(a>=b)?2*exp(a+log(1-exp(b-a))):-2*exp(b+log(1-exp(a-b))); //gradient can be negative, must be done in normal space, of ln(w_ijk)
-                            g_cluster[n].at(imu,k,0)=grad;
-                            m_cluster[n].at(imu,k,0)=(t==0)?g_cluster[n].at(imu,k,0):(beta1*m_cluster[n].at(imu,k,0))+((1-beta1)*g_cluster[n].at(imu,k,0));
-                            v_cluster[n].at(imu,k,0)=(t==0)?pow(g_cluster[n].at(imu,k,0),2.0):(beta2*v_cluster[n].at(imu,k,0))+((1-beta2)*pow(g_cluster[n].at(imu,k,0),2.0));
-                            double bias_corrected_m=m_cluster[n].at(imu,k,0)/(1-pow(beta1,(double) t+1));
-                            double bias_corrected_v=v_cluster[n].at(imu,k,0)/(1-pow(beta2,(double) t+1));
-                            // trial_cluster[n].w().at(imu,k,0)=((1-(alpha*0.01))*exp(trial_cluster[n].w().at(imu,k,0)))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
-                            double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
-                            double reckless_alpha=2*alpha; //win-adamw
-                            double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*0.01)); //win-adamw
-                            x_cluster[n].at(imu,k,0)=(1/(1+(alpha*0.01)))*(trial_cluster[n].w().at(imu,k,0)-(alpha*u)); //win-adamw
-                            trial_cluster[n].w().at(imu,k,0)=(reckless_alpha*tau*x_cluster[n].at(imu,k,0))+((alpha*tau)*(trial_cluster[n].w().at(imu,k,0)-(reckless_alpha*u))); //win-adamw
+                            if(a!=b){ //a==b means grad C is 0, so no change to params
+                                double grad=(a>b)?2*exp(a+log(1-exp(b-a))):-2*exp(b+log(1-exp(a-b))); //gradient can be negative, must be done in normal space, of ln(w_ijk)
+                                g_cluster[n].at(imu,k,0)=grad;
+                                m_cluster[n].at(imu,k,0)=(t==0)?g_cluster[n].at(imu,k,0):(beta1*m_cluster[n].at(imu,k,0))+((1-beta1)*g_cluster[n].at(imu,k,0));
+                                v_cluster[n].at(imu,k,0)=(t==0)?pow(g_cluster[n].at(imu,k,0),2.0):(beta2*v_cluster[n].at(imu,k,0))+((1-beta2)*pow(g_cluster[n].at(imu,k,0),2.0));
+                                double bias_corrected_m=m_cluster[n].at(imu,k,0)/(1-pow(beta1,(double) t+1));
+                                double bias_corrected_v=v_cluster[n].at(imu,k,0)/(1-pow(beta2,(double) t+1));
+                                // trial_cluster[n].w().at(imu,k,0)=((1-(alpha*0.01))*exp(trial_cluster[n].w().at(imu,k,0)))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
+                                double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
+                                double reckless_alpha=2*alpha; //win-adamw
+                                double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*0.01)); //win-adamw
+                                x_cluster[n].at(imu,k,0)=(1/(1+(alpha*0.01)))*(trial_cluster[n].w().at(imu,k,0)-(alpha*u)); //win-adamw
+                                trial_cluster[n].w().at(imu,k,0)=(reckless_alpha*tau*x_cluster[n].at(imu,k,0))+((alpha*tau)*(trial_cluster[n].w().at(imu,k,0)-(reckless_alpha*u))); //win-adamw
+                            }
                             sum_addends.push_back(trial_cluster[n].w().at(imu,k,0));
                         }
                     }
                 }
                 double sum=lse(sum_addends);
-                if(lr!=0){ //lr==0 means use iterative method based on stationarity condition
-                    for(size_t imu=0;imu<p_prime_ki_env.nx();imu++){
-                        for(size_t k=0;k<p_prime_ki_env.ny();k++){
-                            trial_cluster[n].w().at(imu,k,0)-=sum;
-                            if(trial_cluster[n].w().at(imu,k,0)<log(1e-100)){
-                                trial_cluster[n].w().at(imu,k,0)=log(1e-100);
-                            }
+                for(size_t imu=0;imu<p_prime_ki_env.nx();imu++){
+                    for(size_t k=0;k<p_prime_ki_env.ny();k++){
+                        trial_cluster[n].w().at(imu,k,0)-=sum;
+                        if(trial_cluster[n].w().at(imu,k,0)<log(1e-100)){
+                            trial_cluster[n].w().at(imu,k,0)=log(1e-100);
                         }
                     }
                 }
