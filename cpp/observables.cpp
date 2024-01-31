@@ -63,10 +63,10 @@ std::vector<double> observables::m_vec(graph<cmp>& g,size_t root,size_t r,size_t
     if(!g.vs()[root].virt()){
         //determine potts basis vectors
         std::vector<std::vector<double> > v;
-        try{
+        if(m_vec_ref_cache.count(r_k)){
             v=observables::m_vec_ref_cache.at(r_k);
         }
-        catch(const std::out_of_range& oor){
+        else{
             v=potts_ref_vecs(r_k);
             observables::m_vec_ref_cache[r_k]=v;
         }
@@ -88,10 +88,10 @@ std::vector<double> observables::m_vec(graph<cmp>& g,size_t root,size_t r,size_t
             size_t c_val=spin_combos[down][s][0];
             //memoize
             std::vector<double> contrib(r_k-1,0);
-            try{
+            if(observables::m_vec_cache.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),r,c_val))){
                 contrib=observables::m_vec_cache.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),r,c_val));
             }
-            catch(const std::out_of_range& oor){
+            else{
                 contrib=m_vec(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),r,c_val,depth+1);
                 observables::m_vec_cache[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),r,c_val)]=contrib;
             }
@@ -143,10 +143,10 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             double contrib=0;
-            try{
+            if(observables::m_known_factors.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals))){
                 contrib=observables::m_known_factors.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals));
             }
-            catch(const std::out_of_range& oor){
+            else{
                 contrib=m(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,depth+1);
                 observables::m_known_factors[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals)]=contrib;
             }
@@ -173,17 +173,17 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                try{
+                if(m_known_factors.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0))){
                     factors[0]=m_known_factors.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0));
                 }
-                catch(const std::out_of_range& oor){
+                else{
                     factors[0]=m(g,g.vs()[root].p1(),n_target,c0,p,r,c_vals0,depth+1);
                     m_known_factors[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0)]=factors[0];
                 }
-                try{
+                if(m_known_factors.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1))){
                     factors[1]=m_known_factors.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1));
                 }
-                catch(const std::out_of_range& oor){
+                else{
                     factors[1]=m(g,g.vs()[root].p2(),n_target,c1,p,r,c_vals1,depth+1);
                     m_known_factors[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1)]=factors[1];
                 }
@@ -321,10 +321,10 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             double contrib=0;
-            try{
+            if(observables::q_known_factors.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals))){
                 contrib=observables::q_known_factors.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals));
             }
-            catch(const std::out_of_range& oor){
+            else{
                 contrib=q(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,depth+1);
                 observables::q_known_factors[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals)]=contrib;
             }
@@ -359,17 +359,17 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                try{
+                if(q_known_factors.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0))){
                     factors[0]=q_known_factors.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0));
                 }
-                catch(const std::out_of_range& oor){
+                else{
                     factors[0]=q(g,g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,depth+1);
                     q_known_factors[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0)]=factors[0];
                 }
-                try{
+                if(q_known_factors.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1))){
                     factors[1]=q_known_factors.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1));
                 }
-                catch(const std::out_of_range& oor){
+                else{
                     factors[1]=q(g,g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,depth+1);
                     q_known_factors[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1)]=factors[1];
                 }
@@ -528,10 +528,10 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n_target,si
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             std::complex<double> contrib=0;
-            try{
+            if(observables::m_known_factors_complex.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components))){
                 contrib=observables::m_known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components));
             }
-            catch(const std::out_of_range& oor){
+            else{
                 contrib=m(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components,depth+1);
                 observables::m_known_factors_complex[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components)]=contrib;
             }
@@ -558,17 +558,17 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n_target,si
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                try{
+                if(m_known_factors_complex.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k_components))){
                     factors[0]=m_known_factors_complex.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k_components));
                 }
-                catch(const std::out_of_range& oor){
+                else{
                     factors[0]=m(g,g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k_components,depth+1);
                     m_known_factors_complex[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k_components)]=factors[0];
                 }
-                try{
+                if(m_known_factors_complex.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k_components))){
                     factors[1]=m_known_factors_complex.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k_components));
                 }
-                catch(const std::out_of_range& oor){
+                else{
                     factors[1]=m(g,g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k_components,depth+1);
                     m_known_factors_complex[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k_components)]=factors[1];
                 }
@@ -713,10 +713,10 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             std::complex<double> contrib=0;
-            try{
+            if(observables::q_known_factors_complex.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components))){
                 contrib=observables::q_known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components));
             }
-            catch(const std::out_of_range& oor){
+            else{
                 contrib=q(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components,depth+1);
                 observables::q_known_factors_complex[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components)]=contrib;
             }
@@ -751,17 +751,17 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                try{
+                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,k_components))){
                     factors[0]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,k_components));
                 }
-                catch(const std::out_of_range& oor){
+                else{
                     factors[0]=q(g,g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,k_components,depth+1);
                     q_known_factors_complex[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,k_components)]=factors[0];
                 }
-                try{
+                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,k_components))){
                     factors[1]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,k_components));
                 }
-                catch(const std::out_of_range& oor){
+                else{
                     factors[1]=q(g,g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,k_components,depth+1);
                     q_known_factors_complex[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,k_components)]=factors[1];
                 }
