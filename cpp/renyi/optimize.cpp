@@ -93,11 +93,14 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         double prev_cost=1e50;
         double ewma_cost=prev_cost;
         size_t window_size=10;
-        //nadam variables
-        double alpha=0.0005;
+        //win-adamw variables
+        double alpha=0.0005; //base lr
         double beta1=0.9;
         double beta2=0.999;
         double epsilon=1e-10;
+        double lambda=0.01; //weight decay
+        double reckless_alpha=2*alpha; //win-adamw
+        double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*lambda)); //win-adamw
         array3d<double> m_current(trial_current.w().nx(),trial_current.w().ny(),trial_current.w().nz());
         std::vector<array3d<double> > m_cluster;
         for(size_t n=0;n<trial_cluster.size();n++){
@@ -276,8 +279,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                                 double bias_corrected_v=v_current.at(i,j,k)/(1-pow(beta2,(double) t+1));
                                 // trial_current.w().at(i,j,k)=((1-(alpha*0.01))*trial_current.w().at(i,j,k))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
                                 double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
-                                double reckless_alpha=2*alpha; //win-adamw
-                                double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*0.01)); //win-adamw
                                 x_current.at(i,j,k)=(1/(1+(alpha*0.01)))*(trial_current.w().at(i,j,k)-(alpha*u)); //win-adamw
                                 trial_current.w().at(i,j,k)=(reckless_alpha*tau*x_current.at(i,j,k))+((alpha*tau)*(trial_current.w().at(i,j,k)-(reckless_alpha*u))); //win-adamw
                             }
@@ -501,8 +502,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                                 double bias_corrected_v=v_cluster[n].at(imu,k,0)/(1-pow(beta2,(double) t+1));
                                 // trial_cluster[n].w().at(imu,k,0)=((1-(alpha*0.01))*exp(trial_cluster[n].w().at(imu,k,0)))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
                                 double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
-                                double reckless_alpha=2*alpha; //win-adamw
-                                double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*0.01)); //win-adamw
                                 x_cluster[n].at(imu,k,0)=(1/(1+(alpha*0.01)))*(trial_cluster[n].w().at(imu,k,0)-(alpha*u)); //win-adamw
                                 trial_cluster[n].w().at(imu,k,0)=(reckless_alpha*tau*x_cluster[n].at(imu,k,0))+((alpha*tau)*(trial_cluster[n].w().at(imu,k,0)-(reckless_alpha*u))); //win-adamw
                             }

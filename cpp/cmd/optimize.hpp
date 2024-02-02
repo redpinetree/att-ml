@@ -13,7 +13,7 @@ namespace optimize{
     array2d<size_t> f_mvec_sim(site,site,array2d<double>,size_t);
     array2d<size_t> f_hybrid_maxent(site,site,array2d<double>,size_t);
     array2d<size_t> f_hybrid_mvec_sim(site,site,array2d<double>,size_t);
-    double kl_div(double,std::vector<site>,bond,std::vector<bond>,bond,std::vector<bond>);
+    double kl_div(double,double,std::vector<site>,bond,std::vector<bond>,bond,std::vector<bond>);
 };
 
 #endif
