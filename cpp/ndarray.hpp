@@ -127,6 +127,17 @@ public:
         }
         return res;
     }
+    
+    //exp for array2d
+    array2d<T> exp_form(){
+        array2d<double> a=*this;
+        for(size_t i=0;i<a.nx();i++){
+            for(size_t j=0;j<a.ny();j++){
+                a.at(i,j)=exp(this->at(i,j));
+            }
+        }
+        return a;
+    }
     size_t nx() const{return this->nx_;}
     size_t ny() const{return this->ny_;}
     std::vector<T> e() const{return this->e_;}
@@ -318,6 +329,19 @@ public:
             }
         }
         return res;
+    }
+    
+    //exp for array3d
+    array3d<T> exp_form(){
+        array3d<double> a=*this;
+        for(size_t i=0;i<a.nx();i++){
+            for(size_t j=0;j<a.ny();j++){
+                for(size_t k=0;k<a.nz();k++){
+                    a.at(i,j,k)=exp(this->at(i,j,k));
+                }
+            }
+        }
+        return a;
     }
     size_t nx() const{return this->nx_;}
     size_t ny() const{return this->ny_;}

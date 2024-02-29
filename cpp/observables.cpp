@@ -45,14 +45,58 @@ double q_prefactor(size_t n_target,size_t r_k){
     return res;
 }
 
+double s2(size_t n,size_t k){ //stirling number of the second kind
+    double res=0;
+    for(size_t m=0;m<=k;m++){
+        res+=(pow(-1,(double) k-m)*pow(m,(double) n))/(tgamma((double) k-m+1)*tgamma((double) m+1));
+    }
+    return res;
+}
+
+std::vector<double> q_prefactor(size_t n_target,size_t r_k,size_t n_sites){
+    std::vector<double> bounds(2,0);
+    if(n_target==1){
+        bounds[0]=0;
+        bounds[1]=1;
+        return bounds;
+    }
+    //lower bound is high temp limit
+    double res_lb=0;
+    for(size_t k=0;k<=n_target-2;k++){
+        double sub_res=0;
+        for(size_t l=1;l<=n_target-k;l++){
+            double falling_factorial=tgamma(n_sites+1)/tgamma(n_sites-l+1);
+            sub_res+=s2(n_target-k,l)*falling_factorial*pow(r_k,-(double) (l+k));
+            // std::cout<<n_target-k<<" "<<l<<" "<<s2(n_target-k,l)<<" "<<falling_factorial<<" "<<(s2(n_target-k,l)*falling_factorial*pow(r_k,-(double) (l+k)))<<"\n";
+        }
+        res_lb+=pow(-1,k)*binom(n_target,k)*pow(n_sites,(double) k-n_target)*sub_res;
+    }
+    res_lb+=pow(-(double) r_k,-(double) n_target)*(1-(double) n_target);
+    bounds[0]=res_lb;
+    //upper bound is low temp limit
+    double res_ub=0;
+    // for(size_t m=1;m<=n_target;m++){
+        // res_ub+=binom(n_target,m)*pow(r_k,m-1)*pow(-1,n_target-m);
+    // }
+    // res_ub+=(n_target%2==0)?1:-1;
+    // bounds[1]=res_ub/pow(r_k,n_target);
+    for(size_t k=0;k<=n_target-2;k++){
+        res_ub+=pow(-1,k)*binom(n_target,k)*pow(r_k,-(double) (k+1));
+    }
+    res_ub+=pow(-(double) r_k,-(double) n_target)*(1-(double) n_target);
+    bounds[1]=res_ub;
+    // std::cout<<"prefactor "<<pow(r_k,n_target)<<" "<<denom_factor<<"\n";
+    return bounds;
+}
+
 std::vector<std::string> observables::output_lines;
 // std::vector<std::vector<double> > observables::probs;
 std::map<std::tuple<size_t,size_t,size_t>,std::vector<double> > observables::m_vec_cache;
 std::map<size_t,std::vector<std::vector<double> > > observables::m_vec_ref_cache;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::m_known_factors;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::m_known_factors_complex;
-std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::q_known_factors;
-std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::q_known_factors_complex;
+std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t> >,double> observables::q_known_factors;
+std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<double> >,std::complex<double> > observables::q_known_factors_complex;
 
 //this m function calculates using a top-down approach. theoretically, this is sufficient to calculate observables, but due to stack size limitations, a segfault occurs with a stack overflow for large lattices.
 template<typename cmp>
@@ -207,26 +251,6 @@ template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,siz
 //this m function is just a wrapper for the bottom-up version
 template<typename cmp>
 double observables::m(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,size_t p,bool abs_flag){
-    // std::vector<size_t> c(g.vs()[root].rank(),0);
-    // c[0]=p;
-    // return observables::m(g,n,p,c);
-    // size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    // size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
-    // size_t r_k=g.vs()[root].rank();
-    // std::vector<double> p_k(r_k,0);
-    // for(size_t j=0;j<r_j;j++){
-        // for(size_t i=0;i<r_i;i++){
-            // size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
-            // double e=(*g.vs()[root].adj().begin()).w().at(i,j);
-            // p_k[k]+=e;
-        // }
-    // }
-    // std::cout<<"PROBS: ";
-    // for(size_t j=0;j<p_k.size();j++){
-        // std::cout<<p_k[j]<<" ";
-    // }
-    // std::cout<<"\n";
-    
     size_t r_k=g.vs()[root].rank();
     double res=0;
     std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
@@ -288,7 +312,7 @@ template double observables::m<bmi_comparator>(graph<bmi_comparator>&,size_t,siz
 
 //this q function calculates using a top-down approach. theoretically, this is sufficient to calculate observables, but due to stack size limitations, a segfault occurs with a stack overflow for large lattices.
 template<typename cmp>
-double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t p,std::vector<size_t> r,std::vector<size_t> c,size_t depth){
+double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t p,std::vector<size_t> c,size_t depth){
     // std::cout<<depth<<"\n";
     size_t r_k=g.vs()[root].rank();
     if(c.size()!=p){
@@ -298,10 +322,9 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
     //compute desired quantity, if leaf
     if(!g.vs()[root].virt()){
         double res=1;
-        for(size_t i=0;i<n;i++){
-            // if(r[i]>=r_k){return 0;} //ignore when reference rank exceeds rank of spin
-            for(size_t j=0;j<p;j++){
-                res*=(c[j]==r[i])?1:0;
+        for(size_t i=0;i<p-1;i++){
+            if(c[i]!=c[i+1]){
+                return 0;
             }
         }
         // std::cout<<res<<"\n";
@@ -310,6 +333,27 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
     double res=0;
     size_t r_i=g.vs()[root].p_bond().w().nx();
     size_t r_j=g.vs()[root].p_bond().w().ny();
+    // if(depth==1 && root==3){
+        // std::cout<<"p_i at site "<<root<<":\n";
+        // for(size_t i=0;i<g.vs()[g.vs()[root].p1()].probs().size();i++){
+            // std::cout<<g.vs()[g.vs()[root].p1()].probs()[i]<<" ";
+        // }
+        // std::cout<<"\n";
+        // std::cout<<"p_j at site "<<root<<":\n";
+        // for(size_t j=0;j<g.vs()[g.vs()[root].p2()].probs().size();j++){
+            // std::cout<<g.vs()[g.vs()[root].p2()].probs()[j]<<" ";
+        // }
+        // std::cout<<"\n";
+        // std::cout<<"p_k at site "<<root<<":\n";
+        // for(size_t k=0;k<g.vs()[root].probs().size();k++){
+            // std::cout<<g.vs()[root].probs()[k]<<" ";
+        // }
+        // std::cout<<"\n";
+        // std::cout<<"p_ik at site "<<root<<":\n"<<(std::string)g.vs()[root].p_ik()<<"\n";
+        // std::cout<<"p_jk at site "<<root<<":\n"<<(std::string)g.vs()[root].p_jk()<<"\n";
+        // std::cout<<"p_ijk at site "<<root<<":\n"<<(std::string)g.vs()[root].p_ijk()<<"\n";
+        // std::cout<<"w_ijk at site "<<root<<":\n"<<(std::string)g.vs()[root].p_bond().w().exp_form()<<"\n";
+    // }
     //subtree contributions
     double c_res=0;
     std::vector<std::vector<std::vector<size_t> > > spin_combos;
@@ -321,12 +365,12 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             double contrib=0;
-            if(observables::q_known_factors.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals))){
-                contrib=observables::q_known_factors.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals));
+            if(observables::q_known_factors.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals))){
+                contrib=observables::q_known_factors.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals));
             }
             else{
-                contrib=q(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,depth+1);
-                observables::q_known_factors[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals)]=contrib;
+                contrib=q(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,depth+1);
+                observables::q_known_factors[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals)]=contrib;
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
@@ -339,6 +383,9 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
         c_res+=temp;
     }
     // if(depth==0){std::cout<<"c_res (subtrees):"<<c_res<<"\n";}
+    // std::cout<<(std::string)g.vs()[root].p_ijk()<<"\n";
+    // std::cout<<(std::string)g.vs()[root].p_ik()<<"\n";
+    // std::cout<<(std::string)g.vs()[root].p_jk()<<"\n";
     res+=c_res;
     for(size_t comp=1;comp<n;comp++){
         size_t c0=comp;
@@ -346,32 +393,24 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
         double c_res=0;
         size_t coef=binom(n,c0)*binom(n-c0,c1);
         std::array<double,2> factors;
-        std::vector<size_t> r0;
-        std::vector<size_t> r1;
-        for(size_t i=0;i<c0;i++){
-            r0.push_back(r[i]);
-        }
-        for(size_t j=c0;j<r.size();j++){
-            r1.push_back(r[j]);
-        }
         for(size_t s0=0;s0<spin_combos[0].size();s0++){
             for(size_t s1=0;s1<spin_combos[1].size();s1++){
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                if(q_known_factors.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0))){
-                    factors[0]=q_known_factors.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0));
+                if(q_known_factors.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0))){
+                    factors[0]=q_known_factors.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0));
                 }
                 else{
-                    factors[0]=q(g,g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,depth+1);
-                    q_known_factors[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0)]=factors[0];
+                    factors[0]=q(g,g.vs()[root].p1(),n_target,c0,p,c_vals0,depth+1);
+                    q_known_factors[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0)]=factors[0];
                 }
-                if(q_known_factors.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1))){
-                    factors[1]=q_known_factors.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1));
+                if(q_known_factors.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1))){
+                    factors[1]=q_known_factors.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1));
                 }
                 else{
-                    factors[1]=q(g,g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,depth+1);
-                    q_known_factors[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1)]=factors[1];
+                    factors[1]=q(g,g.vs()[root].p2(),n_target,c1,p,c_vals1,depth+1);
+                    q_known_factors[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1)]=factors[1];
                 }
                 double factor_prod=factors[0]*factors[1];
                 double weight=1;
@@ -388,83 +427,64 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
     // if(depth==0){std::cout<<"res :"<<n<<" "<<p<<" "<<root<<" "<<res<<"\n";}
     return res;
 }
-template double observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,size_t);
+template double observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t>,size_t);
 
 //this q function is just a wrapper for the bottom-up version
 template<typename cmp>
 double observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,size_t p,bool abs_flag){
-    // std::vector<size_t> c(g.vs()[root].rank(),0);
-    // c[0]=p;
-    // return observables::q(g,n,p,c);
-    // size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    // size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
-    // size_t r_k=g.vs()[root].rank();
-    // std::vector<double> p_k(r_k,0);
-    // for(size_t j=0;j<r_j;j++){
-        // for(size_t i=0;i<r_i;i++){
-            // size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
-            // double e=(*g.vs()[root].adj().begin()).w().at(i,j);
-            // p_k[k]+=e;
-        // }
-    // }
-    // std::cout<<"PROBS: ";
-    // for(size_t j=0;j<p_k.size();j++){
-        // std::cout<<p_k[j]<<" ";
+    // for(size_t a=0;a<g.vs()[root].probs().size();a++){
+        // std::cout<<g.vs()[root].probs()[a]<<" ";
     // }
     // std::cout<<"\n";
-    // std::cout<<"PROBS: ";
-    // for(size_t j=0;j<g.vs()[root].probs().size();j++){
-        // std::cout<<g.vs()[root].probs()[j]<<" ";
-    // }
-    // std::cout<<"\n";
-    // std::cout<<(std::string) g.vs()[root].p_bond().w()<<"\n";
-    // std::cout<<g.vs()[root].p_bond().w().sum_over_all()<<"\n";
-    // std::cout<<(std::string) g.vs()[root].p_bond().f()<<"\n";
-    
     size_t r_k=g.vs()[root].rank();
     double res=0;
     std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
+    // std::vector<std::vector<size_t> > combos;
+    // for(size_t r=0;r<r_k;r++){
+        // combos.push_back(std::vector<size_t>(p,r));
+    // }
     for(size_t n=2;n<=n_target;n++){
-        std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,n);
         double n_res=0;
         for(size_t idx=0;idx<combos.size();idx++){
             std::vector<size_t> c=combos[idx];
             double prob_factor=1;
             for(size_t i=0;i<c.size();i++){
-                // prob_factor*=p_k[c[i]];
                 prob_factor*=g.vs()[root].probs()[c[i]];
+                // prob_factor*=pow(r_k,-1);
             }
+            // double prob_factor=g.vs()[root].probs()[c[0]];
             double sub_res=0;
-            for(size_t i=0;i<r_combos.size();i++){
-                double contrib=observables::q(g,n,n,p,r_combos[i],c);
-                if(abs_flag){
-                    sub_res=(contrib>sub_res)?contrib:sub_res;
-                }
-                else{
-                    sub_res+=contrib;
-                }
-                // if(n_target==2){
-                    // for(size_t j=0;j<r_combos[i].size();j++){
-                        // std::cout<<r_combos[i][j]<<" ";
-                    // }
-                    // std::cout<<"; ";
-                    // for(size_t j=0;j<c.size();j++){
-                        // std::cout<<c[j]<<" ";
-                    // }
-                    // std::cout<<"\n";
-                    // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<sub_res<<" "<<prob_factor<<"\n";
-                // }
+            double contrib=observables::q(g,n_target,n,p,c);
+            // if(c[0]!=c[1]){contrib=0;}
+            if(abs_flag){
+                sub_res=(contrib>sub_res)?contrib:sub_res;
             }
+            else{
+                sub_res+=contrib;
+            }
+            // if(n_target==2){
+                // for(size_t j=0;j<c.size();j++){
+                    // std::cout<<c[j]<<" ";
+                // }
+                // std::cout<<"\n";
+                // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<sub_res<<" "<<prob_factor<<"\n";
+            // }
             n_res+=sub_res*prob_factor;
             // std::cout<<"n_res: " <<sub_res<<" "<<prob_factor<<" "<<(sub_res*prob_factor)<<"\n";
         }
         res+=pow(-1,(double) n)*binom(n_target,n_target-n)*pow(q_orig,(double) n-n_target)*pow(g.n_phys_sites(),n_target-n)*n_res;
+        // res+=pow(-(double) q_orig,-(double) k)*binom(n_target,k)*n_res;
     }
-    //normalize so that perfect correlation is 1
+    // std::cout<<"prefinal_res: "<<res<<"\n";
+    //constant offset, pre-normalization
     res+=pow(-1,(double) n_target-1)*(n_target-1)*pow(q_orig,-(double) n_target)*pow(g.n_phys_sites(),n_target);
-    // std::cout<<res<<"\n";
-    res*=pow(q_prefactor(n_target,q_orig),p-1);
-    // std::cout<<res<<"\n";
+    //normalize so that perfect correlation is 1
+    std::vector<double> bounds=q_prefactor(n_target,q_orig,g.n_phys_sites());
+    // std::cout<<bounds[0]<<" "<<bounds[1]<<" "<<q_prefactor(n_target,q_orig)<<"\n";
+    // res-=bounds[0]*pow(g.n_phys_sites(),n_target);
+    // res/=(bounds[1]-bounds[0]);
+    // res/=bounds[1];
+    res*=q_prefactor(n_target,q_orig);
     // std::cout<<"final_res: "<<res<<"\n";
     return res;
 }
@@ -472,18 +492,18 @@ template double observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,siz
 
 //this q function calculates using a bottom-up approach. this fixes the stack size issue since all top-down calls resolve with depth 1. this function still requires the top-down version to compute observables as the tree is traversed towards the root.
 template<typename cmp>
-double observables::q(graph<cmp>& g,size_t n_target,size_t n,size_t p,std::vector<size_t> r,std::vector<size_t> c){
+double observables::q(graph<cmp>& g,size_t n_target,size_t n,size_t p,std::vector<size_t> c){
     //due to the ordering defined by the comparator, the leaves are at the start and the root is at the end of the multiset.
     for(auto it=g.es().begin();it!=g.es().end();++it){
         std::array<size_t,2> v_idxs{(*it).v1(),(*it).v2()};
         std::vector<size_t> c0(p,0);
         std::vector<size_t> c1(p,0);
-        q_known_factors[std::make_tuple(v_idxs[0],n_target,n,p,r,c0)]=q(g,v_idxs[0],n_target,n,p,r,c0,0);
-        q_known_factors[std::make_tuple(v_idxs[1],n_target,n,p,r,c1)]=q(g,v_idxs[1],n_target,n,p,r,c1,0);
+        q_known_factors[std::make_tuple(v_idxs[0],n_target,n,p,c0)]=q(g,v_idxs[0],n_target,n,p,c0,0);
+        q_known_factors[std::make_tuple(v_idxs[1],n_target,n,p,c1)]=q(g,v_idxs[1],n_target,n,p,c1,0);
     }
-    return q(g,g.vs().size()-1,n_target,n,p,r,c,0);
+    return q(g,g.vs().size()-1,n_target,n,p,c,0);
 }
-template double observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>);
+template double observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<size_t>);
 
 //this m function calculates using a top-down approach. theoretically, this is sufficient to calculate observables, but due to stack size limitations, a segfault occurs with a stack overflow for large lattices.
 
@@ -673,7 +693,7 @@ template std::complex<double> observables::m<bmi_comparator>(graph<bmi_comparato
 
 //this q function calculates using a top-down approach. theoretically, this is sufficient to calculate observables, but due to stack size limitations, a segfault occurs with a stack overflow for large lattices.
 template<typename cmp>
-std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t p,std::vector<size_t> r,std::vector<size_t> c,std::vector<double> k_components,size_t depth){
+std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t p,std::vector<size_t> c,std::vector<double> k_components,size_t depth){
     // std::cout<<depth<<"\n";
     size_t r_k=g.vs()[root].rank();
     if(c.size()!=p){
@@ -683,10 +703,10 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
     //compute desired quantity, if leaf
     if(!g.vs()[root].virt()){
         std::complex<double> res=1;
-        for(size_t i=0;i<n;i++){
-            // if(r[i]>=r_k){return 0;} //ignore when reference rank exceeds rank of spin
-            for(size_t j=0;j<p;j++){
-                res*=(c[j]==r[i])?1:0;
+        for(size_t i=0;i<p-1;i++){
+            if(c[i]!=c[i+1]){
+                res=0;
+                break;
             }
         }
         //compute ft
@@ -713,12 +733,12 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             std::complex<double> contrib=0;
-            if(observables::q_known_factors_complex.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components))){
-                contrib=observables::q_known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components));
+            if(observables::q_known_factors_complex.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,k_components))){
+                contrib=observables::q_known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,k_components));
             }
             else{
-                contrib=q(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components,depth+1);
-                observables::q_known_factors_complex[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components)]=contrib;
+                contrib=q(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,k_components,depth+1);
+                observables::q_known_factors_complex[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,k_components)]=contrib;
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
@@ -738,32 +758,24 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
         std::complex<double> c_res=0;
         size_t coef=binom(n,c0)*binom(n-c0,c1)/2; //divide by 2 for (a,b),(b,a) with diff ft factor
         std::array<std::complex<double>,2> factors;
-        std::vector<size_t> r0;
-        std::vector<size_t> r1;
-        for(size_t i=0;i<c0;i++){
-            r0.push_back(r[i]);
-        }
-        for(size_t j=c0;j<r.size();j++){
-            r1.push_back(r[j]);
-        }
         for(size_t s0=0;s0<spin_combos[0].size();s0++){
             for(size_t s1=0;s1<spin_combos[1].size();s1++){
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,k_components))){
-                    factors[0]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,k_components));
+                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0,k_components))){
+                    factors[0]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0,k_components));
                 }
                 else{
-                    factors[0]=q(g,g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,k_components,depth+1);
-                    q_known_factors_complex[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r0,c_vals0,k_components)]=factors[0];
+                    factors[0]=q(g,g.vs()[root].p1(),n_target,c0,p,c_vals0,k_components,depth+1);
+                    q_known_factors_complex[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0,k_components)]=factors[0];
                 }
-                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,k_components))){
-                    factors[1]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,k_components));
+                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1,k_components))){
+                    factors[1]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1,k_components));
                 }
                 else{
-                    factors[1]=q(g,g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,k_components,depth+1);
-                    q_known_factors_complex[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r1,c_vals1,k_components)]=factors[1];
+                    factors[1]=q(g,g.vs()[root].p2(),n_target,c1,p,c_vals1,k_components,depth+1);
+                    q_known_factors_complex[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1,k_components)]=factors[1];
                 }
                 std::complex<double> factor_prod=factors[0]*std::conj(factors[1]); //(a,b)
                 factor_prod+=std::conj(factors[0])*factors[1]; //(b,a)
@@ -781,28 +793,15 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
     // if(depth==0){std::cout<<"res :"<<n<<" "<<p<<" "<<root<<" "<<res<<"\n";}
     return res;
 }
-template std::complex<double> observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double>,size_t);
+template std::complex<double> observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<double>,size_t);
 
 //this q function is just a wrapper for the bottom-up version
 template<typename cmp>
 std::complex<double> observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,size_t p,std::vector<double> k_components,bool abs_flag){
-    // size_t r_i=(*g.vs()[root].adj().begin()).w().nx();
-    // size_t r_j=(*g.vs()[root].adj().begin()).w().ny();
-    // size_t r_k=g.vs()[root].rank();
-    // std::vector<double> p_k(r_k,0);
-    // for(size_t j=0;j<r_j;j++){
-        // for(size_t i=0;i<r_i;i++){
-            // size_t k=(*g.vs()[root].adj().begin()).f().at(i,j);
-            // double e=(*g.vs()[root].adj().begin()).w().at(i,j);
-            // p_k[k]+=e;
-        // }
-    // }
-    
     size_t r_k=g.vs()[root].rank();
     std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
     std::complex<double> res=0;
     for(size_t n=2;n<=n_target;n++){
-        std::vector<std::vector<size_t> > r_combos=spin_cart_prod(r_k,n);
         std::complex<double> n_res=0;
         for(size_t idx=0;idx<combos.size();idx++){
             std::vector<size_t> c=combos[idx];
@@ -811,14 +810,12 @@ std::complex<double> observables::q(graph<cmp>& g,size_t q_orig,size_t root,size
                 prob_factor*=g.vs()[root].probs()[c[i]];
             }
             std::complex<double> sub_res=0;
-            for(size_t i=0;i<r_combos.size();i++){
-                std::complex<double> contrib=observables::q(g,n,n,p,r_combos[i],c,k_components);
-                if(abs_flag){
-                    sub_res=(std::norm(contrib)>std::norm(sub_res))?contrib:sub_res;
-                }
-                else{
-                    sub_res+=contrib;
-                }
+            std::complex<double> contrib=observables::q(g,n,n,p,c,k_components);
+            if(abs_flag){
+                sub_res=(std::norm(contrib)>std::norm(sub_res))?contrib:sub_res;
+            }
+            else{
+                sub_res+=contrib;
             }
             n_res+=sub_res*prob_factor;
         }
@@ -826,7 +823,8 @@ std::complex<double> observables::q(graph<cmp>& g,size_t q_orig,size_t root,size
     }
     //normalize so that perfect correlation is 1
     res+=pow(-1,(double) n_target-1)*(n_target-1)*pow(q_orig,-(double) n_target)*pow(g.n_phys_sites(),n_target);
-    res*=pow(q_prefactor(n_target,q_orig),p-1);
+    // res*=pow(q_prefactor(n_target,q_orig),n_target);
+    res*=q_prefactor(n_target,q_orig);
     // std::cout<<"final_res: "<<res<<"\n";
     return res;
 }
@@ -834,18 +832,18 @@ template std::complex<double> observables::q<bmi_comparator>(graph<bmi_comparato
 
 //this q function calculates using a bottom-up approach. this fixes the stack size issue since all top-down calls resolve with depth 1. this function still requires the top-down version to compute observables as the tree is traversed towards the root.
 template<typename cmp>
-std::complex<double> observables::q(graph<cmp>& g,size_t n_target,size_t n,size_t p,std::vector<size_t> r,std::vector<size_t> c,std::vector<double> k_components){
+std::complex<double> observables::q(graph<cmp>& g,size_t n_target,size_t n,size_t p,std::vector<size_t> c,std::vector<double> k_components){
     //due to the ordering defined by the comparator, the leaves are at the start and the root is at the end of the multiset.
     for(auto it=g.es().begin();it!=g.es().end();++it){
         std::array<size_t,2> v_idxs{(*it).v1(),(*it).v2()};
         std::vector<size_t> c0(p,0);
         std::vector<size_t> c1(p,0);
-        q_known_factors_complex[std::make_tuple(v_idxs[0],n_target,n,p,r,c0,k_components)]=q(g,v_idxs[0],n_target,n,p,r,c0,k_components,0);
-        q_known_factors_complex[std::make_tuple(v_idxs[1],n_target,n,p,r,c1,k_components)]=q(g,v_idxs[1],n_target,n,p,r,c1,k_components,0);
+        q_known_factors_complex[std::make_tuple(v_idxs[0],n_target,n,p,c0,k_components)]=q(g,v_idxs[0],n_target,n,p,c0,k_components,0);
+        q_known_factors_complex[std::make_tuple(v_idxs[1],n_target,n,p,c1,k_components)]=q(g,v_idxs[1],n_target,n,p,c1,k_components,0);
     }
-    return q(g,g.vs().size()-1,n_target,n,p,r,c,k_components,0);
+    return q(g,g.vs().size()-1,n_target,n,p,c,k_components,0);
 }
-template std::complex<double> observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t>,std::vector<double>);
+template std::complex<double> observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,size_t,size_t,std::vector<size_t>,std::vector<double>);
 
 template<typename cmp>
 void observables::print_moments(graph<cmp>& g,size_t q_orig){ //debug

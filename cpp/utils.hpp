@@ -83,6 +83,25 @@ inline std::vector<std::vector<size_t> > spin_cart_prod(size_t q, size_t p){
     return cart_prod;
 }
 
+//cartesian product of vectors
+inline std::vector<std::vector<size_t> > spin_cart_prod(std::vector<size_t> v){
+    std::vector<std::vector<size_t> > cart_prod;
+    std::vector<size_t> term(v.size(),0);
+    size_t total=1;
+    for(size_t i=0;i<v.size();i++){
+        total*=v[i];
+    }
+    for(size_t i=0;i<total;i++){
+        size_t i_cpy=i;
+        for(size_t j=0;j<v.size();j++){
+            term[v.size()-1-j]=i_cpy%v[j];
+            i_cpy/=v[j];
+        }
+        cart_prod.push_back(term);
+    }
+    return cart_prod;
+}
+
 //binomial coefficient
 inline size_t binom(size_t n,size_t k){
     if(k==0){
