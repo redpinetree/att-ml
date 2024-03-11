@@ -61,11 +61,17 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 }
             }
         }
+        // size_t min=new_w.nx()<new_w.ny()?new_w.nx():new_w.ny();
+        // min=min<new_w.nz()?min:new_w.nz();
+        // for(size_t i=0;i<min;i++){
+            // new_w.at(i,i,i)=1;
+            // sum+=new_w.at(i,i,i);
+        // }
         for(size_t i=0;i<new_w.nx();i++){
             for(size_t j=0;j<new_w.ny();j++){
                 for(size_t k=0;k<new_w.nz();k++){
                     new_w.at(i,j,k)/=sum;
-                    new_w.at(i,j,k)=log(new_w.at(i,j,k));
+                    new_w.at(i,j,k)=new_w.at(i,j,k)==0?-100:log(new_w.at(i,j,k));
                 }
             }
         }
@@ -80,10 +86,15 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     sum+=new_w.at(i,j,0);
                 }
             }
+            // min=new_w.nx()<new_w.ny()?new_w.nx():new_w.ny();
+            // for(size_t i=0;i<min;i++){
+                // new_w.at(i,i,0)=1;
+                // sum+=new_w.at(i,i,0);
+            // }
             for(size_t i=0;i<new_w.nx();i++){
                 for(size_t j=0;j<new_w.ny();j++){
                     new_w.at(i,j,0)/=sum;
-                    new_w.at(i,j,0)=log(new_w.at(i,j,0));
+                    new_w.at(i,j,0)=new_w.at(i,j,0)==0?-100:log(new_w.at(i,j,0));
                 }
             }
             trial_cluster[n].w()=new_w;
@@ -101,6 +112,8 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         double lambda=0.01; //weight decay
         double reckless_alpha=2*alpha; //win-adamw
         double tau=1/(alpha+reckless_alpha+(alpha*reckless_alpha*lambda)); //win-adamw
+        //entropy term weight
+        double entropy_weight=0.01;
         array3d<double> m_current(trial_current.w().nx(),trial_current.w().ny(),trial_current.w().nz());
         std::vector<array3d<double> > m_cluster;
         for(size_t n=0;n<trial_cluster.size();n++){
@@ -130,6 +143,8 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         }
         double diff=0;
         double cost=0;
+        double entropic_cost=0;
+        double total_cost=0;
         array3d<double> p_prime_ijk_env(trial_current.w().nx(),trial_current.w().ny(),r_k);
         for(size_t t=0;t<max_it;t++){
             // std::cout<<"old_current.w():\n"<<(std::string)old_current.w()<<"\n";
@@ -257,6 +272,38 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             // std::cout<<"ij_factors:"<<(std::string)ij_factors<<"\n";
             // std::cout<<"sum_ij_factors:"<<sum_ij_factors<<"\n";
             
+            size_t r_i=trial_current.w().nx();
+            size_t r_j=trial_current.w().ny();
+            array3d<double> joint_p_ijk(r_i,r_j,r_k);
+            std::vector<double> p_k(r_k,0);
+            std::vector<double> entropic_term(r_k,0);
+            double joint_p_ijk_sum=0;
+            for(size_t i=0;i<r_i;i++){
+                for(size_t j=0;j<r_j;j++){
+                    for(size_t k=0;k<r_k;k++){
+                        double e=exp(trial_current.w().at(i,j,k));
+                        joint_p_ijk.at(i,j,k)=e*sites[trial_current.v1()].probs()[i]*sites[trial_current.v2()].probs()[j];
+                        p_k[k]+=joint_p_ijk.at(i,j,k);
+                        joint_p_ijk_sum+=joint_p_ijk.at(i,j,k);
+                    }
+                }
+            }
+            for(size_t i=0;i<r_i;i++){
+                for(size_t j=0;j<r_j;j++){
+                    for(size_t k=0;k<r_k;k++){
+                        joint_p_ijk.at(i,j,k)/=joint_p_ijk_sum;
+                    }
+                }
+            }
+            for(size_t k=0;k<p_k.size();k++){
+                p_k[k]/=joint_p_ijk_sum;
+            }
+            for(size_t k=0;k<p_k.size();k++){
+                for(size_t k2=0;k2<p_k.size();k2++){
+                    entropic_term[k]+=((k==k2)?1-p_k[k2]:-p_k[k2])*(1+log(p_k[k2]));
+                }
+            }
+            
             std::vector<double> sum_addends;
             for(size_t i=0;i<p_prime_ijk_env.nx();i++){
                 for(size_t j=0;j<p_prime_ijk_env.ny();j++){
@@ -272,6 +319,20 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                             double b=p_prime_ijk_env.at(i,j,k)+sum_ij_factors+trial_current.w().at(i,j,k);
                             if(a!=b){ //a==b means grad C is 0, so no change to params
                                 double grad=(a>b)?2*exp(a+log(1-exp(b-a))):-2*exp(b+log(1-exp(a-b))); //gradient can be negative, must be done in normal space, of ln(w_ijk)
+                                // grad=lse(grad,log(0.001*joint_p_ijk.at(i,j,k)*entropic_term[k]));
+                                grad+=entropy_weight*joint_p_ijk.at(i,j,k)*entropic_term[k];
+                                g_current.at(i,j,k)=grad;
+                                m_current.at(i,j,k)=(t==0)?g_current.at(i,j,k):(beta1*m_current.at(i,j,k))+((1-beta1)*g_current.at(i,j,k));
+                                v_current.at(i,j,k)=(t==0)?pow(g_current.at(i,j,k),2.0):(beta2*v_current.at(i,j,k))+((1-beta2)*pow(g_current.at(i,j,k),2.0));
+                                double bias_corrected_m=m_current.at(i,j,k)/(1-pow(beta1,(double) t+1));
+                                double bias_corrected_v=v_current.at(i,j,k)/(1-pow(beta2,(double) t+1));
+                                // trial_current.w().at(i,j,k)=((1-(alpha*0.01))*trial_current.w().at(i,j,k))-(alpha*(bias_corrected_m/(sqrt(bias_corrected_v)+epsilon))); //adamw
+                                double u=bias_corrected_m/(sqrt(bias_corrected_v)+epsilon); //win-adamw
+                                x_current.at(i,j,k)=(1/(1+(alpha*0.01)))*(trial_current.w().at(i,j,k)-(alpha*u)); //win-adamw
+                                trial_current.w().at(i,j,k)=(reckless_alpha*tau*x_current.at(i,j,k))+((alpha*tau)*(trial_current.w().at(i,j,k)-(reckless_alpha*u))); //win-adamw
+                            }
+                            else{
+                                double grad=entropy_weight*joint_p_ijk.at(i,j,k)*entropic_term[k];
                                 g_current.at(i,j,k)=grad;
                                 m_current.at(i,j,k)=(t==0)?g_current.at(i,j,k):(beta1*m_current.at(i,j,k))+((1-beta1)*g_current.at(i,j,k));
                                 v_current.at(i,j,k)=(t==0)?pow(g_current.at(i,j,k),2.0):(beta2*v_current.at(i,j,k))+((1-beta2)*pow(g_current.at(i,j,k),2.0));
@@ -531,6 +592,14 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 // restarts--;
                 // break;
             // }
+            
+            entropic_cost=0;
+            for(size_t k=0;k<trial_current.w().nz();k++){
+                entropic_cost-=entropy_weight*p_k[k]*log(p_k[k]);
+            }
+            entropic_cost-=entropy_weight*log(trial_current.w().nz());
+            
+            total_cost=cost+entropic_cost;
             if((fabs(cost)>=1e-5)&&(cost<0)){ //if too small, reinitialize, doesn't count
                 std::cout<<"cost less than 0. discarding result.\n";
                 restarts--;
@@ -556,20 +625,20 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     // std::cout<<"converged after "<<(t+1)<<" iterations (diff==0)\n";
                     // break;
                 // }
-                ewma_cost=(((window_size-1)*ewma_cost)+(prev_cost-cost))/(double)window_size;
+                ewma_cost=(((window_size-1)*ewma_cost)+(prev_cost-total_cost))/(double)window_size;
                 // std::cout<<"ewma_cost: "<<ewma_cost<<"\n";
-                prev_cost=cost;
-                if(ewma_cost<0){
-                    std::cout<<"converged after "<<(t+1)<<" iterations (ewma_cost)\n";
-                    break;
-                }
-                if(fabs(cost)<1e-5){
-                    std::cout<<"converged after "<<(t+1)<<" iterations (cost)\n";
+                // if(ewma_cost<0){
+                    // std::cout<<"converged after "<<(t+1)<<" iterations (ewma_cost)\n";
+                    // break;
+                // }
+                if(fabs(prev_cost-total_cost)<1e-12){
+                    std::cout<<"converged after "<<(t+1)<<" iterations (total_cost)\n";
                     break;
                 }
                 if(t==max_it-1){
                     std::cout<<"no convergence after "<<(max_it)<<" iterations\n";
                 }
+                prev_cost=total_cost;
             }
             
             //update convergence check variables
@@ -581,12 +650,12 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         if((fabs(cost)>=1e-5)&&(cost<0)){
             continue;
         }
-        std::cout<<"final cost: "<<cost<<"\n";
+        std::cout<<"final cost: "<<cost<<" "<<entropic_cost<<"\n";
         // std::cout<<"final diff: "<<diff<<"\n";
         
-        if(cost<best_cost){
+        if(total_cost<best_cost){
             std::cout<<"cost improved. replacing...\n";
-            best_cost=cost;
+            best_cost=total_cost;
             best_current=trial_current;
             for(size_t n=0;n<best_cluster.size();n++){
                 best_cluster[n]=trial_cluster[n];

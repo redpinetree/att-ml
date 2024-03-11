@@ -307,8 +307,10 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
             double k=current.f().at(i,j);
             double e=exp(current.w().at(i,j));
             p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
-            p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
-            p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals
+            // p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
+            // p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals
+            p_ik.at(i,k)+=p_ijk.at(i,j,k); //compute marginals
+            p_jk.at(j,k)+=p_ijk.at(i,j,k); //compute marginals
             p_k[k]+=p_ijk.at(i,j,k);
             sum+=p_ijk.at(i,j,k);
         }
@@ -323,30 +325,24 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
                 sum_ij+=p_ijk.at(i,j,k);
             }
         }
-        if(sum_ij>1e-8){
-            for(size_t i=0;i<r_i;i++){
-                for(size_t j=0;j<r_j;j++){
-                    p_ijk.at(i,j,k)/=sum_ij;
-                }
+        for(size_t i=0;i<r_i;i++){
+            for(size_t j=0;j<r_j;j++){
+                p_ijk.at(i,j,k)/=sum_ij;
             }
         }
         double sum_i=0;
         for(size_t i=0;i<r_i;i++){
             sum_i+=p_ik.at(i,k);
         }
-        if(sum_i>1e-8){
-            for(size_t i=0;i<r_i;i++){
-                p_ik.at(i,k)/=sum_i;
-            }
+        for(size_t i=0;i<r_i;i++){
+            p_ik.at(i,k)/=sum_i; //same as sum_ij?
         }
         double sum_j=0;
         for(size_t j=0;j<r_j;j++){
             sum_j+=p_jk.at(j,k);
         }
-        if(sum_j>1e-8){
-            for(size_t j=0;j<r_j;j++){
-                p_jk.at(j,k)/=sum_j;
-            }
+        for(size_t j=0;j<r_j;j++){
+            p_jk.at(j,k)/=sum_j; //same as sum_ij?
         }
     }
     g.vs()[current.order()].p_bond()=current;

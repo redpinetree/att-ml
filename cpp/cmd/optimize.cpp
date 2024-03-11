@@ -425,18 +425,18 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 // }
                 ewma_cost=(((window_size-1)*ewma_cost)+(prev_cost-cost))/(double)window_size;
                 // std::cout<<"ewma_cost: "<<ewma_cost<<"\n";
-                prev_cost=cost;
                 if(ewma_cost<0){
                     std::cout<<"converged after "<<(t+1)<<" iterations (ewma_cost)\n";
                     break;
                 }
-                if(fabs(cost)<1e-5){
+                if(fabs(prev_cost-cost)<1e-5){
                     std::cout<<"converged after "<<(t+1)<<" iterations (cost)\n";
                     break;
                 }
                 if(t==max_it-1){
                     std::cout<<"no convergence after "<<(max_it)<<" iterations\n";
                 }
+                prev_cost=cost;
             }
             
             //update convergence check variables

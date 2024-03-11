@@ -297,8 +297,10 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
             for(size_t k=0;k<r_k;k++){
                 double e=exp(current.w().at(i,j,k));
                 p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
-                p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
-                p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals
+                // p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
+                // p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals
+                p_ik.at(i,k)+=p_ijk.at(i,j,k); //compute marginals
+                p_jk.at(j,k)+=p_ijk.at(i,j,k); //compute marginals
                 p_k[k]+=p_ijk.at(i,j,k);
                 sum+=p_ijk.at(i,j,k);
             }
@@ -307,48 +309,96 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     for(size_t k=0;k<p_k.size();k++){
         p_k[k]/=sum;
     }
+    double sum_ijk=0;
     for(size_t k=0;k<r_k;k++){
-        double sum_ij=0;
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
-                sum_ij+=p_ijk.at(i,j,k);
-            }
-        }
-        if(sum_ij>1e-8){
-            for(size_t i=0;i<r_i;i++){
-                for(size_t j=0;j<r_j;j++){
-                    p_ijk.at(i,j,k)/=sum_ij;
-                }
-            }
-        }
-        double sum_i=0;
-        for(size_t i=0;i<r_i;i++){
-            sum_i+=p_ik.at(i,k);
-        }
-        if(sum_i>1e-8){
-            for(size_t i=0;i<r_i;i++){
-                p_ik.at(i,k)/=sum_i;
-            }
-        }
-        double sum_j=0;
-        for(size_t j=0;j<r_j;j++){
-            sum_j+=p_jk.at(j,k);
-        }
-        if(sum_j>1e-8){
-            for(size_t j=0;j<r_j;j++){
-                p_jk.at(j,k)/=sum_j;
+                sum_ijk+=p_ijk.at(i,j,k);
             }
         }
     }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t i=0;i<r_i;i++){
+            for(size_t j=0;j<r_j;j++){
+                p_ijk.at(i,j,k)/=sum_ijk;
+            }
+        }
+    }
+    double sum_i=0;
+    for(size_t k=0;k<r_k;k++){
+        for(size_t i=0;i<r_i;i++){
+            sum_i+=p_ik.at(i,k);
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t i=0;i<r_i;i++){
+            p_ik.at(i,k)/=sum_i;
+        }
+    }
+    double sum_j=0;
+    for(size_t k=0;k<r_k;k++){
+        for(size_t j=0;j<r_j;j++){
+            sum_j+=p_jk.at(j,k);
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t j=0;j<r_j;j++){
+            p_jk.at(j,k)/=sum_j;
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t i=0;i<r_i;i++){
+            for(size_t j=0;j<r_j;j++){
+                p_ijk.at(i,j,k)/=p_k[k];
+            }
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t i=0;i<r_i;i++){
+            p_ik.at(i,k)/=p_k[k];
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t j=0;j<r_j;j++){
+            p_jk.at(j,k)/=p_k[k];
+        }
+    }
+    // for(size_t k=0;k<r_k;k++){
+        // double sum_ij=0;
+        // for(size_t i=0;i<r_i;i++){
+            // for(size_t j=0;j<r_j;j++){
+                // sum_ij+=p_ijk.at(i,j,k);
+            // }
+        // }
+        // for(size_t i=0;i<r_i;i++){
+            // for(size_t j=0;j<r_j;j++){
+                // p_ijk.at(i,j,k)/=sum_ij;
+            // }
+        // }
+        // double sum_i=0;
+        // for(size_t i=0;i<r_i;i++){
+            // sum_i+=p_ik.at(i,k);
+        // }
+        // for(size_t i=0;i<r_i;i++){
+            // p_ik.at(i,k)/=sum_i;
+        // }
+        // double sum_j=0;
+        // for(size_t j=0;j<r_j;j++){
+            // sum_j+=p_jk.at(j,k);
+        // }
+        // for(size_t j=0;j<r_j;j++){
+            // p_jk.at(j,k)/=sum_j;
+        // }
+    // }
     g.vs()[current.order()].p_bond()=current;
     g.vs()[current.order()].probs()=p_k;
     g.vs()[current.order()].p_ijk()=p_ijk;
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
-    // for(size_t k=0;k<g.vs()[current.order()].probs().size();k++){
-        // std::cout<<g.vs()[current.order()].probs()[k]<<" ";
-    // }
-    // std::cout<<"\n";
+    for(size_t k=0;k<g.vs()[current.order()].probs().size();k++){
+        std::cout<<g.vs()[current.order()].probs()[k]<<" ";
+    }
+    std::cout<<"\n";
     
     g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
     for(size_t idx=0;idx<r_k;idx++){
