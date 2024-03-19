@@ -105,7 +105,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         double ewma_cost=prev_cost;
         size_t window_size=10;
         //win-adamw variables
-        double alpha=0.0005; //base lr
+        double alpha=0.0001; //base lr
         double beta1=0.9;
         double beta2=0.999;
         double epsilon=1e-10;
@@ -165,9 +165,18 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 gi_prime[k]=vec_add_float(gi_prime_factors);
                 gj_prime[k]=vec_add_float(gj_prime_factors);
             }
-            //calculate F'_i(S_i,S_k,S_k',a) and F'_j(S_j,S_k,S_k',a)
+            //calculate F'_i(S_i,S_k,S_k',a) and F'_j(S_j,S_k,S_k',a) and keep F factors
+            std::vector<array3d<double> > f_factors;
             array3d<double> fi_prime(trial_current.w().nx(),r_k,r_k);
             array3d<double> fj_prime(trial_current.w().ny(),r_k,r_k);
+            for(size_t m=0;m<trial_cluster.size();m++){
+                if((old_cluster[m].v1()==old_current.v1())||(old_cluster[m].v2()==old_current.v1())){ //connected to site i
+                    f_factors.push_back(array3d<double>(trial_current.w().nx(),r_k,r_k));
+                }
+                else{ //connected to site j
+                    f_factors.push_back(array3d<double>(trial_current.w().ny(),r_k,r_k));
+                }
+            }
             for(size_t k=0;k<r_k;k++){
                 for(size_t k2=0;k2<r_k;k2++){
                     std::vector<std::vector<double> > fi_prime_factors;
@@ -195,6 +204,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                                 }
                                 double sum=lse(sum_addends);
                                 fi_prime_factors[i].push_back(sum);
+                                f_factors[m].at(i,k,k2)=sum;
                             }
                         }
                         else{ //connected to site j
@@ -213,6 +223,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                                 }
                                 double sum=lse(sum_addends);
                                 fj_prime_factors[j].push_back(sum);
+                                f_factors[m].at(j,k,k2)=sum;
                             }
                         }
                     }
@@ -375,96 +386,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 }
                 
                 array3d<double> p_prime_ki_env(trial_cluster[n].w().nx(),trial_cluster[n].w().ny(),1);
-                
-                //calculate G'_i(S_k) and G'_j(S_k)
-                std::vector<double> gi_prime(r_k,1);
-                std::vector<double> gj_prime(r_k,1);
-                for(size_t k=0;k<r_k;k++){
-                    std::vector<double> gi_prime_factors;
-                    std::vector<double> gj_prime_factors;
-                    for(size_t m=0;m<trial_cluster.size();m++){
-                        if((old_cluster[m].v1()==old_current.v1())||(old_cluster[m].v2()==old_current.v1())){ //connected to site i
-                            gi_prime_factors.push_back((trial_cluster[m].w().lse_over_axis(0,2))[k]);
-                        }
-                        else{ //connected to site j
-                            gj_prime_factors.push_back((trial_cluster[m].w().lse_over_axis(0,2))[k]);
-                        }
-                    }
-                    gi_prime[k]=vec_add_float(gi_prime_factors);
-                    gj_prime[k]=vec_add_float(gj_prime_factors);
-                }
-                //calculate F'_i(S_i,S_k,S_k',a) and F'_j(S_j,S_k,S_k',a) and keep F factors
-                std::vector<array3d<double> > f_factors;
-                array3d<double> fi_prime(trial_current.w().nx(),r_k,r_k);
-                array3d<double> fj_prime(trial_current.w().ny(),r_k,r_k);
-                for(size_t m=0;m<trial_cluster.size();m++){
-                    if((old_cluster[m].v1()==old_current.v1())||(old_cluster[m].v2()==old_current.v1())){ //connected to site i
-                        f_factors.push_back(array3d<double>(trial_current.w().nx(),r_k,r_k));
-                    }
-                    else{ //connected to site j
-                        f_factors.push_back(array3d<double>(trial_current.w().ny(),r_k,r_k));
-                    }
-                }
-                for(size_t k=0;k<r_k;k++){
-                    for(size_t k2=0;k2<r_k;k2++){
-                        std::vector<std::vector<double> > fi_prime_factors;
-                        std::vector<std::vector<double> > fj_prime_factors;
-                        for(size_t i=0;i<trial_current.w().nx();i++){
-                            fi_prime_factors.push_back(std::vector<double>());
-                        }
-                        for(size_t j=0;j<trial_current.w().ny();j++){
-                            fj_prime_factors.push_back(std::vector<double>());
-                        }
-                        for(size_t m=0;m<trial_cluster.size();m++){
-                            if((old_cluster[m].v1()==old_current.v1())||(old_cluster[m].v2()==old_current.v1())){ //connected to site i
-                                for(size_t i=0;i<old_current.w().nx();i++){
-                                    std::vector<double> sum_addends;
-                                    for(size_t imu=0;imu<trial_cluster[m].w().nx();imu++){
-                                        double num=trial_cluster[m].w().at(imu,k,0)+trial_cluster[m].w().at(imu,k2,0);
-                                        double denom;
-                                        if(old_cluster[m].v1()==trial_current.v1()){ //site imu > site i
-                                            denom=old_cluster[m].w().at(i,imu,0);
-                                        }
-                                        else{ //site imu < site i
-                                            denom=old_cluster[m].w().at(imu,i,0);
-                                        }
-                                        sum_addends.push_back(num-denom);
-                                    }
-                                    double sum=lse(sum_addends);
-                                    fi_prime_factors[i].push_back(sum);
-                                    f_factors[m].at(i,k,k2)=sum;
-                                }
-                            }
-                            else{ //connected to site j
-                                for(size_t j=0;j<old_current.w().ny();j++){
-                                    std::vector<double> sum_addends;
-                                    for(size_t imu=0;imu<trial_cluster[m].w().nx();imu++){
-                                        double num=trial_cluster[m].w().at(imu,k,0)+trial_cluster[m].w().at(imu,k2,0);
-                                        double denom;
-                                        if(old_cluster[m].v1()==trial_current.v2()){ //site imu > site j
-                                            denom=old_cluster[m].w().at(j,imu,0);
-                                        }
-                                        else{ //site imu < site j
-                                            denom=old_cluster[m].w().at(imu,j,0);
-                                        }
-                                        sum_addends.push_back(num-denom);
-                                    }
-                                    double sum=lse(sum_addends);
-                                    fj_prime_factors[j].push_back(sum);
-                                    f_factors[m].at(j,k,k2)=sum;
-                                }
-                            }
-                        }
-                        for(size_t i=0;i<trial_current.w().nx();i++){
-                            fi_prime.at(i,k,k2)=vec_add_float(fi_prime_factors[i]);
-                        }
-                        for(size_t j=0;j<trial_current.w().ny();j++){
-                            fj_prime.at(j,k,k2)=vec_add_float(fj_prime_factors[j]);
-                        }
-                    }
-                }
-                // std::cout<<"fi_prime:"<<(std::string)fi_prime<<"\n";
-                // std::cout<<"fj_prime:"<<(std::string)fj_prime<<"\n";
                 //calculate P'^{env}_{ki_\mu} and Z' (as sum_p_prime_ki_env)
                 std::vector<std::vector<double> > addends_env(p_prime_ki_env.nx()*p_prime_ki_env.ny());
                 std::vector<double> sum_p_prime_ki_env_addends;
