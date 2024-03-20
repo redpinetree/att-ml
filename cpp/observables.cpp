@@ -45,52 +45,7 @@ double q_prefactor(size_t n_target,size_t r_k){
     return res;
 }
 
-double s2(size_t n,size_t k){ //stirling number of the second kind
-    double res=0;
-    for(size_t m=0;m<=k;m++){
-        res+=(pow(-1,(double) k-m)*pow(m,(double) n))/(tgamma((double) k-m+1)*tgamma((double) m+1));
-    }
-    return res;
-}
-
-std::vector<double> q_prefactor(size_t n_target,size_t r_k,size_t n_sites){
-    std::vector<double> bounds(2,0);
-    if(n_target==1){
-        bounds[0]=0;
-        bounds[1]=1;
-        return bounds;
-    }
-    //lower bound is high temp limit
-    double res_lb=0;
-    for(size_t k=0;k<=n_target-2;k++){
-        double sub_res=0;
-        for(size_t l=1;l<=n_target-k;l++){
-            double falling_factorial=tgamma(n_sites+1)/tgamma(n_sites-l+1);
-            sub_res+=s2(n_target-k,l)*falling_factorial*pow(r_k,-(double) (l+k));
-            // std::cout<<n_target-k<<" "<<l<<" "<<s2(n_target-k,l)<<" "<<falling_factorial<<" "<<(s2(n_target-k,l)*falling_factorial*pow(r_k,-(double) (l+k)))<<"\n";
-        }
-        res_lb+=pow(-1,k)*binom(n_target,k)*pow(n_sites,(double) k-n_target)*sub_res;
-    }
-    res_lb+=pow(-(double) r_k,-(double) n_target)*(1-(double) n_target);
-    bounds[0]=res_lb;
-    //upper bound is low temp limit
-    double res_ub=0;
-    // for(size_t m=1;m<=n_target;m++){
-        // res_ub+=binom(n_target,m)*pow(r_k,m-1)*pow(-1,n_target-m);
-    // }
-    // res_ub+=(n_target%2==0)?1:-1;
-    // bounds[1]=res_ub/pow(r_k,n_target);
-    for(size_t k=0;k<=n_target-2;k++){
-        res_ub+=pow(-1,k)*binom(n_target,k)*pow(r_k,-(double) (k+1));
-    }
-    res_ub+=pow(-(double) r_k,-(double) n_target)*(1-(double) n_target);
-    bounds[1]=res_ub;
-    // std::cout<<"prefactor "<<pow(r_k,n_target)<<" "<<denom_factor<<"\n";
-    return bounds;
-}
-
 std::vector<std::string> observables::output_lines;
-// std::vector<std::vector<double> > observables::probs;
 std::map<std::tuple<size_t,size_t,size_t>,std::vector<double> > observables::m_vec_cache;
 std::map<size_t,std::vector<std::vector<double> > > observables::m_vec_ref_cache;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::m_known_factors;
@@ -333,27 +288,6 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
     double res=0;
     size_t r_i=g.vs()[root].p_bond().w().nx();
     size_t r_j=g.vs()[root].p_bond().w().ny();
-    // if(depth==1 && root==3){
-        // std::cout<<"p_i at site "<<root<<":\n";
-        // for(size_t i=0;i<g.vs()[g.vs()[root].p1()].probs().size();i++){
-            // std::cout<<g.vs()[g.vs()[root].p1()].probs()[i]<<" ";
-        // }
-        // std::cout<<"\n";
-        // std::cout<<"p_j at site "<<root<<":\n";
-        // for(size_t j=0;j<g.vs()[g.vs()[root].p2()].probs().size();j++){
-            // std::cout<<g.vs()[g.vs()[root].p2()].probs()[j]<<" ";
-        // }
-        // std::cout<<"\n";
-        // std::cout<<"p_k at site "<<root<<":\n";
-        // for(size_t k=0;k<g.vs()[root].probs().size();k++){
-            // std::cout<<g.vs()[root].probs()[k]<<" ";
-        // }
-        // std::cout<<"\n";
-        // std::cout<<"p_ik at site "<<root<<":\n"<<(std::string)g.vs()[root].p_ik()<<"\n";
-        // std::cout<<"p_jk at site "<<root<<":\n"<<(std::string)g.vs()[root].p_jk()<<"\n";
-        // std::cout<<"p_ijk at site "<<root<<":\n"<<(std::string)g.vs()[root].p_ijk()<<"\n";
-        // std::cout<<"w_ijk at site "<<root<<":\n"<<(std::string)g.vs()[root].p_bond().w().exp_form()<<"\n";
-    // }
     //subtree contributions
     double c_res=0;
     std::vector<std::vector<std::vector<size_t> > > spin_combos;
@@ -383,9 +317,6 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
         c_res+=temp;
     }
     // if(depth==0){std::cout<<"c_res (subtrees):"<<c_res<<"\n";}
-    // std::cout<<(std::string)g.vs()[root].p_ijk()<<"\n";
-    // std::cout<<(std::string)g.vs()[root].p_ik()<<"\n";
-    // std::cout<<(std::string)g.vs()[root].p_jk()<<"\n";
     res+=c_res;
     for(size_t comp=1;comp<n;comp++){
         size_t c0=comp;
@@ -432,17 +363,9 @@ template double observables::q<bmi_comparator>(graph<bmi_comparator>&,size_t,siz
 //this q function is just a wrapper for the bottom-up version
 template<typename cmp>
 double observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,size_t p,bool abs_flag){
-    // for(size_t a=0;a<g.vs()[root].probs().size();a++){
-        // std::cout<<g.vs()[root].probs()[a]<<" ";
-    // }
-    // std::cout<<"\n";
     size_t r_k=g.vs()[root].rank();
-    double res=0;
     std::vector<std::vector<size_t> > combos=spin_cart_prod(g.vs()[root].rank(),p);
-    // std::vector<std::vector<size_t> > combos;
-    // for(size_t r=0;r<r_k;r++){
-        // combos.push_back(std::vector<size_t>(p,r));
-    // }
+    double res=0;
     for(size_t n=2;n<=n_target;n++){
         double n_res=0;
         for(size_t idx=0;idx<combos.size();idx++){
@@ -450,40 +373,22 @@ double observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
             double prob_factor=1;
             for(size_t i=0;i<c.size();i++){
                 prob_factor*=g.vs()[root].probs()[c[i]];
-                // prob_factor*=pow(r_k,-1);
             }
-            // double prob_factor=g.vs()[root].probs()[c[0]];
             double sub_res=0;
             double contrib=observables::q(g,n_target,n,p,c);
-            // if(c[0]!=c[1]){contrib=0;}
             if(abs_flag){
                 sub_res=(contrib>sub_res)?contrib:sub_res;
             }
             else{
                 sub_res+=contrib;
             }
-            // if(n_target==2){
-                // for(size_t j=0;j<c.size();j++){
-                    // std::cout<<c[j]<<" ";
-                // }
-                // std::cout<<"\n";
-                // std::cout<<"contrib: " <<n<<" "<<p<<" "<<contrib<<" "<<sub_res<<" "<<prob_factor<<"\n";
-            // }
             n_res+=sub_res*prob_factor;
-            // std::cout<<"n_res: " <<sub_res<<" "<<prob_factor<<" "<<(sub_res*prob_factor)<<"\n";
         }
         res+=pow(-1,(double) n)*binom(n_target,n_target-n)*pow(q_orig,(double) n-n_target)*pow(g.n_phys_sites(),n_target-n)*n_res;
-        // res+=pow(-(double) q_orig,-(double) k)*binom(n_target,k)*n_res;
     }
-    // std::cout<<"prefinal_res: "<<res<<"\n";
     //constant offset, pre-normalization
     res+=pow(-1,(double) n_target-1)*(n_target-1)*pow(q_orig,-(double) n_target)*pow(g.n_phys_sites(),n_target);
     //normalize so that perfect correlation is 1
-    std::vector<double> bounds=q_prefactor(n_target,q_orig,g.n_phys_sites());
-    // std::cout<<bounds[0]<<" "<<bounds[1]<<" "<<q_prefactor(n_target,q_orig)<<"\n";
-    // res-=bounds[0]*pow(g.n_phys_sites(),n_target);
-    // res/=(bounds[1]-bounds[0]);
-    // res/=bounds[1];
     res*=q_prefactor(n_target,q_orig);
     // std::cout<<"final_res: "<<res<<"\n";
     return res;
@@ -705,8 +610,7 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
         std::complex<double> res=1;
         for(size_t i=0;i<p-1;i++){
             if(c[i]!=c[i+1]){
-                res=0;
-                break;
+                return 0;
             }
         }
         //compute ft
@@ -721,7 +625,6 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
     std::complex<double> res=0;
     size_t r_i=g.vs()[root].p_bond().w().nx();
     size_t r_j=g.vs()[root].p_bond().w().ny();
-    // std::cout<<r_i<<" "<<r_j<<" "<<r_k<<" "<<c.size()<<"\n";
     //subtree contributions
     std::complex<double> c_res=0;
     std::vector<std::vector<std::vector<size_t> > > spin_combos;
@@ -821,9 +724,9 @@ std::complex<double> observables::q(graph<cmp>& g,size_t q_orig,size_t root,size
         }
         res+=pow(-1,(double) n)*binom(n_target,n_target-n)*pow(q_orig,(double) n-n_target)*pow(g.n_phys_sites(),n_target-n)*n_res;
     }
-    //normalize so that perfect correlation is 1
+    //constant offset, pre-normalization
     res+=pow(-1,(double) n_target-1)*(n_target-1)*pow(q_orig,-(double) n_target)*pow(g.n_phys_sites(),n_target);
-    // res*=pow(q_prefactor(n_target,q_orig),n_target);
+    //normalize so that perfect correlation is 1
     res*=q_prefactor(n_target,q_orig);
     // std::cout<<"final_res: "<<res<<"\n";
     return res;

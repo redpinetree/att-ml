@@ -24,7 +24,6 @@ std::ostream& operator<<(std::ostream& os,const bond& e){
     return os;
 }
 
-// size_t bond::q() const{return this->q_;}
 std::pair<size_t,size_t> bond::v() const{return this->v_;}
 std::pair<size_t,size_t> bond::v_orig() const{return this->v_orig_;}
 size_t bond::v1() const{return this->v_.first;}
@@ -37,7 +36,6 @@ double bond::bmi() const{return this->bmi_;}
 double bond::cost() const{return this->cost_;}
 size_t bond::order() const{return this->order_;}
 bool bond::todo() const{return this->todo_;}
-// size_t& bond::q(){return this->q_;}
 std::pair<size_t,size_t>& bond::v(){return this->v_;}
 std::pair<size_t,size_t>& bond::v_orig(){return this->v_orig_;}
 size_t& bond::v1(){return this->v_.first;}
@@ -70,17 +68,6 @@ void bond::bmi(array3d<double>& w){
     for(size_t j=0;j<w.ny();j++){
         nonzero_sum_ax1+=(sum_ax1[j]!=0)?1:0;
     }
-    // std::cout<<"pre bmi:\n"<<(std::string) w<<"\n";
-        // std::vector<double> row_sum=w.sum_over_axis(0);
-        // std::vector<double> col_sum=w.sum_over_axis(1);
-        // for(size_t j=0;j<col_sum.size();j++){
-            // std::cout<<col_sum[j]<<",";
-        // }
-        // std::cout<<"\n";
-        // for(size_t i=0;i<row_sum.size();i++){
-            // std::cout<<row_sum[i]<<",";
-        // }
-        // std::cout<<"\n\n";
     //norm_check bool is true if all elements in sum_ax are 0 (clipped to 0 below 1e-10)
     std::vector<bool> close_ax0(w.nx());
     bool norm_check_ax0=1;
@@ -88,10 +75,6 @@ void bond::bmi(array3d<double>& w){
         //if sum_ax is not already 0 (all elements in row/col are 0)
         close_ax0[i]=((sum_ax0[i]==0)||(fabs(sum_ax0[i]-(1/(double) nonzero_sum_ax0))<1e-10))?1:0;
     }
-    // for(size_t i=0;i<close_ax0.size();i++){
-        // std::cout<<close_ax0[i]<<" ";
-    // }
-    // std::cout<<"\n";
     norm_check_ax0=std::all_of(close_ax0.begin(),close_ax0.end(),[](bool i){return i;});
     std::vector<bool> close_ax1(w.ny());
     bool norm_check_ax1=1;
@@ -99,26 +82,16 @@ void bond::bmi(array3d<double>& w){
         //if sum_ax is not already 0 (all elements in row/col are 0)
         close_ax1[j]=((sum_ax1[j]==0)||(fabs(sum_ax1[j]-(1/(double) nonzero_sum_ax1))<1e-10))?1:0;
     }
-    // for(size_t j=0;j<close_ax1.size();j++){
-        // std::cout<<close_ax1[j]<<" ";
-    // }
-    // std::cout<<"\n";
     norm_check_ax1=std::all_of(close_ax1.begin(),close_ax1.end(),[](bool i){return i;});
     // std::cout<<"norm_checks: "<<norm_check_ax0<<","<<norm_check_ax1<<","<<(norm_check_ax0&&norm_check_ax1)<<"\n";
     //normalize w
     if(!(norm_check_ax0&&norm_check_ax1)){
-        // std::cout<<"x:\n";
         std::vector<double> x(w.nx(),1/(double) nonzero_sum_ax0);
         std::vector<double> x_old(w.nx());
-        // for(size_t i=0;i<x.size();i++){
-            // std::cout<<x[i]<<" ";
-        // }
-        // std::cout<<"\n";
         std::vector<bool> close_x(w.nx(),0);
         for(size_t i=0;i<close_x.size();i++){
             close_x[i]=((x[i]==0)||(fabs(x[i]-x_old[i])<1e-10))?1:0;
         }
-        // std::cout<<"check: "<<std::all_of(close_x.begin(),close_x.end(),[](bool i){return i;})<<"\n";
         size_t x_it=0;
         while(!std::all_of(close_x.begin(),close_x.end(),[](bool i){return i;})){
             if(x_it>=max_it){break;}
@@ -139,18 +112,9 @@ void bond::bmi(array3d<double>& w){
                 close_x[i]=((x[i]==0)||(fabs(x[i]-x_old[i])<1e-10))?1:0;
             }
             x_it++;
-            // for(size_t i=0;i<close_x.size();i++){
-                // std::cout<<x[i]<<" ";
-            // }
-            // std::cout<<"\n";
         }
-        // std::cout<<"y:\n";
         std::vector<double> y(w.ny(),1/(double) nonzero_sum_ax1);
         std::vector<double> y_old(w.ny());
-        // for(size_t i=0;i<y.size();i++){
-            // std::cout<<y[i]<<" ";
-        // }
-        // std::cout<<"\n";
         std::vector<bool> close_y(w.ny(),0);
         for(size_t i=0;i<close_y.size();i++){
             close_y[i]=((y[i]==0)||(fabs(y[i]-y_old[i])<1e-10))?1:0;
@@ -175,10 +139,6 @@ void bond::bmi(array3d<double>& w){
                 close_y[i]=((y[i]==0)||(fabs(y[i]-y_old[i])<1e-10))?1:0;
             }
             y_it++;
-            // for(size_t i=0;i<close_y.size();i++){
-                // std::cout<<y[i]<<" ";
-            // }
-            // std::cout<<"\n";
         }
         double sum=0;
         for(size_t i=0;i<p_ij.nx();i++){
@@ -200,17 +160,6 @@ void bond::bmi(array3d<double>& w){
             }
         }
     }
-    // std::cout<<"post bmi:\n"<<(std::string) w<<"\n";
-        // row_sum=w.sum_over_axis(0);
-        // col_sum=w.sum_over_axis(1);
-        // for(size_t j=0;j<col_sum.size();j++){
-            // std::cout<<col_sum[j]<<",";
-        // }
-        // std::cout<<"\n";
-        // for(size_t i=0;i<row_sum.size();i++){
-            // std::cout<<row_sum[i]<<",";
-        // }
-        // std::cout<<"\n\n";
     std::vector<double> p_i(p_ij.nx());
     std::vector<double> p_j(p_ij.ny());
     for(size_t i=0;i<p_ij.nx();i++){
@@ -219,14 +168,7 @@ void bond::bmi(array3d<double>& w){
             p_j[j]+=p_ij.at(i,j,0);
         }
     }
-    // for(size_t i=0;i<p_i.size();i++){
-        // std::cout<<p_i[i]<<" ";
-    // }
-    // std::cout<<"\n";
-    // for(size_t j=0;j<p_j.size();j++){
-        // std::cout<<p_j[j]<<" ";
-    // }
-    // std::cout<<"\n";
+    
     double S_ij=0;
     double S_i=0;
     double S_j=0;

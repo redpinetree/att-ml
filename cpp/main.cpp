@@ -89,11 +89,6 @@ void calc_observables(graph<cmp>& g,size_t q_orig,double& m1_1_abs,double& m1_2_
         size_t max_idx=max_it-g.dims().begin();
         k_min=2*PI/(*max_it); //max dim yields min k
         k[max_idx]=k_min;
-        // std::cout<<observables::m(g,q,1,1,k)<<"\n";
-        // std::cout<<observables::m(g,q,1,2,k)<<"\n";
-        // std::cout<<observables::m(g,q,2,1,k)<<"\n";
-        // std::cout<<observables::m(g,q,2,2,k)<<"\n";
-        // q2_k=observables::q(g,q_orig,g.vs().size()-1,2,2,k,0)/pow(g.n_phys_sites(),2);
         q2_k=observables::m(g,q_orig,g.vs().size()-1,2,2,k,0)/pow(g.n_phys_sites(),2);
     }
 }
@@ -299,7 +294,6 @@ int main(int argc,char **argv){
             header1_ls_str+="dist param1 param2";
         }
         header1_ss<<"idx q d r "<<header1_ls_str<<"\n";
-        // observables::output_lines.push_back(header1_ss.str());
         std::string header1_ls_vals_str;
         if(ls.empty()){
             header1_ls_vals_str+="\""+input+"\"";
@@ -313,11 +307,9 @@ int main(int argc,char **argv){
         header1_vals_ss<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<"\n";
         // observables::output_lines.push_back(header1_vals_ss.str());
         if(n_samples!=0){ //hypercubic lattice is used
-            // header2_ss<<"beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg\n";
             header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg total_c\n";
         }
         else{
-            // header2_ss<<"beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2_std sus_fm sus_sg binder_m binder_q\n";
             header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q total_c\n";
         }
         observables::output_lines.push_back(header2_ss.str());
@@ -359,14 +351,12 @@ int main(int argc,char **argv){
                 total_cost+=(*it).cost();
             }
             //compute output quantities
-            // q2_var=m4_2-pow(m2_2,2);
             q2_var=q4-pow(q2,2);
             q2_std=sqrt(q2_var);
             sus_fm=n_phys_sites*m1_2_abs;
             sus_sg=n_phys_sites*q2;
             binder_m=0.5*(3-(m4_1/pow(m2_1,2)));
             binder_q=0.5*(3-(q4/pow(q2,2)));
-            // binder_q=q4/pow(q2,2);
             if(add_suffix){ //hypercubic lattice is used
                 sus_sg_k=n_phys_sites*sqrt(std::norm(q2_k));
                 std::cout<<q2_k<<" "<<sus_sg_k<<" "<<sus_sg<<"\n";
@@ -375,11 +365,9 @@ int main(int argc,char **argv){
             //prepare output lines
             std::stringstream output_line_ss;
             if(add_suffix){ //hypercubic lattice is used
-                // output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<"\n";
                 output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<" "<<total_cost<<"\n";
             }
             else{
-                // output_line_ss<<std::scientific<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<"\n";
                 output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<total_cost<<"\n";
             }
             observables::output_lines.push_back(output_line_ss.str());

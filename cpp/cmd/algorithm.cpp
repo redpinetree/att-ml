@@ -56,16 +56,9 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         //initialize cmd function f()
         // current.f()=optimize::f_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         // current.f()=optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]);
-        // std::cout<<std::string(optimize::f_alg1(g.vs()[current.v1()],g.vs()[current.v2()]))<<"\n";
         // current.f()=optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         // current.f()=optimize::f_hybrid_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         current.f()=optimize::f_hybrid_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
-        // std::cout<<std::string(current.f())<<"\n";
-        // std::cout<<"alg:\n"<<std::string(current.f())<<"\n";
-        // std::cout<<"maxent:\n"<<std::string(optimize::f_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k))<<"\n";
-        // std::cout<<std::string(g)<<"\n";
-        // std::cout<<std::string(current.w())<<"\n";
-        // std::cout<<std::string(current.f())<<"\n";
         
         //determine master and slave node
         size_t master,slave;
@@ -105,10 +98,6 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         }
         
         // sw1.split();
-        // std::cout<<std::string(current)<<","<<master<<","<<slave<<","<<g.vs()[master].adj().size()<<","<<g.vs()[slave].adj().size()<<"\n";
-        // std::cout<<std::string(current)<<","<<r_k<<"\n";
-        // std::cout<<std::string(g)<<"\n";
-        // std::cout<<iteration<<"\n";
         // sw2.start();
         std::vector<bond> cluster;
         bond old_current=current; //for debug
@@ -120,9 +109,6 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         //confluent mapping decomposition
         // std::cout<<"\ntemporary removal from edgelist and reconnection:\n";
         while((!g.vs()[slave].adj().empty())||(!g.vs()[master].adj().empty())){
-            // for(auto it=g.vs()[slave].adj().begin();it!=g.vs()[slave].adj().end();++it){
-                // std::cout<<std::string(*it)<<"\n";
-            // }
             size_t source,not_source;
             bond current_bond;
             if(!g.vs()[slave].adj().empty()){
@@ -135,10 +121,8 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                 source=master;
                 not_source=slave;
             }
-            // std::cout<<"current bond: "<<std::string(current_bond)<<"\n";
             auto it=g.es().find(*(g.vs()[source].adj().begin()));
             if(it==g.es().end()){
-                // std::cout<<"could not find bond in edgelist, skipping...\n";
                 g.vs()[source].adj().erase(g.vs()[source].adj().begin());
                 continue;
             }
@@ -153,15 +137,13 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                 g.vs()[source].adj().erase(loc2); //remove the edge copy from the source site
             }
             
-            old_cluster.push_back(current_bond); //DEBUG for cost function
+            old_cluster.push_back(current_bond);
             size_t other_site;
             if((current_bond.v1()==current.v1())||(current_bond.v1()==current.v2())){ //current_bond always has todo=true
-                // current_bond.v1_orig()=(current.v1()==master)?current.v1_orig():current.v2_orig();
                 other_site=current_bond.v2();
                 current_bond.v1()=virtual_idx; //reconnect
             }
             else if((current_bond.v2()==current.v1())||(current_bond.v2()==current.v2())){
-                // current_bond.v2_orig()=(current.v1()==master)?current.v1_orig():current.v2_orig();
                 other_site=current_bond.v1();
                 current_bond.v2()=virtual_idx; //reconnect
             }
@@ -177,52 +159,20 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                 dupes.push_back(std::pair<size_t,size_t>(dupe_idx,cluster.size()));
             }
             
-            auto loc6=g.vs()[other_site].adj().find(current_bond_cpy);
-            if(loc6!=g.vs()[other_site].adj().end()){
-                g.vs()[other_site].adj().erase(loc6); //remove the edge copy from the other site (rel. to not_source)
-            }
-            else{
-                std::cout<<"loc6 FAIL\n";
+            auto loc3=g.vs()[other_site].adj().find(current_bond_cpy);
+            if(loc3!=g.vs()[other_site].adj().end()){
+                g.vs()[other_site].adj().erase(loc3); //remove the edge copy from the other site (rel. to not_source)
             }
             cluster.push_back(current_bond);
-            // g.es().insert(current_bond);
-            // std::cout<<master<<" "<<slave<<" "<<virtual_idx<<" "<<source<<" "<<not_source<<" "<<other_site<<"\n";
         }
         
         //optimization of weights in spin cluster
-        // std::cout<<"\noptimization of weights in spin cluster:\n";
-        // std::cout<<"current: "<<(std::string)current<<"\n";
-        // std::cout<<(std::string)current.w()<<"\n";
-        // std::cout<<"cluster edges:\n";
-        // for(size_t n=0;n<cluster.size();n++){
-            // std::cout<<(std::string)cluster[n]<<"\n";
-            // std::cout<<(std::string)cluster[n].w()<<"\n";
-        // }
-        
         // DEBUG: just recompute w based on renormed j if conn. to slave.
         // optimize::potts_renorm(slave,old_cluster,current,cluster);
-        
-        // std::cout<<"HERE\n";
         current.cost()=optimize::opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,lr,restarts);
-        // std::cout<<"HERE DONE\n";
-        
-        // std::cout<<"current: "<<(std::string)current<<"\n";
-        // std::cout<<(std::string)current.w()<<"\n";
-        // std::cout<<"cluster edges:\n";
-        // for(size_t n=0;n<cluster.size();n++){
-            // std::cout<<(std::string)cluster[n]<<"\n";
-            // std::cout<<(std::string)cluster[n].w()<<"\n";
-        // }
         
         //merge identical bonds
         if(dupes.size()!=0){
-            // std::cout<<"\nmerging double bonds:\n";
-            // for(size_t i=0;i<dupes.size();i++){
-                // std::cout<<"("<<dupes[i].first<<","<<dupes[i].second<<")"<<"\n";
-            // }
-            // for(size_t n=0;n<cluster.size();n++){
-                // std::cout<<std::string(cluster[n])<<"\n";
-            // }
             std::sort(dupes.begin(),dupes.end());
             for(int i=dupes.size()-1;i>=0;i--){
                 // std::cout<<"merging: "<<std::string(cluster[dupes[i].second])<<"+"<<std::string(cluster[dupes[i].first]);
@@ -263,9 +213,6 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                 // std::cout<<"->"<<std::string(cluster[dupes[i].first])<<"\n";
                 // std::cout<<std::string(cluster[dupes[i].first].w())<<"\n";
             }
-            // for(size_t n=0;n<cluster.size();n++){
-                // std::cout<<std::string(cluster[n])<<"\n";
-            // }
         }
         
         current.order()=g.vs().size()-1;
@@ -283,9 +230,6 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         
         // sw2.split();
         iteration++;
-        // std::cout<<std::string(g)<<"\n";
-        // std::cout<<std::string(current.w())<<"\n";
-        // exit(1);
     }
     // std::cout<<"volume time: "<<sw1.elapsed()<<"\n";
     // std::cout<<"reconnect time: "<<sw2.elapsed()<<"\n";
@@ -307,8 +251,6 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
             double k=current.f().at(i,j);
             double e=exp(current.w().at(i,j));
             p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
-            // p_ik.at(i,k)+=e*g.vs()[current.v1()].probs()[i]; //compute marginals
-            // p_jk.at(j,k)+=e*g.vs()[current.v2()].probs()[j]; //compute marginals
             p_ik.at(i,k)+=p_ijk.at(i,j,k); //compute marginals
             p_jk.at(j,k)+=p_ijk.at(i,j,k); //compute marginals
             p_k[k]+=p_ijk.at(i,j,k);
@@ -350,10 +292,6 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     g.vs()[current.order()].p_ijk()=p_ijk;
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
-    // for(size_t k=0;k<g.vs()[current.order()].probs().size();k++){
-        // std::cout<<g.vs()[current.order()].probs()[k]<<" ";
-    // }
-    // std::cout<<"\n";
     
     g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
     for(size_t idx=0;idx<r_k;idx++){
@@ -367,14 +305,5 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
         }
         g.vs()[current.order()].m_vec().push_back(res);
     }
-    // std::cout<<"site "<<current.order()<<"\n";
-    // for(size_t idx=0;idx<r_k;idx++){
-        // std::cout<<"idx="<<idx<<" ";
-        // for(size_t i=0;i<g.vs()[current.order()].m_vec().size();i++){
-            // std::cout<<g.vs()[current.order()].m_vec()[idx][i]<<" ";
-            // std::cout<<(g.vs()[current.order()].m_vec()[idx][i]/(double)g.vs()[current.order()].vol())<<" ";
-        // }
-        // std::cout<<"\n";
-    // }
 }
 template void algorithm::calculate_site_probs(graph<bmi_comparator>&,bond&);

@@ -4,7 +4,7 @@
 #include "optimize.hpp"
 #include "../observables.hpp"
 
-double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr=0,size_t max_restarts=10){
+double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr,size_t max_restarts){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     double best_cost=1e49;
     bond best_current=current;
@@ -69,7 +69,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                         }
                     }
                     trial_cluster[n].w()=new_w;
-                    // std::cout<<(std::string) new_w<<"\n";
                 }
             }
         }
@@ -89,7 +88,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 }
             }
             trial_current.w()=new_w;
-            // std::cout<<(std::string) new_w<<"\n";
             for(size_t n=0;n<trial_cluster.size();n++){
                 array2d<double> new_w(sites[trial_cluster[n].v1()].rank(),r_k);
                 double sum=0;
@@ -110,7 +108,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     }
                 }
                 trial_cluster[n].w()=new_w;
-                // std::cout<<(std::string) new_w<<"\n";
             }
         }
         //cost convergence variables
@@ -118,7 +115,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         double ewma_cost=prev_cost;
         size_t window_size=10;
         //win-adamw variables
-        double alpha=0.0001;
+        double alpha=lr;
         double beta1=0.9;
         double beta2=0.999;
         double epsilon=1e-10;
@@ -237,8 +234,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                         sum_addends.push_back(trial_current.w().at(i,j));
                     }
                     else{ //lr!=0 means use gradient descent with lr
-                        // double grad=exp(p_prime_ij_env.at(i,j))-exp(p_ij.at(i,j)-trial_current.w().at(i,j));
-                        // grad*=exp(trial_current.w().at(i,j)); //get gradient of ln(w_ijk)
                         double a=p_prime_ij_env.at(i,j)+trial_current.w().at(i,j);
                         double b=p_ij.at(i,j);
                         if(a!=b){ //a==b means grad C is 0, so no change to params
@@ -268,7 +263,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             }
             // std::cout<<"trial_current.w():\n"<<(std::string)trial_current.w()<<"\n";
             
-            //NOTE: right now, this uses a workaround for floating-point non-associativity, which involves storing addends in vectors and then sorting them before adding.
             //p_prime_ki,imu if source==current.v1(), p_prime_kj,jnu if source==current.v2(). wlog, use p_prime_ki and imu.
             //k, the new index, is always second because virtual indices > physical indices.
             for(size_t n=0;n<trial_cluster.size();n++){
@@ -343,6 +337,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 double sum_p_prime_ki_env=lse(sum_p_prime_ki_env_addends);
                 // std::cout<<"p_ki: "<<(std::string) p_ki<<"\n";
                 // std::cout<<"p_ki_env: "<<(std::string) p_prime_ki_env<<"\n";
+                
                 //normalize P_{ki_\mu},P'^{env}_{ki_\mu}
                 for(size_t i=0;i<p_ki.nx();i++){
                     for(size_t j=0;j<p_ki.ny();j++){
@@ -361,8 +356,6 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                             sum_addends.push_back(trial_cluster[n].w().at(imu,k));
                         }
                         else{ //lr!=0 means use gradient descent with lr
-                            // double grad=exp(p_prime_ki_env.at(imu,k))-exp(p_ki.at(imu,k)-trial_cluster[n].w().at(imu,k));
-                            // grad*=exp(trial_cluster[n].w().at(imu,k)); //get gradient of ln(w_kimu)
                             double a=p_prime_ki_env.at(imu,k)+trial_cluster[n].w().at(imu,k);
                             double b=p_ki.at(imu,k);
                             if(a!=b){ //a==b means grad C is 0, so no change to params
@@ -395,40 +388,18 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             //check for convergence if after first iteration (since trial_current must be resized)
             cost=kl_div(exp(z),exp(z_prime),sites,old_current,old_cluster,trial_current,trial_cluster);
             // std::cout<<cost<<"\n";
-            // if(cost>1e3){ //if too large, reinitialize, doesn't count
-                // std::cout<<"cost too large. discarding result.\n";
-                // restarts--;
-                // break;
-            // }
             if((fabs(cost)>=1e-5)&&(cost<0)){ //if too small, reinitialize, doesn't count
                 std::cout<<"cost less than 0. discarding result.\n";
                 restarts--;
                 break;
             }
             if(t>0){
-                // diff=0;
-                // for(size_t i=0;i<trial_current.w().nx();i++){
-                    // for(size_t j=0;j<trial_current.w().ny();j++){
-                        // diff+=fabs(trial_current.w().at(i,j)-prev_current.at(i,j));
-                    // }
-                // }
-                // for(size_t n=0;n<trial_cluster.size();n++){
-                    // for(size_t i=0;i<trial_cluster[n].w().nx();i++){
-                        // for(size_t j=0;j<trial_cluster[n].w().ny();j++){
-                            // diff+=fabs(trial_cluster[n].w().at(i,j)-prev_cluster[n].at(i,j));
-                        // }
-                    // }
-                // }
-                // if(diff<1e-6){
-                    // std::cout<<"converged after "<<(t+1)<<" iterations (diff==0)\n";
-                    // break;
-                // }
                 ewma_cost=(((window_size-1)*ewma_cost)+(prev_cost-cost))/(double)window_size;
                 // std::cout<<"ewma_cost: "<<ewma_cost<<"\n";
-                if(ewma_cost<0){
-                    std::cout<<"converged after "<<(t+1)<<" iterations (ewma_cost)\n";
-                    break;
-                }
+                // if(ewma_cost<0){
+                    // std::cout<<"converged after "<<(t+1)<<" iterations (ewma_cost)\n";
+                    // break;
+                // }
                 if(fabs(prev_cost-cost)<1e-5){
                     std::cout<<"converged after "<<(t+1)<<" iterations (cost)\n";
                     break;
@@ -480,7 +451,6 @@ array2d<size_t> optimize::f_alg1(site v_i,site v_j){
     for(size_t s_i=0;s_i<v_i.rank();s_i++){
         for(size_t s_j=0;s_j<v_j.rank();s_j++){
             f_res.at(s_i,s_j)=(v_i.vol()>v_j.vol())?s_i:s_j;
-            // f_res.at(s_i,s_j)=s_i;
         }
     }
     return f_res;
@@ -496,7 +466,6 @@ array2d<size_t> optimize::f_maxent(site v_i,site v_j,array2d<double> w,size_t r_
             exp_w.at(i,j)=exp(w.at(i,j));
         }
     }
-    // std::cout<<v_i.rank()*v_j.rank()<<"\n";
     for(size_t n=0;n<v_i.rank()*v_j.rank();n++){
         auto max_it=std::max_element(exp_w.e().begin(),exp_w.e().end());
         double max=*max_it;
@@ -522,7 +491,6 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
     size_t r_i=v_i.rank();
     size_t r_j=v_j.rank();
     array2d<size_t> f_res(r_i,r_j);
-    //TODO
     //calculate dot product
     std::vector<double> w_sums(r_k,0);
     std::vector<std::pair<size_t,size_t> > done_ij_pairs; //for part that ensures surjectivity
@@ -571,12 +539,10 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
                 double dot=0;
                 std::vector<double> dot_addends;
                 for(size_t idx=0;idx<m_i_m_j_sum.size();idx++){
-                    // dot+=m_i_m_j_sum[idx]*e_k[idx];
                     dot_addends.push_back(m_i_m_j_sum[idx]*e_k[idx]);
                 }
                 dot=vec_add_float(dot_addends);
                 c.at(i,j,k)=dot;
-                // c.at(i,j,k)=dot*w.at(i,j);
             }
         }
     }
@@ -615,9 +581,7 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
             }
             size_t max_c_idx=0;
             double max_c=c.at(i,j,0)-(1e-10*w_sums[0]);
-            // std::cout<<(c.at(i,j,0)-(1e-10*w_sums[0]))<<" "<<max_c<<"\n";
             for(size_t k=1;k<r_k;k++){
-                // std::cout<<(c.at(i,j,k)-(1e-10*w_sums[k]))<<" "<<max_c<<"\n";
                 if((c.at(i,j,k)-(1e-10*w_sums[k]))>max_c){
                     max_c_idx=k;
                     max_c=c.at(i,j,k)-(1e-10*w_sums[k]);
@@ -625,10 +589,6 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
             }
             f_res.at(i,j)=max_c_idx;
             w_sums[max_c_idx]+=exp(w.at(i,j));
-            // for(size_t i=0;i<w_sums.size();i++){
-                // std::cout<<w_sums[i]<<" ";
-            // }
-            // std::cout<<"\n";
         }
     }
     // std::cout<<(std::string)w<<"\n";
@@ -842,33 +802,6 @@ double optimize::kl_div(double z,double z_prime,std::vector<site> sites,bond old
             gj_prime_tilde.at(i,j)=gj_prime_tilde_res;
         }
     }
-    // for(size_t i=0;i<gi_prime_tilde.nx();i++){
-        // for(size_t j=0;j<gi_prime_tilde.ny();j++){
-            // if(gi_prime_tilde.at(i,j)==0){
-                // gi_prime_tilde.at(i,j)=1;
-            // }
-        // }
-    // }
-    // for(size_t i=0;i<gj_prime_tilde.nx();i++){
-        // for(size_t j=0;j<gj_prime_tilde.ny();j++){
-            // if(gj_prime_tilde.at(i,j)==0){
-                // gj_prime_tilde.at(i,j)=1;
-            // }
-        // }
-    // }
-    // for(size_t i=0;i<gi_prime_tilde.nx();i++){
-        // for(size_t j=0;j<gi_prime_tilde.ny();j++){
-            // std::cout<<gi_prime_tilde.at(i,j)<<" ";
-        // }
-        // std::cout<<"\n";
-    // }
-        // std::cout<<"\n";
-    // for(size_t i=0;i<gj_prime_tilde.nx();i++){
-        // for(size_t j=0;j<gj_prime_tilde.ny();j++){
-            // std::cout<<gj_prime_tilde.at(i,j)<<" ";
-        // }
-        // std::cout<<"\n";
-    // }
     
     double a=0;
     double b=0;
@@ -890,21 +823,7 @@ double optimize::kl_div(double z,double z_prime,std::vector<site> sites,bond old
             b_prime+=contrib_b_prime;
         }
     }
-    // std::cout<<z<<" "<<alt_z<<" "<<z_prime<<" "<<alt_z_prime<<"\n";
-    // std::cout<<"old_current: "<<(std::string) old_current.w()<<"\n";
-    // for(size_t n=0;n<cluster.size();n++){
-        // std::cout<<(std::string) old_cluster[n].w()<<"\n";
-    // }
-    // std::cout<<"current: "<<(std::string) current.w()<<"\n";
-    // for(size_t n=0;n<cluster.size();n++){
-        // std::cout<<(std::string) cluster[n].w()<<"\n";
-    // }
-    // std::cout<<((a/z)+(b/z)-log(z))<<" "<<((a_prime/z)+(b_prime/z)-log(alt_z_prime))<<"\n";
-    // std::cout<<((a/alt_z)+(b/alt_z)-log(alt_z))<<" "<<((a_prime/alt_z)+(b_prime/alt_z)-log(alt_z_prime))<<"\n";
-    // std::cout<<"z: "<<z<<"\nz': "<<alt_z_prime<<"\n";
-    // std::cout<<"a: "<<a<<"\nb: "<<b<<"\n";
-    // double res=-((a_prime/alt_z)+(b_prime/alt_z)-log(alt_z_prime));
+    
     double res=((a/z)+(b/z)-log(z))-((a_prime/z)+(b_prime/z)-log(z_prime));
-    // double res=((a/alt_z)+(b/alt_z)-log(alt_z))-((a_prime/alt_z)+(b_prime/alt_z)-log(alt_z_prime));
     return res;
 }
