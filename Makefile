@@ -48,10 +48,10 @@ $(OBJ_OLD): %.o: %.cpp
 	$(MPICXX) -c $(@:%.o=%.cpp) -o $@ $(CXXFLAGS)
 
 $(OBJ_COMMON_CMD): %_cmd.o: %.cpp
-	$(MPICXX) -I ./cpp/cmd -c $< -o $@ $(CXXFLAGS)
+	$(MPICXX) -I ./cpp/cmd -D MODEL_CMD -c $< -o $@ $(CXXFLAGS)
 
 $(OBJ_COMMON_RENYI): %_renyi.o: %.cpp
-	$(MPICXX) -I ./cpp/renyi -c $< -o $@ $(CXXFLAGS)
+	$(MPICXX) -I ./cpp/renyi -D MODEL_RENYI -c $< -o $@ $(CXXFLAGS)
 
 $(OBJ_CMD): %.o: %.cpp
 	$(MPICXX) -I ./cpp/cmd -c $< -o $@ $(CXXFLAGS)

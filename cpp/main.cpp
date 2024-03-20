@@ -109,7 +109,12 @@ int main(int argc,char **argv){
     double dist_param1,dist_param2;
     size_t r_max=0;
     size_t iter_max=100; //default is 100 iterations max
+#ifdef MODEL_CMD
     double lr=0;
+#endif
+#ifdef MODEL_RENYI
+    double lr=0.0001;
+#endif
     size_t restarts=10;
     //option arguments
     while(1){
