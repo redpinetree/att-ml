@@ -159,13 +159,13 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             std::vector<double> sum_p_prime_ij_env_addends;
             std::vector<double> gi_prime(r_k,1);
             std::vector<double> gj_prime(r_k,1);
-            for(size_t i=0;i<p_ij.nx();i++){
-                for(size_t j=0;j<p_ij.ny();j++){
+            for(size_t i=0;i<current.w().nx();i++){
+                for(size_t j=0;j<current.w().ny();j++){
                     //calculate G'(f_k(S_i,S_j))
                     std::vector<double> gi_prime_factors;
                     std::vector<double> gj_prime_factors;
-                    size_t k=trial_current.f().at(i,j); //select where output is added to
-                    for(size_t m=0;m<cluster.size();m++){
+                    size_t k=current.f().at(i,j); //select where output is added to
+                    for(size_t m=0;m<trial_cluster.size();m++){
                         if((old_cluster[m].v1()==old_current.v1())||(old_cluster[m].v2()==old_current.v1())){ //connected to site i
                             gi_prime_factors.push_back((trial_cluster[m].w().lse_over_axis(0))[k]);
                         }
@@ -175,27 +175,10 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     }
                     gi_prime[k]=vec_add_float(gi_prime_factors);
                     gj_prime[k]=vec_add_float(gj_prime_factors);
-                    
-                std::vector<double> gi_prime(r_k,1);
-                std::vector<double> gj_prime(r_k,1);
-                for(size_t i=0;i<current.w().nx();i++){
-                    for(size_t j=0;j<current.w().ny();j++){
-                        //calculate G'(f_k(S_i,S_j))
-                        std::vector<double> gi_prime_factors;
-                        std::vector<double> gj_prime_factors;
-                        size_t k=current.f().at(i,j); //select where output is added to
-                        for(size_t m=0;m<trial_cluster.size();m++){
-                            if((old_cluster[m].v1()==old_current.v1())||(old_cluster[m].v2()==old_current.v1())){ //connected to site i
-                                gi_prime_factors.push_back((trial_cluster[m].w().lse_over_axis(0))[k]);
-                            }
-                            else{ //connected to site j
-                                gj_prime_factors.push_back((trial_cluster[m].w().lse_over_axis(0))[k]);
-                            }
-                        }
-                        gi_prime[k]=vec_add_float(gi_prime_factors);
-                        gj_prime[k]=vec_add_float(gj_prime_factors);
-                    }
                 }
+            }
+            for(size_t i=0;i<p_ij.nx();i++){
+                for(size_t j=0;j<p_ij.ny();j++){
                     std::vector<double> factors;
                     std::vector<double> factors_env;
                     //calculate P_{ij}
@@ -205,6 +188,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     p_ij.at(i,j)=vec_add_float(factors);
                     sum_p_ij_addends.push_back(p_ij.at(i,j));
                     //calculate P'^{env}_{ij}
+                    size_t k=current.f().at(i,j); //select where output is added to
                     factors_env.push_back(gi_prime[k]);
                     factors_env.push_back(gj_prime[k]);
                     p_prime_ij_env.at(i,j)=vec_add_float(factors_env);
