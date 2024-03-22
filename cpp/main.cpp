@@ -108,14 +108,16 @@ int main(int argc,char **argv){
     std::string input,output,dist;
     double dist_param1,dist_param2;
     size_t r_max=0;
-    size_t iter_max=100; //default is 100 iterations max
 #ifdef MODEL_CMD
+    size_t iter_max=100; //default is 100 iterations max
     double lr=0;
+    size_t restarts=1;
 #endif
 #ifdef MODEL_RENYI
+    size_t iter_max=100000; //default is 100000 iterations max
     double lr=0.0001;
-#endif
     size_t restarts=10;
+#endif
     //option arguments
     while(1){
         static struct option long_opts[]={
