@@ -278,7 +278,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 for(size_t j=0;j<r_j;j++){
                     for(size_t k=0;k<r_k;k++){
                         double e=exp(trial_current.w().at(i,j,k));
-                        joint_p_ijk.at(i,j,k)=e*sites[trial_current.v1()].probs()[i]*sites[trial_current.v2()].probs()[j];
+                        joint_p_ijk.at(i,j,k)=e*sites[trial_current.v1()].p_k()[i]*sites[trial_current.v2()].p_k()[j];
                         p_k[k]+=joint_p_ijk.at(i,j,k);
                         joint_p_ijk_sum+=joint_p_ijk.at(i,j,k);
                     }

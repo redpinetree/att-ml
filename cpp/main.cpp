@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -8,6 +9,7 @@
 #include <getopt.h>
 
 #include "mpi.h"
+#include "sampling.hpp"
 #include "stopwatch.hpp"
 #include "mpi_utils.hpp"
 #include "graph.hpp"
@@ -36,6 +38,7 @@ void print_usage(){
     std::cerr<<"\t-n,--iter-max: maximum number of optimization iterations\n";
     std::cerr<<"\t-l,--learning-rate: learning rate. if nonzero, the optimization method will be gradient descent instead of iterative optimization.\n";
     std::cerr<<"\t-R,--restarts: maximum number of restarts\n";
+    std::cerr<<"\t-c,--configs: number of configs to sample per temperature\n";
 }
 
 template<typename cmp>
@@ -118,6 +121,7 @@ int main(int argc,char **argv){
     double lr=0.0001;
     size_t restarts=10;
 #endif
+    size_t n_configs=0;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -134,10 +138,11 @@ int main(int argc,char **argv){
             {"iter-max",required_argument,0,'n'},
             {"learning-rate",required_argument,0,'l'},
             {"restarts",required_argument,0,'R'},
+            {"configs",required_argument,0,'c'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:c:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -155,6 +160,7 @@ int main(int argc,char **argv){
             case 'n': iter_max=(size_t) atoi(optarg); break;
             case 'l': lr=(double) atof(optarg); break;
             case 'R': restarts=(size_t) atoi(optarg); break;
+            case 'c': n_configs=(size_t) atoi(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -279,11 +285,20 @@ int main(int argc,char **argv){
     size_t n_samples_counter=(n_samples==0)?1:n_samples;
     for(size_t sample=mpi_utils::proc_rank;sample<n_samples_counter;sample+=mpi_utils::proc_num){
         std::string sample_output_fn=output;
+        std::string sample_overlaps_output_fn=output;
         if(n_samples!=0){
             if(verbose>=1){std::cout<<"sample "<<sample<<":\n";}
             if(add_suffix){sample_output_fn+="_"+std::to_string(sample);}
+            if(add_suffix){sample_overlaps_output_fn+="_"+std::to_string(sample);}
         }
         sample_output_fn+=".txt";
+        sample_overlaps_output_fn+=".dat";
+        if(n_configs>0){
+            std::ofstream ofs(sample_overlaps_output_fn,std::ios::binary);
+            size_t n_betas=((max_beta-min_beta)/step_beta)+1;
+            ofs.write((char*) &n_betas,sizeof(n_betas));
+            ofs.close();
+        }
         double beta=min_beta;
         double m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min;
         std::complex<double> q2_k;
@@ -337,6 +352,21 @@ int main(int argc,char **argv){
             if(verbose>=3){std::cout<<"approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
+            if(n_configs>0){
+                sw.start();
+                std::vector<std::vector<size_t> > samples=sampling::sample(g,n_configs);
+                std::vector<double> overlaps=sampling::pair_overlaps(samples,q);
+                sw.split();
+                if(verbose>=3){std::cout<<"config sampling time: "<<(double) sw.elapsed()<<"ms\n";}
+                trial_time+=sw.elapsed();
+                sw.reset();
+                if(output_set){
+                    sampling::write_output(sample_overlaps_output_fn,overlaps,beta);
+                }
+                else{
+                    sampling::write_output(overlaps);
+                }
+            }
             sw.start();
             if(g.dims().size()!=0){
                 calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min,q2_k);
@@ -366,7 +396,6 @@ int main(int argc,char **argv){
             binder_q=0.5*(3-(q4/pow(q2,2)));
             if(add_suffix){ //hypercubic lattice is used
                 sus_sg_k=n_phys_sites*sqrt(std::norm(q2_k));
-                std::cout<<q2_k<<" "<<sus_sg_k<<" "<<sus_sg<<"\n";
                 corr_len_sg=sqrt((sus_sg/sus_sg_k)-1)/(2*sin(k_min/2));
             }
             //prepare output lines

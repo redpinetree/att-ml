@@ -25,10 +25,10 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         
         //if v1 and v2 are real sites, assign default probs and m_vecs
         if(!g.vs()[current.v1()].virt()){
-            g.vs()[current.v1()].probs()=std::vector<double>(g.vs()[current.v1()].rank(),pow(g.vs()[current.v1()].rank(),-1));
+            g.vs()[current.v1()].p_k()=std::vector<double>(g.vs()[current.v1()].rank(),pow(g.vs()[current.v1()].rank(),-1));
             for(size_t idx=0;idx<g.vs()[current.v1()].rank();idx++){
                 std::vector<double> res(g.vs()[current.v1()].rank()-1,0);
-                double prob_factor=g.vs()[current.v1()].probs()[idx];
+                double prob_factor=g.vs()[current.v1()].p_k()[idx];
                 for(size_t i=0;i<g.vs()[current.v1()].rank();i++){
                     std::vector<double> contrib=observables::m_vec(g,current.v1(),i,idx,0);
                     for(size_t j=0;j<contrib.size();j++){
@@ -39,10 +39,10 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
             }
         }
         if(!g.vs()[current.v2()].virt()){
-            g.vs()[current.v2()].probs()=std::vector<double>(g.vs()[current.v2()].rank(),pow(g.vs()[current.v2()].rank(),-1));
+            g.vs()[current.v2()].p_k()=std::vector<double>(g.vs()[current.v2()].rank(),pow(g.vs()[current.v2()].rank(),-1));
             for(size_t idx=0;idx<g.vs()[current.v2()].rank();idx++){
                 std::vector<double> res(g.vs()[current.v2()].rank()-1,0);
-                double prob_factor=g.vs()[current.v2()].probs()[idx];
+                double prob_factor=g.vs()[current.v2()].p_k()[idx];
                 for(size_t i=0;i<g.vs()[current.v2()].rank();i++){
                     std::vector<double> contrib=observables::m_vec(g,current.v2(),i,idx,0);
                     for(size_t j=0;j<contrib.size();j++){
@@ -250,7 +250,7 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
         for(size_t j=0;j<r_j;j++){
             double k=current.f().at(i,j);
             double e=exp(current.w().at(i,j));
-            p_ijk.at(i,j,k)=e*g.vs()[current.v1()].probs()[i]*g.vs()[current.v2()].probs()[j];
+            p_ijk.at(i,j,k)=e*g.vs()[current.v1()].p_k()[i]*g.vs()[current.v2()].p_k()[j];
             p_ik.at(i,k)+=p_ijk.at(i,j,k); //compute marginals
             p_jk.at(j,k)+=p_ijk.at(i,j,k); //compute marginals
             p_k[k]+=p_ijk.at(i,j,k);
@@ -288,7 +288,7 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
         }
     }
     g.vs()[current.order()].p_bond()=current;
-    g.vs()[current.order()].probs()=p_k;
+    g.vs()[current.order()].p_k()=p_k;
     g.vs()[current.order()].p_ijk()=p_ijk;
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
@@ -296,7 +296,7 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
     for(size_t idx=0;idx<r_k;idx++){
         std::vector<double> res(r_k-1,0);
-        double prob_factor=g.vs()[current.order()].probs()[idx];
+        double prob_factor=g.vs()[current.order()].p_k()[idx];
         for(size_t i=0;i<r_k;i++){
             std::vector<double> contrib=observables::m_vec(g,current.order(),i,idx,0);
             for(size_t j=0;j<contrib.size();j++){

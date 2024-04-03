@@ -36,7 +36,7 @@ public:
     size_t& p1();
     size_t& p2();
     bond& p_bond();
-    std::vector<double>& probs();
+    std::vector<double>& p_k();
     array3d<double>& p_ijk();
     array2d<double>& p_ik();
     array2d<double>& p_jk();
@@ -51,7 +51,7 @@ private:
     bool virt_;
     std::pair<size_t,size_t> p_;
     bond p_bond_;
-    std::vector<double> probs_;
+    std::vector<double> p_k_;
     array3d<double> p_ijk_;
     array2d<double> p_ik_;
     array2d<double> p_jk_;

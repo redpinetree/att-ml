@@ -215,7 +215,7 @@ double observables::m(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
         double prob_factor=1;
         for(size_t i=0;i<c.size();i++){
             // prob_factor*=p_k[c[i]];
-            prob_factor*=g.vs()[root].probs()[c[i]];
+            prob_factor*=g.vs()[root].p_k()[c[i]];
         }
         double sub_res=0;
         for(size_t i=0;i<r_combos.size();i++){
@@ -372,7 +372,7 @@ double observables::q(graph<cmp>& g,size_t q_orig,size_t root,size_t n_target,si
             std::vector<size_t> c=combos[idx];
             double prob_factor=1;
             for(size_t i=0;i<c.size();i++){
-                prob_factor*=g.vs()[root].probs()[c[i]];
+                prob_factor*=g.vs()[root].p_k()[c[i]];
             }
             double sub_res=0;
             double contrib=observables::q(g,n_target,n,p,c);
@@ -549,7 +549,7 @@ std::complex<double> observables::m(graph<cmp>& g,size_t q_orig,size_t root,size
         double prob_factor=1;
         for(size_t i=0;i<c.size();i++){
             // prob_factor*=p_k[c[i]];
-            prob_factor*=g.vs()[root].probs()[c[i]];
+            prob_factor*=g.vs()[root].p_k()[c[i]];
         }
         std::complex<double> sub_res=0;
         for(size_t i=0;i<r_combos.size();i++){
@@ -710,7 +710,7 @@ std::complex<double> observables::q(graph<cmp>& g,size_t q_orig,size_t root,size
             std::vector<size_t> c=combos[idx];
             double prob_factor=1;
             for(size_t i=0;i<c.size();i++){
-                prob_factor*=g.vs()[root].probs()[c[i]];
+                prob_factor*=g.vs()[root].p_k()[c[i]];
             }
             std::complex<double> sub_res=0;
             std::complex<double> contrib=observables::q(g,n,n,p,c,k_components);
