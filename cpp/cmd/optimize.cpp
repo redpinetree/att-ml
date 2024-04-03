@@ -210,6 +210,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 }
             }
             double z_prime=sum_p_prime_ij_env;
+            cost=kl_div(exp(z),exp(z_prime),gi,gj,sites,old_current,old_cluster,trial_current,trial_cluster);
             // std::cout<<sum_p_prime_ij_env<<"\n";
             // std::cout<<(std::string)trial_current.w()<<"\n";
             // std::cout<<(std::string)p_ij<<"\n";
@@ -375,11 +376,11 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             }
             
             //check for convergence if after first iteration (since trial_current must be resized)
-            cost=kl_div(exp(z),exp(z_prime),gi,gj,sites,old_current,old_cluster,trial_current,trial_cluster);
             // std::cout<<cost<<"\n";
             if((fabs(cost)>=1e-5)&&(cost<0)){ //if too small, reinitialize, doesn't count
                 std::cout<<"cost less than 0. discarding result.\n";
                 restarts--;
+                exit(1);
                 break;
             }
             if(t>0){
@@ -622,54 +623,39 @@ double optimize::kl_div(double z,double z_prime,std::vector<double> gi,std::vect
                 double spin_sum_i_tilde=0;
                 double spin_sum_j_tilde=0;
                 double div_factor=0;
-                size_t source;
-                if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v1()==old_current.v2()){
-                    source=(old_cluster[n].v1()==old_current.v1())?old_current.v1():old_current.v2();
-                }
-                else{
-                    source=(old_cluster[n].v2()==old_current.v1())?old_current.v1():old_current.v2();
-                }
-                if(source==old_current.v1()){ //connected to site i
+                if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v2()==old_current.v1()){ //connected to site i
                     if(old_cluster[n].v1()==old_current.v1()){ //site imu > site i
                         for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
                             div_factor+=exp(old_cluster[n].w().at(i,imu));
-                        }
-                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
                             spin_sum_i_tilde+=exp(old_cluster[n].w().at(i,imu))*old_cluster[n].w().at(i,imu);
                         }
                     }
                     else{ //site imu < site i
                         for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
                             div_factor+=exp(old_cluster[n].w().at(imu,i));
-                        }
-                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
                             spin_sum_i_tilde+=exp(old_cluster[n].w().at(imu,i))*old_cluster[n].w().at(imu,i);
                         }
                     }
-                    gi_tilde_res+=(div_factor>0)?(spin_sum_i_tilde*exp(gi[i])/div_factor):0;
+                    gi_tilde_res+=spin_sum_i_tilde/div_factor;
                 }
                 else{ //connected to site j
                     if(old_cluster[n].v1()==old_current.v2()){ //site imu > site j
                         for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
                             div_factor+=exp(old_cluster[n].w().at(j,imu));
-                        }
-                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
                             spin_sum_j_tilde+=exp(old_cluster[n].w().at(j,imu))*old_cluster[n].w().at(j,imu);
                         }
                     }
                     else{ //site imu < site j
                         for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
                             div_factor+=exp(old_cluster[n].w().at(imu,j));
-                        }
-                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
                             spin_sum_j_tilde+=exp(old_cluster[n].w().at(imu,j))*old_cluster[n].w().at(imu,j);
                         }
                     }
-                    gj_tilde_res+=(div_factor>0)?(spin_sum_j_tilde*exp(gj[j])/div_factor):0;
+                    gj_tilde_res+=spin_sum_j_tilde/div_factor;
                 }
             }
-            gi_tilde.at(i,j)=gi_tilde_res;
-            gj_tilde.at(i,j)=gj_tilde_res;
+            gi_tilde.at(i,j)=gi_tilde_res*exp(gi[i]);
+            gj_tilde.at(i,j)=gj_tilde_res*exp(gj[j]);
         }
     }
     
@@ -684,55 +670,46 @@ double optimize::kl_div(double z,double z_prime,std::vector<double> gi,std::vect
                 double spin_sum_j_tilde=0;
                 double div_factor=0;
                 size_t k=current.f().at(i,j);
-                size_t source;
-                if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v1()==old_current.v2()){
-                    source=(old_cluster[n].v1()==old_current.v1())?old_current.v1():old_current.v2();
-                }
-                else{
-                    source=(old_cluster[n].v2()==old_current.v1())?old_current.v1():old_current.v2();
-                }
-                if(source==old_current.v1()){ //connected to site i
+                if(old_cluster[n].v1()==old_current.v1()||old_cluster[n].v2()==old_current.v1()){ //connected to site i
                     if(old_cluster[n].v1()==old_current.v1()){ //site imu > site i
-                        for(size_t imu=0;imu<cluster[n].w().nx();imu++){
+                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
                             div_factor+=exp(old_cluster[n].w().at(i,imu));
+                            spin_sum_i_tilde+=exp(old_cluster[n].w().at(i,imu))*cluster[n].w().at(imu,k);
                         }
                     }
                     else{ //site imu < site i
-                        for(size_t imu=0;imu<cluster[n].w().nx();imu++){
+                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
                             div_factor+=exp(old_cluster[n].w().at(imu,i));
+                            spin_sum_i_tilde+=exp(old_cluster[n].w().at(imu,i))*cluster[n].w().at(imu,k);
                         }
                     }
-                    for(size_t imu=0;imu<cluster[n].w().nx();imu++){
-                        spin_sum_i_tilde+=exp(old_cluster[n].w().at(i,imu))*cluster[n].w().at(imu,k);
-                    }
-                    gi_prime_tilde_res+=(div_factor>0)?(spin_sum_i_tilde*exp(gi[i])/div_factor):0;
+                    gi_prime_tilde_res+=spin_sum_i_tilde/div_factor;
                 }
                 else{ //connected to site j
                     if(old_cluster[n].v1()==old_current.v2()){ //site imu > site j
-                        for(size_t imu=0;imu<cluster[n].w().nx();imu++){
+                        for(size_t imu=0;imu<old_cluster[n].w().ny();imu++){
                             div_factor+=exp(old_cluster[n].w().at(j,imu));
+                            spin_sum_j_tilde+=exp(old_cluster[n].w().at(j,imu))*cluster[n].w().at(imu,k);
                         }
                     }
                     else{ //site imu < site j
-                        for(size_t imu=0;imu<cluster[n].w().nx();imu++){
+                        for(size_t imu=0;imu<old_cluster[n].w().nx();imu++){
                             div_factor+=exp(old_cluster[n].w().at(imu,j));
+                            spin_sum_j_tilde+=exp(old_cluster[n].w().at(imu,j))*cluster[n].w().at(imu,k);
                         }
                     }
-                    for(size_t imu=0;imu<cluster[n].w().nx();imu++){
-                        spin_sum_j_tilde+=exp(old_cluster[n].w().at(j,imu))*cluster[n].w().at(imu,k);
-                    }
-                    gj_prime_tilde_res+=(div_factor>0)?(spin_sum_j_tilde*exp(gj[j])/div_factor):0;
+                    gj_prime_tilde_res+=spin_sum_j_tilde/div_factor;
                 }
             }
-            gi_prime_tilde.at(i,j)=gi_prime_tilde_res;
-            gj_prime_tilde.at(i,j)=gj_prime_tilde_res;
+            gi_prime_tilde.at(i,j)=gi_prime_tilde_res*exp(gi[i]);
+            gj_prime_tilde.at(i,j)=gj_prime_tilde_res*exp(gj[j]);
         }
     }
     
     double a=0;
     double b=0;
-    for(size_t i=0;i<sites[old_current.v1()].rank();i++){
-        for(size_t j=0;j<sites[old_current.v2()].rank();j++){
+    for(size_t i=0;i<old_current.w().nx();i++){
+        for(size_t j=0;j<old_current.w().ny();j++){
             double contrib_a=exp(old_current.w().at(i,j))*exp(gi[i])*exp(gj[j])*old_current.w().at(i,j);
             double contrib_b=exp(old_current.w().at(i,j))*((gi_tilde.at(i,j)*exp(gj[j]))+(exp(gi[i])*gj_tilde.at(i,j)));
             a+=contrib_a;
@@ -741,14 +718,15 @@ double optimize::kl_div(double z,double z_prime,std::vector<double> gi,std::vect
     }
     double a_prime=0;
     double b_prime=0;
-    for(size_t i=0;i<sites[current.v1()].rank();i++){
-        for(size_t j=0;j<sites[current.v2()].rank();j++){
+    for(size_t i=0;i<current.w().nx();i++){
+        for(size_t j=0;j<current.w().ny();j++){
             double contrib_a_prime=exp(old_current.w().at(i,j))*exp(gi[i])*exp(gj[j])*current.w().at(i,j);
             double contrib_b_prime=exp(old_current.w().at(i,j))*((gi_prime_tilde.at(i,j)*exp(gj[j]))+(exp(gi[i])*gj_prime_tilde.at(i,j)));
             a_prime+=contrib_a_prime;
             b_prime+=contrib_b_prime;
         }
     }
+    
     
     double res=((a/z)+(b/z)-log(z))-((a_prime/z)+(b_prime/z)-log(z_prime));
     return res;
