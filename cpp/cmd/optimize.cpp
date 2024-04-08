@@ -220,7 +220,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             for(size_t i=0;i<p_ij.nx();i++){
                 for(size_t j=0;j<p_ij.ny();j++){
                     if(lr==0){ //lr==0 means use iterative method based on stationarity condition
-                        trial_current.w().at(i,j)=p_ij.at(i,j)-p_prime_ij_env.at(i,j);
+                        trial_current.w().at(i,j)=p_ij.at(i,j)-((fabs(p_prime_ij_env.at(i,j))<1e-10)?0:p_prime_ij_env.at(i,j));
                         sum_addends.push_back(trial_current.w().at(i,j));
                     }
                     else{ //lr!=0 means use gradient descent with lr
@@ -342,7 +342,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 for(size_t imu=0;imu<p_ki.nx();imu++){
                     for(size_t k=0;k<p_ki.ny();k++){
                         if(lr==0){ //lr==0 means use iterative method based on stationarity condition
-                            trial_cluster[n].w().at(imu,k)=p_ki.at(imu,k)-p_prime_ki_env.at(imu,k);
+                            trial_cluster[n].w().at(imu,k)=p_ki.at(imu,k)-((fabs(p_prime_ki_env.at(imu,k))<1e-10)?0:p_prime_ki_env.at(imu,k));
                             sum_addends.push_back(trial_cluster[n].w().at(imu,k));
                         }
                         else{ //lr!=0 means use gradient descent with lr
@@ -376,7 +376,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             }
             
             //check for convergence if after first iteration (since trial_current must be resized)
-            // std::cout<<cost<<"\n";
+            std::cout<<cost<<"\n";
             if((fabs(cost)>=1e-5)&&(cost<0)){ //if too small, reinitialize, doesn't count
                 std::cout<<"cost less than 0. discarding result.\n";
                 restarts--;
@@ -396,6 +396,16 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 }
                 if(t==max_it-1){
                     std::cout<<"no convergence after "<<(max_it)<<" iterations\n";
+                    std::cout<<"fail:\n";
+                    std::cout<<(std::string) current.w().exp_form()<<"\n";
+                    for(size_t a=0;a<cluster.size();a++){
+                        std::cout<<(std::string) cluster[a].w().exp_form()<<"\n";
+                    }
+                    std::cout<<(std::string) trial_current.w().exp_form()<<"\n";
+                    for(size_t a=0;a<trial_cluster.size();a++){
+                        std::cout<<(std::string) trial_cluster[a].w().exp_form()<<"\n";
+                    }
+                    exit(1);
                 }
                 prev_cost=cost;
             }
@@ -411,9 +421,8 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         }
         std::cout<<"final cost: "<<cost<<"\n";
         // std::cout<<"final diff: "<<diff<<"\n";
-                    
         if(cost<best_cost){
-            std::cout<<"cost improved. replacing...\n";
+            // std::cout<<"cost improved. replacing...\n";
             best_cost=cost;
             best_current=trial_current;
             for(size_t n=0;n<best_cluster.size();n++){
@@ -421,11 +430,11 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             }
         }
         if(fabs(best_cost)<1e-5){
-            std::cout<<"identical distribution obtained. stopping optimization.\n";
+            // std::cout<<"identical distribution obtained. stopping optimization.\n";
             break;
         }
     }
-    std::cout<<"best cost: "<<best_cost<<"\n";
+    // std::cout<<"best cost: "<<best_cost<<"\n";
     current=best_current;
     current.bmi(current.w());
     for(size_t n=0;n<cluster.size();n++){
@@ -537,7 +546,7 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
         }
     }
     //satisfy surjectivity
-    /* for(size_t k=0;k<r_k;k++){
+    for(size_t k=0;k<r_k;k++){
         size_t max_c_idx_i=0;
         size_t max_c_idx_j=0;
         double max_c=c.at(0,0,k)-(1e-10*w_sums[k]);
@@ -560,7 +569,7 @@ array2d<size_t> optimize::f_mvec_sim(site v_i,site v_j,array2d<double> w,size_t 
         f_res.at(max_c_idx_i,max_c_idx_j)=k;
         w_sums[k]+=w.at(max_c_idx_i,max_c_idx_j);
         done_ij_pairs.push_back(std::make_pair(max_c_idx_i,max_c_idx_j));
-    } */
+    }
     //determine rest of f
     for(size_t i=0;i<r_i;i++){
         for(size_t j=0;j<r_j;j++){
