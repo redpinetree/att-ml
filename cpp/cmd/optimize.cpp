@@ -5,6 +5,10 @@
 #include "../observables.hpp"
 
 double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr,size_t max_restarts){
+    if(lr==0){
+        max_it=2;
+        max_restarts=1;
+    }
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     double best_cost=1e49;
     bond best_current=current;
@@ -394,7 +398,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     std::cout<<"converged after "<<(t+1)<<" iterations (cost)\n";
                     break;
                 }
-                if(t==max_it-1){
+                if((lr!=0)&(t==max_it-1)){
                     std::cout<<"no convergence after "<<(max_it)<<" iterations\n";
                     std::cout<<"fail:\n";
                     std::cout<<(std::string) current.w().exp_form()<<"\n";
