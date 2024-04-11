@@ -32,6 +32,7 @@ inline double lse(double a,double b){
     return (a>b)?a+log(1+exp(b-a)):b+log(exp(a-b)+1);
 }
 inline double lse(std::vector<double> v){
+    std::sort(v.begin(),v.end());
     if(v.size()==0){
         return 0;
     }
