@@ -121,6 +121,11 @@ int main(int argc,char **argv){
     double lr=0.0001;
     size_t restarts=10;
 #endif
+#ifdef MODEL_CPD
+    size_t iter_max=100; //default is 100 iterations max
+    double lr=0;
+    size_t restarts=1;
+#endif
     size_t n_configs=0;
     //option arguments
     while(1){

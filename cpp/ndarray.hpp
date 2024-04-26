@@ -1,7 +1,9 @@
 #ifndef NDARRAY
 #define NDARRAY
 
+#include <cmath>
 #include <vector>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <algorithm>
@@ -127,7 +129,6 @@ public:
         }
         return res;
     }
-    
     //exp for array2d
     array2d<T> exp_form(){
         array2d<double> a=*this;
@@ -330,7 +331,6 @@ public:
         }
         return res;
     }
-    
     //exp for array3d
     array3d<T> exp_form(){
         array3d<double> a=*this;
@@ -346,6 +346,8 @@ public:
     size_t nx() const{return this->nx_;}
     size_t ny() const{return this->ny_;}
     size_t nz() const{return this->nz_;}
+    std::vector<T> e() const{return this->e_;}
+    std::vector<T>& e(){return this->e_;}
     T at(size_t x,size_t y,size_t z) const{return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
     T& at(size_t x,size_t y,size_t z){return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
 private:
