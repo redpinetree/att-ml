@@ -17,8 +17,8 @@ namespace optimize{
     array3d<double> nn_hals(array3d<double>&,array3d<double>&,array3d<double>&);
     void normalize(bond&,std::vector<bond>&,std::vector<double>&);
     void unnormalize(bond&,std::vector<double>&);
-    double tree_cpd(bond&,std::vector<bond>&,bond&,std::vector<bond>&,size_t,std::string,bool,bool);
-    double opt(size_t,size_t,size_t,std::vector<site>,bond&,std::vector<bond>&,bond&,std::vector<bond>&,size_t,double,size_t);
+    double tree_cpd(bond&,std::vector<bond>&,bond&,std::vector<bond>&,size_t,std::string,bool);
+    double opt(size_t,size_t,size_t,std::vector<site>,bond&,std::vector<bond>&,bond&,std::vector<bond>&,size_t,std::string,size_t);
 };
 
 #endif

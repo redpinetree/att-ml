@@ -32,11 +32,15 @@ void print_usage(){
     std::cerr<<"\t-i,--input: path to specified input file containing graph description. the graph is assumed to not contain multiedges.\n";
     std::cerr<<"\t-o,--output: prefix for output files. please omit the file extension.\n";
     std::cerr<<"\t-d,--distribution: distribution for sampling bond configurations. one of \"gaussian\",\"bimodal\" (+1/-1),\"uniform\".\n";
-    std::cerr<<"\t-1,--dist-param1: distribution hyperparameter.\n\t\tgaussian-> mean\n\t\tbimodal -> probability of ferromagnetic bond\n\t\tuniform -> minimum bond strength\n";
-    std::cerr<<"\t-2,--dist-param2: distribution hyperparameter.\n\t\tgaussian-> standard deviation\n\t\tbimodal -> ignored, overriden to 0\n\t\tuniform -> maximum bond strength\n";
+    std::cerr<<"\t-1,--dist-param1: distribution hyperparameter.\n\t\tif gaussian-> mean\n\t\tif bimodal -> probability of ferromagnetic bond\n\t\tif uniform -> minimum bond strength\n";
+    std::cerr<<"\t-2,--dist-param2: distribution hyperparameter.\n\t\tif gaussian-> standard deviation\n\t\tif bimodal -> ignored, overriden to 0\n\t\tif uniform -> maximum bond strength\n";
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-n,--iter-max: maximum number of optimization iterations\n";
+#ifdef MODEL_CPD
+    std::cerr<<"\t-I,--init-method: initialization method.\n\t\thybrid-> tries \"prev\" once on first attempt, then \"lstsq\" once, then \"rand\" repeatedly\n\t\tprev  -> starts from the target weights from before the deformation, padded appropriately\n\t\tlstsq -> uses the least squares approximation calculated via SVD\n\t\trand  -> initial factor matrices are uniform randomly initialized, normalized to sum to 1\n";
+#else
     std::cerr<<"\t-l,--learning-rate: learning rate. if nonzero, the optimization method will be gradient descent instead of iterative optimization.\n";
+#endif
     std::cerr<<"\t-R,--restarts: maximum number of restarts\n";
     std::cerr<<"\t-c,--configs: number of configs to sample per temperature\n";
 }
@@ -122,9 +126,9 @@ int main(int argc,char **argv){
     size_t restarts=10;
 #endif
 #ifdef MODEL_CPD
-    size_t iter_max=100; //default is 100 iterations max
-    double lr=0;
-    size_t restarts=1;
+    size_t iter_max=100; //default is 100 iterations for max
+    std::string init_method="hybrid";
+    size_t restarts=10;
 #endif
     size_t n_configs=0;
     //option arguments
@@ -141,13 +145,21 @@ int main(int argc,char **argv){
             {"dist-param2",required_argument,0,'2'},
             {"r-max",required_argument,0,'r'},
             {"iter-max",required_argument,0,'n'},
+#ifdef MODEL_CPD
+            {"init-method",required_argument,0,'I'},
+#else
             {"learning-rate",required_argument,0,'l'},
+#endif
             {"restarts",required_argument,0,'R'},
             {"configs",required_argument,0,'c'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
+#ifdef MODEL_CPD
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:R:c:",long_opts,&opt_idx);
+#else
         int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:c:",long_opts,&opt_idx);
+#endif
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -163,7 +175,11 @@ int main(int argc,char **argv){
             case '2': dist_param2=(double) atof(optarg); dist_param2_set=true; break;
             case 'r': r_max=(size_t) atoi(optarg); break;
             case 'n': iter_max=(size_t) atoi(optarg); break;
+#ifdef MODEL_CPD
+            case 'I': init_method=std::string(optarg); break;
+#else
             case 'l': lr=(double) atof(optarg); break;
+#endif
             case 'R': restarts=(size_t) atoi(optarg); break;
             case 'c': n_configs=(size_t) atoi(optarg); break;
             case '?':
@@ -277,11 +293,22 @@ int main(int argc,char **argv){
             dist_param2=0;
         }
     }
-    if(r_max==0){
-        std::cout<<"Maximum rank is zero. Will default to r_max=q.\n";
+#ifdef MODEL_CPD
+    if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="rand")&&(init_method!="hybrid")){
+        std::cout<<"Error: <init_method> must be one of \"hybrid\", \"prev\", \"lstsq\", or \"rand\".\n";
+        exit(1);
     }
+    if((restarts>1)&&((init_method=="prev")||(init_method=="lstsq"))){
+        std::cout<<"CPD initialization is deterministic ("<<init_method<<"), so restart count set to 1.\n";
+        restarts=1;
+    }
+#else
     if(lr!=0){
         std::cout<<"Learning rate is nonzero. Using gradient descent method.\n";
+    }
+#endif
+    if(r_max==0){
+        std::cout<<"Maximum rank is zero. Will default to r_max=q.\n";
     }
     std::vector<double> times;
     stopwatch sw,sw_total;
@@ -352,7 +379,11 @@ int main(int argc,char **argv){
 
             graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
             sw.start();
+#ifdef MODEL_CPD
+            algorithm::approx(q,g,r_max,iter_max,init_method,restarts);
+#else
             algorithm::approx(q,g,r_max,iter_max,lr,restarts);
+#endif
             sw.split();
             if(verbose>=3){std::cout<<"approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();

@@ -12,7 +12,7 @@
 #include "../utils.hpp"
 
 template<typename cmp>
-void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,double lr,size_t restarts){
+void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,std::string init_method,size_t restarts){
     r_max=(r_max==0)?q:r_max;
     //graph deformation
     size_t iteration=0;
@@ -53,7 +53,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         }
         
         // std::cout<<std::string(g)<<"\n";
-        // std::cout<<std::string(current.w())<<"\n";
+        // std::cout<<std::string(current)<<"\n";
         
         //determine master and slave node
         size_t master,slave;
@@ -161,15 +161,15 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         }
         
         //optimization of weights in spin cluster
-        current.cost()=optimize::opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,lr,restarts);
+        current.cost()=optimize::opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,init_method,restarts);
         
         //merge identical bonds
         if(dupes.size()!=0){
             std::sort(dupes.begin(),dupes.end());
             for(int i=dupes.size()-1;i>=0;i--){
-                std::cout<<"merging: "<<std::string(cluster[dupes[i].second])<<"+"<<std::string(cluster[dupes[i].first]);
-                std::cout<<"\n1st: "<<std::string(cluster[dupes[i].first].w())<<"\n";
-                std::cout<<"2nd: "<<std::string(cluster[dupes[i].second].w())<<"\n";
+                // std::cout<<"merging: "<<std::string(cluster[dupes[i].second])<<"+"<<std::string(cluster[dupes[i].first]);
+                // std::cout<<"\n1st: "<<std::string(cluster[dupes[i].first].w())<<"\n";
+                // std::cout<<"2nd: "<<std::string(cluster[dupes[i].second].w())<<"\n";
                 //check if same size
                 bool same_nx=cluster[dupes[i].first].w().nx()==cluster[dupes[i].second].w().nx();
                 bool same_ny=cluster[dupes[i].first].w().ny()==cluster[dupes[i].second].w().ny();
@@ -227,7 +227,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
     // std::cout<<"volume time: "<<sw1.elapsed()<<"\n";
     // std::cout<<"reconnect time: "<<sw2.elapsed()<<"\n";
 }
-template void algorithm::approx(size_t,graph<bmi_comparator>&,size_t,size_t,double,size_t);
+template void algorithm::approx(size_t,graph<bmi_comparator>&,size_t,size_t,std::string,size_t);
 
 template<typename cmp>
 void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){

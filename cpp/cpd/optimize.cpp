@@ -30,12 +30,13 @@ array3d<double> optimize::calc_aTb(std::vector<array3d<double> >& aTb_legs,bond&
         dim=r_i*r_j;
     }
     else{
-        bool m_ij_flag=((old_cluster[m-1].v1()==old_current.v1())||(old_cluster[m-1].v2()==old_current.v1()));
-        dim=m_ij_flag?r_i:r_j;
+        //dim is the rank at the site that is not part of the active bond
+        bool dim_flag=((old_cluster[m-1].v1()==old_current.v1())||(old_cluster[m-1].v1()==old_current.v2()));
+        dim=dim_flag?old_cluster[m-1].w().ny():old_cluster[m-1].w().nx();
     }
     array3d<double> aTb(r_k,dim,1);
-    // array3d<double> aTb((m==0)?r_k:old_cluster[m-1].w().ny(),(m==0)?r_i*r_j:old_cluster[m-1].w().nx(),1);
     if(m!=0){
+        //this flag checks if the bond is connected to site i or site j of the active bond
         bool m_ij_flag=((old_cluster[m-1].v1()==old_current.v1())||(old_cluster[m-1].v2()==old_current.v1()));
         for(size_t x=0;x<aTb.nx();x++){
             for(size_t y=0;y<aTb.ny();y++){
@@ -50,15 +51,26 @@ array3d<double> optimize::calc_aTb(std::vector<array3d<double> >& aTb_legs,bond&
                                 continue;
                             }
                             else{
+                                //this flag checks if the bond is connected to site i or site j of the active bond
                                 bool m2_ij_flag=((old_cluster[m2-1].v1()==old_current.v1())||(old_cluster[m2-1].v2()==old_current.v1()));
                                 factors*=aTb_legs[m2].at(x,m2_ij_flag?i:j,0);
                             }
                         }
-                        if(((old_cluster[m-1].v1()==old_current.v1())||(old_cluster[m-1].v1()==old_current.v2()))){
-                            sum+=factors*old_cluster[m-1].w().at(y,m_ij_flag?i:j,0);
+                        if(m_ij_flag){ //connected to i
+                            if((old_cluster[m-1].v1()==old_current.v1())){ //imu<i
+                                sum+=factors*old_cluster[m-1].w().at(i,y,0);
+                            }
+                            else{ //imu>i
+                                sum+=factors*old_cluster[m-1].w().at(y,i,0);
+                            }
                         }
-                        else{
-                            sum+=factors*old_cluster[m-1].w().at(m_ij_flag?i:j,y,0);
+                        else{ //connected to j
+                            if((old_cluster[m-1].v1()==old_current.v2())){ //imu<j
+                                sum+=factors*old_cluster[m-1].w().at(j,y,0);
+                            }
+                            else{ //imu>j
+                                sum+=factors*old_cluster[m-1].w().at(y,j,0);
+                            }
                         }
                     }
                 }
@@ -73,6 +85,7 @@ array3d<double> optimize::calc_aTb(std::vector<array3d<double> >& aTb_legs,bond&
                 for(size_t m2=0;m2<aTb_legs.size();m2++){
                     if(m==m2){continue;}
                     else{
+                        //this flag checks if the bond is connected to site i or site j of the active bond
                         bool m2_ij_flag=((old_cluster[m2-1].v1()==old_current.v1())||(old_cluster[m2-1].v2()==old_current.v1()));
                         factors*=aTb_legs[m2].at(x,m2_ij_flag?y/r_j:y%r_j,0);
                     }
@@ -137,13 +150,14 @@ double optimize::calc_tr_bTb(std::vector<array3d<double> >& bTb_legs,bond& old_c
 }
 
 array3d<double> optimize::nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x){
+    if((aTa.nx()!=aTb.nx())||(aTa.ny()!=x.nx())||(x.ny()!=aTb.ny())){
+        std::cout<<"Incompatible matrix equation in NN-HALS with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
+        exit(1);
+    }
     array3d<double> prev_x=x;
     double err=0;
     double err_first=0;
-    // double rho=1+((x.nx()*x.ny())+((x.nx()*aTb.nx())/((x.ny()*aTb.nx())+x.ny())));
-    double rho=1+((x.nx()*x.ny())+(x.nx()*aTb.nx())/(aTb.nx()*x.ny())+x.ny());
-    // double rho=100;
-    for(size_t it=0;it<100;it++){
+    for(size_t it=0;it<1000;it++){
         for(size_t k=0;k<aTb.nx();k++){
             if(aTa.at(k,k,0)!=0){
                 double zero_check=0;
@@ -152,18 +166,13 @@ array3d<double> optimize::nn_hals(array3d<double>& aTa,array3d<double>& aTb,arra
                     double c_sum=0;
                     for(size_t l=0;l<x.nx();l++){
                         c_sum+=aTa.at(l,k,0)*x.at(l,col,0);
-                        // std::cout<<aTa.at(l,k,0)<<" "<<x.at(l,col,0)<<"\n";
                     }
                     c.push_back(c_sum);
-                    // std::cout<<c[col]<<"\n";
                 }
                 for(size_t col=0;col<x.ny();col++){
                     c[col]-=x.at(k,col,0)*aTa.at(k,k,0); //this term in c removes current k column information
-                    // std::cout<<c[col]<<" ";
                 }
-                    // std::cout<<"\n";
                 for(size_t col=0;col<x.ny();col++){
-                    // std::cout<<(aTb.at(k,col,0)-c[col])<<" ";
                     x.at(k,col,0)=(aTb.at(k,col,0)-c[col])/aTa.at(k,k,0);
                     x.at(k,col,0)=(x.at(k,col,0)>0)?x.at(k,col,0):0; //clip negative values
                     zero_check+=x.at(k,col,0);
@@ -178,7 +187,6 @@ array3d<double> optimize::nn_hals(array3d<double>& aTa,array3d<double>& aTb,arra
                 }
             }
         }
-        // std::cout<<"\n"<<(std::string)x<<"\n";
         double err=0;
         for(size_t i=0;i<x.nx();i++){
             for(size_t j=0;j<x.ny();j++){
@@ -190,9 +198,8 @@ array3d<double> optimize::nn_hals(array3d<double>& aTa,array3d<double>& aTb,arra
         if(it==0){
             err_first=err;
         }
-        // std::cout<<err<<"\n";
-        if((err<(1e-8*err_first))||(it>1+(0.5*rho))){ //alpha=0.5 for HALS, eps=1e-8
-            std::cout<<"HALS stopped early after "<<it<<" iterations.\n";
+        if(err<(1e-8*err_first)){ //eps=1e-8
+            // std::cout<<"HALS stopped early after "<<it<<" iterations.\n";
             break;
         }
     }
@@ -271,7 +278,7 @@ void optimize::unnormalize(bond& current,std::vector<double>& weights){
 }
 
 
-double optimize::tree_cpd(bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,std::string init_method,bool unnormalize_flag,bool verbose){
+double optimize::tree_cpd(bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,std::string init_method,bool unnormalize_flag){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     size_t r_i=current.w().nx();
     size_t r_j=current.w().ny();
@@ -282,22 +289,22 @@ double optimize::tree_cpd(bond& old_current,std::vector<bond>& old_cluster,bond&
     std::vector<array3d<double> > aTa_legs;
     std::vector<array3d<double> > aTb_legs;
     std::vector<array3d<double> > bTb_legs;
-    std::cout<<"next set:\n";
-    std::cout<<"target:\n";
-    std::cout<<old_current<<"\n";
-    std::cout<<(std::string) old_current.w()<<"\n";
-    for(size_t n=0;n<old_cluster.size();n++){
-        std::cout<<old_cluster[n]<<"\n";
-        std::cout<<(std::string) old_cluster[n].w()<<"\n";
-    }
-    std::cout<<"trial:\n";
-    std::cout<<current<<"\n";
-    std::cout<<(std::string) current.w()<<"\n";
-    for(size_t n=0;n<cluster.size();n++){
-        std::cout<<cluster[n]<<"\n";
-        std::cout<<(std::string) cluster[n].w()<<"\n";
-    }
-    std::cout<<"\n";
+    // std::cout<<"next set:\n";
+    // std::cout<<"target:\n";
+    // std::cout<<old_current<<"\n";
+    // std::cout<<(std::string) old_current.w()<<"\n";
+    // for(size_t n=0;n<old_cluster.size();n++){
+        // std::cout<<old_cluster[n]<<"\n";
+        // std::cout<<(std::string) old_cluster[n].w()<<"\n";
+    // }
+    // std::cout<<"trial:\n";
+    // std::cout<<current<<"\n";
+    // std::cout<<(std::string) current.w()<<"\n";
+    // for(size_t n=0;n<cluster.size();n++){
+        // std::cout<<cluster[n]<<"\n";
+        // std::cout<<(std::string) cluster[n].w()<<"\n";
+    // }
+    // std::cout<<"\n";
     
     array3d<double> mat_current=matricize(current.w());
     aTa_legs.push_back(matmul_xTy(mat_current,mat_current));
@@ -309,34 +316,6 @@ double optimize::tree_cpd(bond& old_current,std::vector<bond>& old_cluster,bond&
         aTb_legs.push_back(matmul_xTy(cluster[n].w(),arg));
         bTb_legs.push_back(matmul_xTy(arg,arg));
     }
-    
-    // std::cout<<"aTa_legs:\n";
-    // for(size_t m=0;m<aTa_legs.size();m++){
-        // std::cout<<(std::string) aTa_legs[m]<<"\n";
-    // }
-    // std::cout<<"aTb_legs:\n";
-    // for(size_t m=0;m<aTb_legs.size();m++){
-        // std::cout<<(std::string) aTb_legs[m]<<"\n";
-    // }
-    // std::cout<<"bTb_legs:\n";
-    // for(size_t m=0;m<bTb_legs.size();m++){
-        // std::cout<<(std::string) bTb_legs[m]<<"\n";
-    // }
-    
-    // std::cout<<"aTa:\n";
-    // for(size_t m=0;m<aTa_legs.size();m++){
-        // array3d<double> aTa=optimize::calc_aTa(aTa_legs,weights,m);
-        // std::cout<<(std::string) aTa<<"\n";
-    // }
-    // std::cout<<"aTb:\n";
-    // for(size_t m=0;m<aTb_legs.size();m++){
-        // array3d<double> aTb=optimize::calc_aTb(aTb_legs,old_current,old_cluster,weights,m);
-        // std::cout<<(std::string) aTb<<"\n";
-    // }
-    // std::cout<<"tr_axTax:"<<optimize::calc_tr_axTax(aTa_legs,weights)<<"\n";
-    // std::cout<<"tr_axTb:"<<optimize::calc_tr_axTb(aTb_legs,old_current,old_cluster,weights)<<"\n";
-    // std::cout<<"tr_bTb:"<<optimize::calc_tr_bTb(bTb_legs,old_current,old_cluster)<<"\n";
-    // std::cout<<"initial error:"<<((optimize::calc_tr_axTax(aTa_legs,weights)+optimize::calc_tr_bTb(bTb_legs,old_current,old_cluster)-(2*optimize::calc_tr_axTb(aTb_legs,old_current,old_cluster,weights)))/optimize::calc_tr_bTb(bTb_legs,old_current,old_cluster))<<"\n";
     
     double prev_err=0;
     double err=1;
@@ -368,15 +347,21 @@ double optimize::tree_cpd(bond& old_current,std::vector<bond>& old_cluster,bond&
                     }
                 }
             }
+            else if(init_method=="lstsq"){
+                size_t status=0;
+                init=lstsq(aTa,aTb,status);
+                if(status==1){ //failed to converge, so fall back to "prev" method
+                    std::cout<<"Falling back to \"prev\" method...\n";
+                    init=(m==0)?matricize(current.w()):cluster[m-1].w();
+                    init=transpose(init);
+                }
+            }
             else{
                 std::cout<<"Invalid initializer for HALS subroutine ("<<init_method<<" was passed), aborting...\n";
                 exit(1);
             }
-            std::cout<<"init:\n"<<(std::string)init<<"\n";
-            std::cout<<"aTa:\n"<<(std::string)aTa<<"\n";
-            std::cout<<"aTb:\n"<<(std::string)aTb<<"\n";
             array3d<double> x=optimize::nn_hals(aTa,aTb,init);
-            std::cout<<(std::string)x<<"\n";
+            // std::cout<<(std::string)x<<"\n";
             if(m==0){
                 current.w()=tensorize(x,r_i,r_j);
             }
@@ -403,56 +388,27 @@ double optimize::tree_cpd(bond& old_current,std::vector<bond>& old_cluster,bond&
         double tr_axTb=optimize::calc_tr_axTb(aTb_legs,old_current,old_cluster,weights);
         err=(tr_axTax+tr_bTb-(2*tr_axTb))/tr_bTb;
         if((it>0)&&(fabs(prev_err-err)<1e-8)){
-            if(verbose){
-                std::cout<<"CPD converged after "<<it<<" iterations.\n";
-            }
+            // std::cout<<"CPD converged after "<<it<<" iterations.\n";
             break;
         }
         prev_err=err;
     }
-    if(verbose){
-        std::cout<<"final error: "<<err<<"\n";
-    }
     
-    // std::cout<<"final aTa_legs:\n";
-    // for(size_t m=0;m<aTa_legs.size();m++){
-        // std::cout<<(std::string) aTa_legs[m]<<"\n";
-    // }
-    // std::cout<<"final aTb_legs:\n";
-    // for(size_t m=0;m<aTb_legs.size();m++){
-        // std::cout<<(std::string) aTb_legs[m]<<"\n";
-    // }
-    // std::cout<<"final bTb_legs:\n";
-    // for(size_t m=0;m<bTb_legs.size();m++){
-        // std::cout<<(std::string) bTb_legs[m]<<"\n";
-    // }
-    
-    std::cout<<"final weights:\n";
-    for(size_t k=0;k<weights.size();k++){
-        std::cout<<weights[k]<<" ";
-    }
-    std::cout<<"\nfinal factor matrices:\n";
-    std::cout<<(std::string) current.w()<<"\n";
-    for(size_t n=0;n<cluster.size();n++){
-        std::cout<<(std::string) cluster[n].w()<<"\n";
-    }
-    
+    //convert superdiagonal core tensor to just plain delta tensor
     if(unnormalize_flag){
         optimize::unnormalize(current,weights);
-    }
-    
-    std::cout<<"final unnormalized factor matrices:\n";
-    std::cout<<(std::string) current.w()<<"\n";
-    for(size_t n=0;n<cluster.size();n++){
-        std::cout<<(std::string) cluster[n].w()<<"\n";
     }
     
     return err;
 }
 
-double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr,size_t max_restarts){
+double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,std::string init_method,size_t max_restarts){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     double best_err=1;
+    if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="rand")&&(init_method!="hybrid")){
+        std::cout<<"Invalid initializer for HALS subroutine ("<<init_method<<" was passed), aborting...\n";
+        exit(1);
+    }
     
     //TEMP: convert old_current, old_cluster to exp_form since not in log space
     old_current.w()=old_current.w().exp_form();
@@ -513,8 +469,24 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         }
         
         //perform tree-cpd
-        double err=optimize::tree_cpd(old_current,old_cluster,trial_current,trial_cluster,max_it,"prev",1,1);
-        std::cout<<"error: "<<err<<"\n";
+        double err;
+        if(init_method=="hybrid"){
+            std::string hybrid_init_method;
+            if(restarts==1){ //first attempt uses padded target data
+                hybrid_init_method="prev";
+            }
+            else if(restarts==2){ //second attempt uses least-squares approximation
+                hybrid_init_method="lstsq";
+            }
+            else{ //remaining attempts use random initialization
+                hybrid_init_method="rand";
+            }
+            err=optimize::tree_cpd(old_current,old_cluster,trial_current,trial_cluster,max_it,hybrid_init_method,1);
+        }
+        else{
+            err=optimize::tree_cpd(old_current,old_cluster,trial_current,trial_cluster,max_it,init_method,1);
+        }
+        // std::cout<<"error: "<<err<<"\n";
         
         //check if better and update best result
         if(fabs(err)<best_err){
@@ -555,11 +527,11 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         }
     }
     
-    std::cout<<"final weight matrices:\n";
-    std::cout<<(std::string) current.w()<<"\n";
-    for(size_t n=0;n<cluster.size();n++){
-        std::cout<<(std::string) cluster[n].w()<<"\n";
-    }
+    // std::cout<<"final weight matrices:\n";
+    // std::cout<<(std::string) current.w()<<"\n";
+    // for(size_t n=0;n<cluster.size();n++){
+        // std::cout<<(std::string) cluster[n].w()<<"\n";
+    // }
     
     //TEMP: convert old_current, old_cluster to exp_form since not in log space
     for(size_t i=0;i<current.w().nx();i++){
