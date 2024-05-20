@@ -310,6 +310,7 @@ public:
                         v.push_back(this->at(i,j,k));
                     }
                 }
+                std::sort(v.begin(),v.end());
                 double max=*(std::max_element(v.begin(),v.end()));
                 for(size_t n=0;n<v.size();n++){
                     e+=exp(v[n]-max);
