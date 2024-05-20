@@ -6,7 +6,7 @@
 
 double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,double lr,size_t max_restarts){
     if(lr==0){
-        max_it=2;
+        max_it=100;
         max_restarts=1;
     }
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
@@ -255,7 +255,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                     }
                 }
             }
-            // std::cout<<"trial_current.w():\n"<<(std::string)trial_current.w()<<"\n";
+            // std::cout<<"trial_current.w():\n"<<(std::string)trial_current.w().exp_form()<<"\n";
             
             //p_prime_ki,imu if source==current.v1(), p_prime_kj,jnu if source==current.v2(). wlog, use p_prime_ki and imu.
             //k, the new index, is always second because virtual indices > physical indices.
@@ -311,7 +311,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                             addends[(k*p_ki.nx())+imu].push_back(vec_add_float(factors));
                             sum_p_ki_addends.push_back(vec_add_float(factors));
                             //calculate P'^{env}_{ki_\mu} addends
-                            factors_env.push_back(current.w().at(i,j));
+                            factors_env.push_back(trial_current.w().at(i,j));
                             factors_env.push_back(gi_prime[k]);
                             factors_env.push_back(gj_prime[k]);
                             factors_env.push_back(-(trial_cluster[n].w().lse_over_axis(0))[k]); //divide appropriate factor
@@ -377,10 +377,11 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                         }
                     }
                 }
+                // std::cout<<"trial_cluster[n].w():\n"<<(std::string)trial_cluster[n].w().exp_form()<<"\n";
             }
             
             //check for convergence if after first iteration (since trial_current must be resized)
-            std::cout<<cost<<"\n";
+            // std::cout<<cost<<"\n";
             if((fabs(cost)>=1e-5)&&(cost<0)){ //if too small, reinitialize, doesn't count
                 std::cout<<"cost less than 0. discarding result.\n";
                 restarts--;
@@ -426,7 +427,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
         std::cout<<"final cost: "<<cost<<"\n";
         // std::cout<<"final diff: "<<diff<<"\n";
         if(cost<best_cost){
-            // std::cout<<"cost improved. replacing...\n";
+            std::cout<<"cost improved. replacing...\n";
             best_cost=cost;
             best_current=trial_current;
             for(size_t n=0;n<best_cluster.size();n++){

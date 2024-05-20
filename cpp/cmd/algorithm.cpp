@@ -60,6 +60,9 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
         // current.f()=optimize::f_hybrid_maxent(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         current.f()=optimize::f_hybrid_mvec_sim(g.vs()[current.v1()],g.vs()[current.v2()],current.w(),r_k);
         
+        // std::cout<<std::string(g)<<"\n";
+        // std::cout<<std::string(current)<<"\n";
+        
         //determine master and slave node
         size_t master,slave;
         if(g.vs()[current.v1()].vol()==g.vs()[current.v2()].vol()){

@@ -305,7 +305,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 for(size_t j=0;j<p_prime_ijk_env.ny();j++){
                     for(size_t k=0;k<p_prime_ijk_env.nz();k++){
                         if(lr==0){ //lr==0 means use iterative method based on stationarity condition
-                            trial_current.w().at(i,j,k)=ij_factors.at(i,j,k)-(sum_ij_factors+p_prime_ijk_env.at(i,j,k));
+                            trial_current.w().at(i,j,k)+=(trial_current.w().at(i,j,k)+sum_ij_factors+p_prime_ijk_env.at(i,j,k))-(ij_factors.at(i,j,k));
                             sum_addends.push_back(trial_current.w().at(i,j,k));
                         }
                         else{ //lr!=0 means use gradient descent with lr
@@ -439,7 +439,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
                 for(size_t imu=0;imu<p_prime_ki_env.nx();imu++){
                     for(size_t k=0;k<p_prime_ki_env.ny();k++){
                         if(lr==0){ //lr==0 means use iterative method based on stationarity condition
-                            trial_cluster[n].w().at(imu,k,0)=ki_factors.at(imu,k)-(sum_ki_factors+p_prime_ki_env.at(imu,k,0));
+                            trial_cluster[n].w().at(imu,k,0)+=(trial_cluster[n].w().at(imu,k,0)+sum_ki_factors+p_prime_ki_env.at(imu,k,0))-(ki_factors.at(imu,k));
                             sum_addends.push_back(trial_cluster[n].w().at(imu,k,0));
                         }
                         else{ //lr!=0 means use gradient descent with lr
@@ -477,7 +477,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site> sit
             for(size_t k=0;k<trial_current.w().nz();k++){
                 entropic_cost-=entropy_weight*p_k[k]*log(p_k[k]);
             }
-            entropic_cost-=entropy_weight*log(trial_current.w().nz());
+            entropic_cost+=entropy_weight*log(trial_current.w().nz());
             
             total_cost=cost+entropic_cost;
             if((fabs(cost)>=1e-5)&&(cost<0)){ //if too small, reinitialize, doesn't count
