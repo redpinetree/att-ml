@@ -51,13 +51,21 @@ bool& bond::todo(){return this->todo_;}
 
 void bond::bmi(array3d<double>& w){
     size_t max_it=100;
+    array3d<double> summed_w_ijk(w.nx(),w.ny(),1);
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            for(size_t k=0;k<w.nz();k++){
+                summed_w_ijk.at(i,j,0)+=exp(w.at(i,j,k));
+            }
+        }
+    }
     array3d<double> p_ij(w.nx(),w.ny(),1);
     std::vector<double> sum_ax0(w.nx());
     std::vector<double> sum_ax1(w.ny());
     for(size_t i=0;i<w.nx();i++){
         for(size_t j=0;j<w.ny();j++){
-            sum_ax0[i]+=exp(w.at(i,j,0));
-            sum_ax1[j]+=exp(w.at(i,j,0));
+            sum_ax0[i]+=summed_w_ijk.at(i,j,0);
+            sum_ax1[j]+=summed_w_ijk.at(i,j,0);
         }
     }
     size_t nonzero_sum_ax0=0;
@@ -87,7 +95,7 @@ void bond::bmi(array3d<double>& w){
     //normalize w
     if(!(norm_check_ax0&&norm_check_ax1)){
         std::vector<double> x(w.nx(),1/(double) nonzero_sum_ax0);
-        std::vector<double> x_old(w.nx());
+        std::vector<double> x_old(w.nx(),0);
         std::vector<bool> close_x(w.nx(),0);
         for(size_t i=0;i<close_x.size();i++){
             close_x[i]=((x[i]==0)||(fabs(x[i]-x_old[i])<1e-10))?1:0;
@@ -102,9 +110,9 @@ void bond::bmi(array3d<double>& w){
                 for(size_t j=0;j<w.ny();j++){
                     double e2=0;
                     for(size_t k=0;k<x.size();k++){
-                        e2+=exp(w.at(k,j,0))*x_old[k];
+                        e2+=summed_w_ijk.at(k,j,0)*x_old[k];
                     }
-                    e1+=(e2!=0)?exp(w.at(i,j,0))*(1/e2):0;
+                    e1+=(e2!=0)?summed_w_ijk.at(i,j,0)*(1/e2):0;
                 }
                 x[i]=(e1!=0)?((double) nonzero_sum_ax1/(double) nonzero_sum_ax0)*(1/e1):0;
             }
@@ -129,9 +137,9 @@ void bond::bmi(array3d<double>& w){
                 for(size_t j=0;j<w.nx();j++){
                     double e2=0;
                     for(size_t k=0;k<y.size();k++){
-                        e2+=exp(w.at(j,k,0))*y_old[k];
+                        e2+=summed_w_ijk.at(j,k,0)*y_old[k];
                     }
-                    e1+=(e2!=0)?exp(w.at(j,i,0))*(1/e2):0;
+                    e1+=(e2!=0)?summed_w_ijk.at(j,i,0)*(1/e2):0;
                 }
                 y[i]=(e1!=0)?((double) nonzero_sum_ax0/(double) nonzero_sum_ax1)*(1/e1):0;
             }
@@ -143,7 +151,7 @@ void bond::bmi(array3d<double>& w){
         double sum=0;
         for(size_t i=0;i<p_ij.nx();i++){
             for(size_t j=0;j<p_ij.ny();j++){
-                p_ij.at(i,j,0)=x[i]*exp(w.at(i,j,0))*y[j];
+                p_ij.at(i,j,0)=x[i]*summed_w_ijk.at(i,j,0)*y[j];
                 sum+=p_ij.at(i,j,0);
             }
         }
@@ -156,7 +164,7 @@ void bond::bmi(array3d<double>& w){
     else{
         for(size_t i=0;i<w.nx();i++){
             for(size_t j=0;j<w.ny();j++){
-                p_ij.at(i,j,0)=exp(w.at(i,j,0));
+                p_ij.at(i,j,0)=summed_w_ijk.at(i,j,0);
             }
         }
     }

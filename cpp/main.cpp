@@ -38,6 +38,7 @@ void print_usage(){
     std::cerr<<"\t-n,--iter-max: maximum number of optimization iterations\n";
 #ifdef MODEL_CPD
     std::cerr<<"\t-I,--init-method: initialization method.\n\t\thybrid-> tries \"prev\" once on first attempt, then \"lstsq\" once, then \"rand\" repeatedly\n\t\tprev  -> starts from the target weights from before the deformation, padded appropriately\n\t\tlstsq -> uses the least squares approximation calculated via SVD\n\t\trand  -> initial factor matrices are uniform randomly initialized, normalized to sum to 1\n";
+    std::cerr<<"\t-S,--solver: solver method.\n\t\tnnhals -> nonnegative hierarchical alternating least squares\n\t\tmuls   -> multiplicative updates minimizing the squared error\n\t\tmukl   -> multiplicative updates minimizing the kl divergence\n\t\tmurenyi-> multiplicative updates minimizing the renyi divergence of order 2\n";
 #else
     std::cerr<<"\t-l,--learning-rate: learning rate. if nonzero, the optimization method will be gradient descent instead of iterative optimization.\n";
 #endif
@@ -128,6 +129,7 @@ int main(int argc,char **argv){
 #ifdef MODEL_CPD
     size_t iter_max=100; //default is 100 iterations for max
     std::string init_method="hybrid";
+    std::string solver="nnhals";
     size_t restarts=10;
 #endif
     size_t n_configs=0;
@@ -147,6 +149,7 @@ int main(int argc,char **argv){
             {"iter-max",required_argument,0,'n'},
 #ifdef MODEL_CPD
             {"init-method",required_argument,0,'I'},
+            {"solver",required_argument,0,'S'},
 #else
             {"learning-rate",required_argument,0,'l'},
 #endif
@@ -156,7 +159,7 @@ int main(int argc,char **argv){
         };
         int opt_idx=0;
 #ifdef MODEL_CPD
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:R:c:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:S:R:c:",long_opts,&opt_idx);
 #else
         int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:c:",long_opts,&opt_idx);
 #endif
@@ -177,6 +180,7 @@ int main(int argc,char **argv){
             case 'n': iter_max=(size_t) atoi(optarg); break;
 #ifdef MODEL_CPD
             case 'I': init_method=std::string(optarg); break;
+            case 'S': solver=std::string(optarg); break;
 #else
             case 'l': lr=(double) atof(optarg); break;
 #endif
@@ -294,11 +298,15 @@ int main(int argc,char **argv){
         }
     }
 #ifdef MODEL_CPD
-    if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="rand")&&(init_method!="hybrid")){
-        std::cout<<"Error: <init_method> must be one of \"hybrid\", \"prev\", \"lstsq\", or \"rand\".\n";
+    if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="rand")&&(init_method!="hybrid")&&(init_method!="cmd")){
+        std::cout<<"Error: <init_method> must be one of \"hybrid\", \"prev\", \"lstsq\", \"cmd\", or \"rand\".\n";
         exit(1);
     }
-    if((restarts>1)&&((init_method=="prev")||(init_method=="lstsq"))){
+    if((solver!="nnhals")&&(solver!="muls")&&(solver!="mukl")&&(solver!="murenyi")){
+        std::cout<<"Error: <solver> must be one of \"nnhals\", \"muls\", \"mukl\", or \"murenyi\".\n";
+        exit(1);
+    }
+    if((restarts>1)&&((init_method=="prev")||(init_method=="lstsq")||(init_method=="cmd"))){
         std::cout<<"CPD initialization is deterministic ("<<init_method<<"), so restart count set to 1.\n";
         restarts=1;
     }
@@ -380,7 +388,7 @@ int main(int argc,char **argv){
             graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
             sw.start();
 #ifdef MODEL_CPD
-            algorithm::approx(q,g,r_max,iter_max,init_method,restarts);
+            algorithm::approx(q,g,r_max,iter_max,init_method,solver,restarts);
 #else
             algorithm::approx(q,g,r_max,iter_max,lr,restarts);
 #endif

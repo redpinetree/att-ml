@@ -12,7 +12,7 @@
 #include "../utils.hpp"
 
 template<typename cmp>
-void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,std::string init_method,size_t restarts){
+void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,std::string init_method,std::string solver,size_t restarts){
     r_max=(r_max==0)?q:r_max;
     //graph deformation
     size_t iteration=0;
@@ -161,7 +161,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,std::
         }
         
         //optimization of weights in spin cluster
-        current.cost()=optimize::opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,init_method,restarts);
+        current.cost()=optimize::opt(master,slave,r_k,g.vs(),old_current,old_cluster,current,cluster,iter_max,init_method,solver,restarts);
         
         //merge identical bonds
         if(dupes.size()!=0){
@@ -211,6 +211,11 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,std::
         current.order()=g.vs().size()-1;
         current.todo()=false;
         
+        current.bmi(current.w());
+        for(size_t n=0;n<cluster.size();n++){
+            cluster[n].bmi(cluster[n].w());
+        }
+        
         g.es().insert(current);
         //reinsert cluster edges into adjs and edgelist
         for(size_t n=0;n<cluster.size();n++){
@@ -227,7 +232,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,std::
     // std::cout<<"volume time: "<<sw1.elapsed()<<"\n";
     // std::cout<<"reconnect time: "<<sw2.elapsed()<<"\n";
 }
-template void algorithm::approx(size_t,graph<bmi_comparator>&,size_t,size_t,std::string,size_t);
+template void algorithm::approx(size_t,graph<bmi_comparator>&,size_t,size_t,std::string,std::string,size_t);
 
 template<typename cmp>
 void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
@@ -313,6 +318,11 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     g.vs()[current.order()].p_ijk()=p_ijk;
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
+    
+    for(size_t k=0;k<p_k.size();k++){
+        std::cout<<p_k[k]<<" ";
+    }
+    std::cout<<"\n";
     
     g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
     for(size_t idx=0;idx<r_k;idx++){
