@@ -12,6 +12,7 @@
 
 namespace observables{
     extern std::vector<std::string> output_lines;
+    extern std::vector<std::string> mc_output_lines;
     extern std::map<std::tuple<size_t,size_t,size_t>,std::vector<double> > m_vec_cache;
     extern std::map<size_t,std::vector<std::vector<double> > > m_vec_ref_cache;
     extern std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> m_known_factors;

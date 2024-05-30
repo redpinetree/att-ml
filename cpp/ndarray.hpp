@@ -9,6 +9,86 @@
 #include <algorithm>
 
 template<typename T>
+class array1d{
+public:
+    array1d():nx_(0){
+        this->e_=std::vector<T>();
+    }
+    array1d(size_t nx):nx_(nx){
+        this->e_=std::vector<T>(nx,0);
+    }
+    operator std::string() const{
+        std::stringstream str;
+        str<<"[";
+        for(size_t i=0;i<this->nx();i++){
+            str<<this->at(i);
+            str<<((i==(this->nx()-1))?"]":",");
+        }
+        if(this->nx()==0){str<<"]";}
+        str<<"\n";
+        return str.str();
+    }
+    std::vector<T> sum(){
+        std::vector<T> res;
+        //TODO: shewchuk summation
+        for(size_t i=0;i<this->nx();i++){
+            T e=0;
+            // for(size_t j=0;j<this->ny();j++){
+                // e+=this->at(i,j);
+            // }
+            std::vector<T> v;
+            for(size_t j=0;j<this->ny();j++){
+                v.push_back(this->at(i,j));
+            }
+            std::sort(v.begin(),v.end());
+            for(size_t n=0;n<v.size();n++){
+                e+=v[n];
+            }
+            res.push_back(e);
+        }
+        return res;
+    }
+    std::vector<T> lse(){
+        std::vector<T> res;
+        //TODO: shewchuk summation
+        for(size_t i=0;i<this->nx();i++){
+            T e=0;
+            // for(size_t j=0;j<this->ny();j++){
+                // e+=this->at(i,j);
+            // }
+            std::vector<T> v;
+            for(size_t j=0;j<this->ny();j++){
+                v.push_back(this->at(i,j));
+            }
+            std::sort(v.begin(),v.end());
+            double max=*(std::max_element(v.begin(),v.end()));
+            for(size_t n=0;n<v.size();n++){
+                e+=exp(v[n]-max);
+            }
+            e=max+log(e);
+            res.push_back(e);
+        }
+        return res;
+    }
+    //exp for array1d
+    array1d<T> exp_form(){
+        array1d<double> a=*this;
+        for(size_t i=0;i<a.nx();i++){
+            a.at(i)=exp(this->at(i));
+        }
+        return a;
+    }
+    size_t nx() const{return this->nx_;}
+    std::vector<T> e() const{return this->e_;}
+    std::vector<T>& e(){return this->e_;}
+    T at(size_t x) const{return this->e_[x];}
+    T& at(size_t x){return this->e_[x];}
+private:
+    size_t nx_;
+    std::vector<T> e_;
+};
+
+template<typename T>
 class array2d{
 public:
     array2d(){

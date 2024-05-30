@@ -315,6 +315,11 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
     
+    // for(size_t k=0;k<p_k.size();k++){
+        // std::cout<<p_k[k]<<" ";
+    // }
+    // std::cout<<"\n";
+    
     g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
     for(size_t idx=0;idx<r_k;idx++){
         std::vector<double> res(r_k-1,0);

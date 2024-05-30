@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "../graph.hpp"
+#include "../sampling.hpp"
 #include "../site.hpp"
 #include "bond.hpp"
 

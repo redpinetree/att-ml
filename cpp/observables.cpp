@@ -46,6 +46,7 @@ double q_prefactor(size_t n_target,size_t r_k){
 }
 
 std::vector<std::string> observables::output_lines;
+std::vector<std::string> observables::mc_output_lines;
 std::map<std::tuple<size_t,size_t,size_t>,std::vector<double> > observables::m_vec_cache;
 std::map<size_t,std::vector<std::vector<double> > > observables::m_vec_ref_cache;
 std::map<std::tuple<size_t,size_t,size_t,size_t,std::vector<size_t>,std::vector<size_t> >,double> observables::m_known_factors;

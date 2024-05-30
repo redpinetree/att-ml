@@ -11,7 +11,7 @@ TARGET_CPD = ./bin/cpd_approx
 
 SRC_OLD_OLD = ./cpp_old_old/tree_approx_potts.cpp ./cpp_old_old/algorithm.cpp ./cpp_old_old/graph.cpp ./cpp_old_old/graph_utils.cpp ./cpp_old_old/site.cpp ./cpp_old_old/bond.cpp ./cpp_old_old/bond_utils.cpp
 SRC_OLD = ./cpp_old/tree_approx_potts.cpp ./cpp_old/observables.cpp ./cpp_old/algorithm.cpp ./cpp_old/graph_utils.cpp ./cpp_old/site.cpp ./cpp_old/bond.cpp ./cpp_old/bond_utils.cpp ./cpp_old/mpi_utils.cpp
-SRC_COMMON = ./cpp/main.cpp ./cpp/observables.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/mpi_utils.cpp
+SRC_COMMON = ./cpp/main.cpp ./cpp/observables.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/mpi_utils.cpp
 SRC_CMD = ./cpp/cmd/graph_utils.cpp ./cpp/cmd/algorithm.cpp ./cpp/cmd/optimize.cpp ./cpp/cmd/bond.cpp
 SRC_RENYI = ./cpp/renyi/graph_utils.cpp ./cpp/renyi/algorithm.cpp ./cpp/renyi/optimize.cpp ./cpp/renyi/bond.cpp
 SRC_CPD = ./cpp/cpd/graph_utils.cpp ./cpp/cpd/algorithm.cpp ./cpp/cpd/optimize.cpp ./cpp/cpd/bond.cpp ./cpp/cpd/mat_ops.cpp

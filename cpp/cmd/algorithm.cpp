@@ -191,16 +191,16 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
                 std::vector<double> sum_addends;
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
-                        cluster[dupes[i].first].w().at(x,y)+=cluster[dupes[i].second].w().at(x,y); //log domain means mult is add
-                        sum_addends.push_back(cluster[dupes[i].first].w().at(x,y));
+                        cluster[dupes[i].first].w().at(x,y,0)+=cluster[dupes[i].second].w().at(x,y,0); //log domain means mult is add
+                        sum_addends.push_back(cluster[dupes[i].first].w().at(x,y,0));
                     }
                 }
                 double sum=lse(sum_addends);
                 for(size_t x=0;x<cluster[dupes[i].first].w().nx();x++){
                     for(size_t y=0;y<cluster[dupes[i].first].w().ny();y++){
-                        cluster[dupes[i].first].w().at(x,y)-=sum;
-                        if(cluster[dupes[i].first].w().at(x,y)<log(1e-100)){ //in case the weight is negative, force it to be nonnegative!
-                            cluster[dupes[i].first].w().at(x,y)=log(1e-100);
+                        cluster[dupes[i].first].w().at(x,y,0)-=sum;
+                        if(cluster[dupes[i].first].w().at(x,y,0)<log(1e-100)){ //in case the weight is negative, force it to be nonnegative!
+                            cluster[dupes[i].first].w().at(x,y,0)=log(1e-100);
                         }
                     }
                 }
@@ -251,43 +251,71 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     std::vector<double> p_k(r_k,0);
     for(size_t i=0;i<r_i;i++){
         for(size_t j=0;j<r_j;j++){
-            double k=current.f().at(i,j);
-            double e=exp(current.w().at(i,j));
-            p_ijk.at(i,j,k)=e*g.vs()[current.v1()].p_k()[i]*g.vs()[current.v2()].p_k()[j];
-            p_ik.at(i,k)+=p_ijk.at(i,j,k); //compute marginals
-            p_jk.at(j,k)+=p_ijk.at(i,j,k); //compute marginals
-            p_k[k]+=p_ijk.at(i,j,k);
-            sum+=p_ijk.at(i,j,k);
+            for(size_t k=0;k<r_k;k++){
+                double e=exp(current.w().at(i,j,k));
+                p_ijk.at(i,j,k)=e*g.vs()[current.v1()].p_k()[i]*g.vs()[current.v2()].p_k()[j];
+                p_ik.at(i,k)+=p_ijk.at(i,j,k); //compute marginals
+                p_jk.at(j,k)+=p_ijk.at(i,j,k); //compute marginals
+                p_k[k]+=p_ijk.at(i,j,k);
+                sum+=p_ijk.at(i,j,k);
+            }
         }
     }
     for(size_t k=0;k<p_k.size();k++){
         p_k[k]/=sum;
     }
+    double sum_ijk=0;
     for(size_t k=0;k<r_k;k++){
-        double sum_ij=0;
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
-                sum_ij+=p_ijk.at(i,j,k);
+                sum_ijk+=p_ijk.at(i,j,k);
             }
         }
+    }
+    for(size_t k=0;k<r_k;k++){
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
-                p_ijk.at(i,j,k)/=sum_ij;
+                p_ijk.at(i,j,k)/=sum_ijk;
             }
         }
-        double sum_i=0;
+    }
+    double sum_i=0;
+    for(size_t k=0;k<r_k;k++){
         for(size_t i=0;i<r_i;i++){
             sum_i+=p_ik.at(i,k);
         }
+    }
+    for(size_t k=0;k<r_k;k++){
         for(size_t i=0;i<r_i;i++){
-            p_ik.at(i,k)/=sum_i; //same as sum_ij?
+            p_ik.at(i,k)/=sum_i;
         }
-        double sum_j=0;
+    }
+    double sum_j=0;
+    for(size_t k=0;k<r_k;k++){
         for(size_t j=0;j<r_j;j++){
             sum_j+=p_jk.at(j,k);
         }
+    }
+    for(size_t k=0;k<r_k;k++){
         for(size_t j=0;j<r_j;j++){
-            p_jk.at(j,k)/=sum_j; //same as sum_ij?
+            p_jk.at(j,k)/=sum_j;
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t i=0;i<r_i;i++){
+            for(size_t j=0;j<r_j;j++){
+                p_ijk.at(i,j,k)/=p_k[k];
+            }
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t i=0;i<r_i;i++){
+            p_ik.at(i,k)/=p_k[k];
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t j=0;j<r_j;j++){
+            p_jk.at(j,k)/=p_k[k];
         }
     }
     g.vs()[current.order()].p_bond()=current;
@@ -295,6 +323,11 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     g.vs()[current.order()].p_ijk()=p_ijk;
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
+    
+    // for(size_t k=0;k<p_k.size();k++){
+        // std::cout<<p_k[k]<<" ";
+    // }
+    // std::cout<<"\n";
     
     g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
     for(size_t idx=0;idx<r_k;idx++){

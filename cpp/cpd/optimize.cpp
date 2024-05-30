@@ -731,7 +731,6 @@ void optimize::unnormalize(bond& current,std::vector<double>& weights){
     weights=std::vector<double>(r_k,1);
 }
 
-
 double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,std::string init_method,std::string solver,bool unnormalize_flag){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     size_t r_i=current.w().nx();
@@ -1127,7 +1126,24 @@ double optimize::calc_cmd(size_t master,size_t slave,std::vector<site>& sites,bo
     for(size_t n=0;n<cluster.size();n++){
         trial_cluster.push_back(cluster[n]);
     }
-    //no need to reinitialize weight matrices because cmd is only valid when r_i=r_j=r_k
+    //reinitialize weight matrices because cmd is only valid when r_i=r_j=r_k
+    array3d<double> new_w(trial_current.w().nx(),trial_current.w().ny(),r_k);
+    double sum=0;
+    for(size_t i=0;i<new_w.nx();i++){
+        for(size_t j=0;j<new_w.ny();j++){
+            new_w.at(i,j,f.at(i,j))=exp(old_current.w().at(i,j,0));
+            sum+=new_w.at(i,j,f.at(i,j));
+        }
+    }
+    for(size_t i=0;i<new_w.nx();i++){
+        for(size_t j=0;j<new_w.ny();j++){
+            for(size_t k=0;k<new_w.nz();k++){
+                new_w.at(i,j,k)/=sum;
+                new_w.at(i,j,k)=log(new_w.at(i,j,k));
+            }
+        }
+    }
+    trial_current.w()=new_w;
     array3d<double> prev_current=trial_current.w();
     std::vector<array3d<double> > prev_cluster;
     for(size_t n=0;n<trial_cluster.size();n++){
@@ -1194,15 +1210,7 @@ double optimize::calc_cmd(size_t master,size_t slave,std::vector<site>& sites,bo
         // std::cout<<(std::string)trial_current.w()<<"\n";
         // std::cout<<(std::string)p_ij<<"\n";
         // std::cout<<(std::string)p_prime_ij_env<<"\n";
-
-        //zero out elements excluded by f
-        for(size_t i=0;i<trial_current.w().nx();i++){
-            for(size_t j=0;j<trial_current.w().ny();j++){
-                for(size_t k=0;k<trial_current.w().nz();k++){
-                    trial_current.w().at(i,j,k)=(f.at(i,j)==k)?trial_current.w().at(i,j,k):log(1e-100);
-                }
-            }
-        }
+        
         std::vector<double> sum_addends;
         for(size_t i=0;i<p_ij.nx();i++){
             for(size_t j=0;j<p_ij.ny();j++){
@@ -1361,7 +1369,6 @@ double optimize::calc_cmd(size_t master,size_t slave,std::vector<site>& sites,bo
     std::cout<<"final cost: "<<cost<<"\n";
     return cost;
 }
-
 
 double optimize::kl_div(double z,double z_prime,std::vector<double> gi,std::vector<double> gj,bond old_current,std::vector<bond> old_cluster,bond current,std::vector<bond> cluster,array2d<size_t> f){
     array2d<double> gi_tilde(old_current.w().nx(),old_current.w().ny());

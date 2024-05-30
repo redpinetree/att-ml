@@ -4,6 +4,7 @@
 #include "../ndarray.hpp"
 #include "../graph.hpp"
 #include "../site.hpp"
+#include "../sampling.hpp"
 
 namespace algorithm{
     template<typename cmp>

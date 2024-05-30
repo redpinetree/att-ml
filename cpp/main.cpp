@@ -15,6 +15,7 @@
 #include "graph.hpp"
 #include "graph_utils.hpp"
 #include "algorithm.hpp"
+#include "algorithm_nll.hpp"
 #include "observables.hpp"
 
 #define PI 3.14159265358979323846
@@ -43,7 +44,9 @@ void print_usage(){
     std::cerr<<"\t-l,--learning-rate: learning rate. if nonzero, the optimization method will be gradient descent instead of iterative optimization.\n";
 #endif
     std::cerr<<"\t-R,--restarts: maximum number of restarts\n";
-    std::cerr<<"\t-c,--configs: number of configs to sample per temperature\n";
+    std::cerr<<"\t-s,--samples: number of samples to obtain per temperature\n";
+    std::cerr<<"\t-c,--cycles: number of NLL training cycles per temperature\n";
+    std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
 }
 
 template<typename cmp>
@@ -51,7 +54,7 @@ graph<cmp> gen_lattice(size_t q,std::vector<size_t> ls,bool open_bc,std::string 
     graph<cmp> g;
     if(dist_type=="gaussian"){
         //dist_param1=mean, dist_param2=std
-        std::normal_distribution<double> dist((dist_param1+1)/2,dist_param2/2);
+        std::normal_distribution<double> dist((dist_param1+1)/2.0,dist_param2/2.0);
         g=graph_utils::gen_hypercubic<std::normal_distribution<double>,cmp>(q,ls,!open_bc,dist,beta);
     }
     else if(dist_type=="bimodal"){
@@ -61,7 +64,7 @@ graph<cmp> gen_lattice(size_t q,std::vector<size_t> ls,bool open_bc,std::string 
     }
     else if(dist_type=="uniform"){
         //dist_param1=min, dist_param2=max
-        std::uniform_real_distribution<double> dist{(dist_param1+1)/2,(dist_param2+1)/2};
+        std::uniform_real_distribution<double> dist{(dist_param1+1)/2.0,(dist_param2+1)/2.0};
         g=graph_utils::gen_hypercubic<std::uniform_real_distribution<double>,cmp>(q,ls,!open_bc,dist,beta);
     }
     return g;
@@ -107,6 +110,7 @@ int main(int argc,char **argv){
     //argument handling
     int open_bc=0;
     int use_t=0;
+    int output_overlaps=0;
     size_t verbose=0;
     bool input_set=false;
     bool output_set=false;
@@ -132,12 +136,15 @@ int main(int argc,char **argv){
     std::string solver="nnhals";
     size_t restarts=10;
 #endif
-    size_t n_configs=0;
+    size_t n_config_samples=0;
+    size_t n_cycles=0;
+    size_t n_nll_iter_max=1000;
     //option arguments
     while(1){
         static struct option long_opts[]={
             {"open-bc",no_argument,&open_bc,1},
             {"use-t",no_argument,&use_t,1},
+            {"output-overlaps",no_argument,&output_overlaps,1},
             {"help",no_argument,0,'h'},
             {"verbose",required_argument,0,'v'},
             {"input",required_argument,0,'i'},
@@ -154,14 +161,16 @@ int main(int argc,char **argv){
             {"learning-rate",required_argument,0,'l'},
 #endif
             {"restarts",required_argument,0,'R'},
-            {"configs",required_argument,0,'c'},
+            {"samples",required_argument,0,'s'},
+            {"cycles",required_argument,0,'c'},
+            {"nll-iter-max",required_argument,0,'N'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
 #ifdef MODEL_CPD
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:S:R:c:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:S:R:s:c:N:",long_opts,&opt_idx);
 #else
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:c:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:s:c:N:",long_opts,&opt_idx);
 #endif
         if(c==-1){break;} //end of options
         switch(c){
@@ -185,7 +194,9 @@ int main(int argc,char **argv){
             case 'l': lr=(double) atof(optarg); break;
 #endif
             case 'R': restarts=(size_t) atoi(optarg); break;
-            case 'c': n_configs=(size_t) atoi(optarg); break;
+            case 's': n_config_samples=(size_t) atoi(optarg); break;
+            case 'c': n_cycles=(size_t) atoi(optarg); break;
+            case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -325,15 +336,20 @@ int main(int argc,char **argv){
     size_t n_samples_counter=(n_samples==0)?1:n_samples;
     for(size_t sample=mpi_utils::proc_rank;sample<n_samples_counter;sample+=mpi_utils::proc_num){
         std::string sample_output_fn=output;
-        std::string sample_overlaps_output_fn=output;
+        std::string sample_mc_output_fn=output+"_mc";
+        std::string sample_overlaps_output_fn=output+"_overlaps";
         if(n_samples!=0){
             if(verbose>=1){std::cout<<"sample "<<sample<<":\n";}
-            if(add_suffix){sample_output_fn+="_"+std::to_string(sample);}
-            if(add_suffix){sample_overlaps_output_fn+="_"+std::to_string(sample);}
+            if(add_suffix){
+                sample_output_fn+="_"+std::to_string(sample);
+                sample_mc_output_fn+="_"+std::to_string(sample);
+                sample_overlaps_output_fn+="_"+std::to_string(sample);
+            }
         }
         sample_output_fn+=".txt";
+        sample_mc_output_fn+=".txt";
         sample_overlaps_output_fn+=".dat";
-        if(n_configs>0){
+        if(n_samples>0){
             std::ofstream ofs(sample_overlaps_output_fn,std::ios::binary);
             size_t n_betas=((max_beta-min_beta)/step_beta)+1;
             ofs.write((char*) &n_betas,sizeof(n_betas));
@@ -343,8 +359,9 @@ int main(int argc,char **argv){
         double m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min;
         std::complex<double> q2_k;
         double q2_var,q2_std,sus_fm,sus_sg,binder_m,binder_q,sus_sg_k,corr_len_sg;
-        std::stringstream header1_ss,header1_vals_ss,header2_ss;
+        std::stringstream header1_ss,header1_vals_ss,header2_ss,header2_mc_ss;
         observables::output_lines.clear(); //flush output lines
+        observables::mc_output_lines.clear(); //flush output lines
         std::string header1_ls_str;
         if(ls.empty()){
             header1_ls_str+="fn";
@@ -367,14 +384,15 @@ int main(int argc,char **argv){
             header1_ls_vals_str+=dist+" "+std::to_string(dist_param1)+" "+std::to_string(dist_param2);
         }
         header1_vals_ss<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<"\n";
-        // observables::output_lines.push_back(header1_vals_ss.str());
         if(n_samples!=0){ //hypercubic lattice is used
             header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q corr_len_sg total_c\n";
         }
         else{
             header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q total_c\n";
         }
+        header2_mc_ss<<"idx q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd q1_abs_mean q1_abs_sd q2_mean q2_sd q4_mean q4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd sus_sg_mean sus_sg_sd binder_m_mean binder_m_sd binder_q_mean binder_q_sd c_mean c_sd\n";
         observables::output_lines.push_back(header2_ss.str());
+        observables::mc_output_lines.push_back(header2_mc_ss.str());
         while(beta<=max_beta){
             //flush caches for observable computation
             observables::m_known_factors.clear();
@@ -396,20 +414,47 @@ int main(int argc,char **argv){
             if(verbose>=3){std::cout<<"approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
-            if(n_configs>0){
+            if(n_config_samples>0){ //sample from the tree, not according to metropolis method
+                double sus_fm_mean,sus_fm_sd,sus_sg_mean,sus_sg_sd,binder_m_mean,binder_m_sd,binder_q_mean,binder_q_sd,c_mean,c_sd;
                 sw.start();
-                std::vector<std::vector<size_t> > samples=sampling::sample(g,n_configs);
-                std::vector<double> overlaps=sampling::pair_overlaps(samples,q);
-                sw.split();
-                if(verbose>=3){std::cout<<"config sampling time: "<<(double) sw.elapsed()<<"ms\n";}
+                std::vector<double> acceptance_ratios=algorithm::train_nll(g,n_cycles,n_config_samples,n_nll_iter_max);
+                std::vector<sample_data> samples=sampling::mh_sample(g,n_config_samples);
+                std::vector<double> e_mc_res=sampling::e_mc(samples);
+                std::vector<double> m_mc_res=sampling::m_mc(samples,q);
+                std::vector<double> overlaps;
+                std::vector<double> q_mc_res=sampling::q_mc(samples,q,overlaps);
+                sus_fm_mean=n_phys_sites*(m_mc_res[2]-pow(m_mc_res[0],2.0)); //chi_fm=n*var(|m|)
+                sus_sg_mean=n_phys_sites*(q_mc_res[2]-pow(q_mc_res[0],2.0)); //chi_sg=n*var(|q|)
+                binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
+                binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
+                c_mean=n_phys_sites*pow(e_mc_res[2],2.0); //c=var(e)
+                if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
                 sw.reset();
+                sw.start();
+                sw.split();
+                trial_time+=sw.elapsed();
+                sw.reset();
+                std::stringstream mc_output_line_ss;
+                mc_output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" ";
+                for(size_t a=0;a<m_mc_res.size();a++){
+                    mc_output_line_ss<<m_mc_res[a]<<" ";
+                }
+                for(size_t a=0;a<q_mc_res.size();a++){
+                    mc_output_line_ss<<q_mc_res[a]<<" ";
+                }
+                for(size_t a=0;a<e_mc_res.size();a++){
+                    mc_output_line_ss<<e_mc_res[a]<<" ";
+                }
+                mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+                observables::mc_output_lines.push_back(mc_output_line_ss.str());
                 if(output_set){
-                    sampling::write_output(sample_overlaps_output_fn,overlaps,beta);
+                    if(output_overlaps){sampling::write_overlap_output(sample_overlaps_output_fn,overlaps,beta);} //only if flag is set
                 }
                 else{
-                    sampling::write_output(overlaps);
+                    if(output_overlaps){sampling::write_overlap_output(overlaps,beta);} //only if flag is set
                 }
+                std::cout<<"Minimum value of energy: "<<sampling::min_e(samples)<<"\n";
             }
             sw.start();
             if(g.dims().size()!=0){
@@ -457,9 +502,11 @@ int main(int argc,char **argv){
         }
         if(output_set){
             observables::write_output(sample_output_fn,observables::output_lines);
+            observables::write_output(sample_mc_output_fn,observables::mc_output_lines);
         }
         else{
             observables::write_output(observables::output_lines);
+            observables::write_output(observables::mc_output_lines);
         }
     }
     sw_total.split();
