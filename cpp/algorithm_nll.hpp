@@ -6,6 +6,8 @@
 namespace algorithm{
     template<typename cmp>
     std::vector<double> train_nll(graph<cmp>&,size_t,size_t,size_t);
+    template<typename cmp>
+    void calculate_site_probs(graph<cmp>&,bond&);
 };
 
 #endif
