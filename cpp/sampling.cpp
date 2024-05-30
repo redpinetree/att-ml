@@ -174,17 +174,17 @@ std::vector<double> sampling::e_mc(std::vector<sample_data>& samples){
     double e1_mean=0;
     double e2_mean=0;
     for(size_t n=0;n<samples.size();n++){
-        e1_mean+=samples[n].e();
-        e2_mean+=pow(samples[n].e(),2.0);
+        e1_mean+=samples[n].e()/(double) samples[n].n_phys_sites();
+        e2_mean+=pow(samples[n].e()/(double) samples[n].n_phys_sites(),2.0);
     }
-    e1_mean/=(double) (samples.size()-1);
-    e2_mean/=(double) (samples.size()-1);
+    e1_mean/=(double) samples.size();
+    e2_mean/=(double) samples.size();
     //sample sds
     double e1_sd=0;
     double e2_sd=0;
     for(size_t n=0;n<samples.size();n++){
-        e1_sd+=pow(samples[n].e()-e1_mean,2.0);
-        e2_sd+=pow(pow(samples[n].e(),2.0)-e2_mean,2.0);
+        e1_sd+=pow((samples[n].e()/(double) samples[n].n_phys_sites())-e1_mean,2.0);
+        e2_sd+=pow(pow(samples[n].e()/(double) samples[n].n_phys_sites(),2.0)-e2_mean,2.0);
     }
     e1_sd=sqrt(e1_sd/(double) (samples.size()-1));
     e2_sd=sqrt(e2_sd/(double) (samples.size()-1));
@@ -203,7 +203,7 @@ std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_or
     std::vector<double> ms;
     for(size_t s=0;s<samples.size();s++){
         std::vector<double> vec_m(q_orig-1,0);
-        for(size_t e=0;e<samples[s].s().size();e++){
+        for(size_t e=0;e<samples[s].n_phys_sites();e++){
             std::vector<double> ref_vec=ref_basis[samples[s].s()[e]];
             for(size_t r=0;r<vec_m.size();r++){
                 vec_m[r]+=ref_vec[r];
@@ -214,7 +214,7 @@ std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_or
             m+=vec_m[r]*vec_m[r];
         }
         m=sqrt(m);
-        m/=(double) samples[s].s().size();
+        m/=(double) samples[s].n_phys_sites();
         ms.push_back(m);
     }
     //sample means
@@ -226,9 +226,9 @@ std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_or
         m2_mean+=pow(ms[n],2.0);
         m4_mean+=pow(ms[n],4.0);
     }
-    m1_abs_mean/=(double) (ms.size()-1);
-    m2_mean/=(double) (ms.size()-1);
-    m4_mean/=(double) (ms.size()-1);
+    m1_abs_mean/=(double) ms.size();
+    m2_mean/=(double) ms.size();
+    m4_mean/=(double) ms.size();
     //sample sds
     double m1_abs_sd=0;
     double m2_sd=0;
@@ -263,9 +263,9 @@ std::vector<double> sampling::q_mc(std::vector<sample_data>& samples,size_t q_or
         q2_mean+=pow(qs[n],2.0);
         q4_mean+=pow(qs[n],4.0);
     }
-    q1_abs_mean/=(double) (qs.size()-1);
-    q2_mean/=(double) (qs.size()-1);
-    q4_mean/=(double) (qs.size()-1);
+    q1_abs_mean/=(double) qs.size();
+    q2_mean/=(double) qs.size();
+    q4_mean/=(double) qs.size();
     //sample sds
     double q1_abs_sd=0;
     double q2_sd=0;

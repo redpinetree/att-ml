@@ -427,7 +427,7 @@ int main(int argc,char **argv){
                 sus_sg_mean=n_phys_sites*(q_mc_res[2]-pow(q_mc_res[0],2.0)); //chi_sg=n*var(|q|)
                 binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
                 binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
-                c_mean=n_phys_sites*pow(e_mc_res[2],2.0); //c=var(e)
+                c_mean=n_phys_sites*(e_mc_res[2]-pow(e_mc_res[0],2.0)); //c=var(e)
                 if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
                 sw.reset();
@@ -479,8 +479,8 @@ int main(int argc,char **argv){
             //compute output quantities
             q2_var=q4-pow(q2,2);
             q2_std=sqrt(q2_var);
-            sus_fm=n_phys_sites*m1_2_abs;
-            sus_sg=n_phys_sites*q2;
+            sus_fm=n_phys_sites*m1_2_abs; //no subtraction of mean!
+            sus_sg=n_phys_sites*q2; //no subtraction of mean!
             binder_m=0.5*(3-(m4_1/pow(m2_1,2)));
             binder_q=0.5*(3-(q4/pow(q2,2)));
             if(add_suffix){ //hypercubic lattice is used
@@ -502,11 +502,11 @@ int main(int argc,char **argv){
         }
         if(output_set){
             observables::write_output(sample_output_fn,observables::output_lines);
-            observables::write_output(sample_mc_output_fn,observables::mc_output_lines);
+            if(n_config_samples>0){observables::write_output(sample_mc_output_fn,observables::mc_output_lines);}
         }
         else{
             observables::write_output(observables::output_lines);
-            observables::write_output(observables::mc_output_lines);
+            if(n_config_samples>0){observables::write_output(observables::mc_output_lines);}
         }
     }
     sw_total.split();
