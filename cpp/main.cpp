@@ -401,7 +401,6 @@ int main(int argc,char **argv){
             observables::q_known_factors_complex.clear();
             double trial_time=0; //not including init time
             if(verbose>=2){std::cout<<((use_t)?"temp=":"beta=")<<beta<<"\n";}
-            size_t n_phys_sites;
 
             graph<bmi_comparator> g=input_set?graph_utils::load_graph<bmi_comparator>(input,q,((use_t)?1/beta:beta)):gen_lattice<bmi_comparator>(q,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
             sw.start();
@@ -414,6 +413,7 @@ int main(int argc,char **argv){
             if(verbose>=3){std::cout<<"approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
+            size_t n_phys_sites=g.n_phys_sites();
             if(n_config_samples>0){ //sample from the tree, not according to metropolis method
                 double sus_fm_mean,sus_fm_sd,sus_sg_mean,sus_sg_sd,binder_m_mean,binder_m_sd,binder_q_mean,binder_q_sd,c_mean,c_sd;
                 sw.start();
@@ -423,8 +423,8 @@ int main(int argc,char **argv){
                 std::vector<double> m_mc_res=sampling::m_mc(samples,q);
                 std::vector<double> overlaps;
                 std::vector<double> q_mc_res=sampling::q_mc(samples,q,overlaps);
-                sus_fm_mean=n_phys_sites*(m_mc_res[2]-pow(m_mc_res[0],2.0)); //chi_fm=n*var(|m|)
-                sus_sg_mean=n_phys_sites*(q_mc_res[2]-pow(q_mc_res[0],2.0)); //chi_sg=n*var(|q|)
+                sus_fm_mean=n_phys_sites*m_mc_res[2]; //chi_fm=n*var(|m|), but no subtracted mean in this case!
+                sus_sg_mean=n_phys_sites*q_mc_res[2]; //chi_sg=n*var(|q|), but no subtracted mean in this case!
                 binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
                 binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
                 c_mean=n_phys_sites*(e_mc_res[2]-pow(e_mc_res[0],2.0)); //c=var(e)
@@ -469,7 +469,6 @@ int main(int argc,char **argv){
             sw.reset();
             if(verbose>=4){observables::print_moments(g,q);}
             if(verbose>=4){std::cout<<std::string(g);}
-            n_phys_sites=g.n_phys_sites();
             
             //compute cumulative cost
             double total_cost=0;
@@ -479,8 +478,8 @@ int main(int argc,char **argv){
             //compute output quantities
             q2_var=q4-pow(q2,2);
             q2_std=sqrt(q2_var);
-            sus_fm=n_phys_sites*m1_2_abs; //no subtraction of mean!
-            sus_sg=n_phys_sites*q2; //no subtraction of mean!
+            sus_fm=n_phys_sites*m1_2_abs; //chi_fm=n*var(|m|), but no subtracted mean in this case!
+            sus_sg=n_phys_sites*q2; //chi_sg=n*var(|q|), but no subtracted mean in this case!
             binder_m=0.5*(3-(m4_1/pow(m2_1,2)));
             binder_q=0.5*(3-(q4/pow(q2,2)));
             if(add_suffix){ //hypercubic lattice is used
