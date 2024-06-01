@@ -43,10 +43,10 @@ std::vector<double> algorithm::train_nll(graph<cmp>& g,size_t n_cycles,size_t n_
         }
     }
     g=best_model;
-    for(size_t c=0;c<acceptance_ratios.size();c++){
-        std::cout<<acceptance_ratios[c]<<" ";
-    }
-    std::cout<<"\n";
+    // for(size_t c=0;c<acceptance_ratios.size();c++){
+        // std::cout<<acceptance_ratios[c]<<" ";
+    // }
+    // std::cout<<"\n";
     return acceptance_ratios;
 }
 

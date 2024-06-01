@@ -29,66 +29,14 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data> samples,size_t i
         std::vector<array1d<double> > r_env_z;
         std::vector<array1d<double> > u_env_z;
         double z=optimize::calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
-        // std::cout<<"env:\n";
-        // for(size_t n=0;n<g.vs().size();n++){
-            // std::cout<<"n="<<n<<"\n";
-            // std::cout<<(std::string)l_env_z[n].exp_form();
-            // std::cout<<(std::string)r_env_z[n].exp_form();
-            // std::cout<<(std::string)u_env_z[n].exp_form();
-            // std::cout<<"\n";
-        // }
-        // std::cout<<"z="<<exp(z)<<"\n";
         std::vector<array3d<double> > dz=optimize::calc_dz(l_env_z,r_env_z,u_env_z); //index i corresponds to tensor with order i so some (for input sites) are empty
-        // size_t n2=0;
-        // std::cout<<"dz:\n";
-        // for(auto it=g.es().begin();it!=g.es().end();++it){
-            // std::cout<<"n="<<(n2+g.n_phys_sites())<<"\n";
-            // std::cout<<(std::string)dz[n2+g.n_phys_sites()].exp_form();
-            // std::cout<<"\n";
-            // std::cout<<(std::string)(*it).w().exp_form();
-            // std::cout<<"\n";
-            // n2++;
-        // }
         
         std::vector<std::vector<array1d<double> > > l_env_sample;
         std::vector<std::vector<array1d<double> > > r_env_sample;
         std::vector<std::vector<array1d<double> > > u_env_sample;
         std::vector<double> w=optimize::calc_w(g,samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
-        // std::cout<<"env:\n";
-        // for(size_t n=0;n<g.vs().size();n++){
-            // for(size_t s=0;s<n_samples;s++){
-                // std::cout<<"n="<<n<<" s="<<s<<"\n";
-                // std::cout<<(std::string)l_env_sample[n][s].exp_form();
-                // std::cout<<(std::string)r_env_sample[n][s].exp_form();
-                // std::cout<<(std::string)u_env_sample[n][s].exp_form();
-                // std::cout<<"\n";
-            // }
-        // }
-        // std::cout<<"w=[";
-        // for(size_t s=0;s<n_samples;s++){
-            // std::cout<<exp(w[s])<<" ";
-        // }
-        // std::cout<<"]\n";
         std::vector<std::vector<array3d<double> > > dw=optimize::calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
-        // size_t n2=0;
-        // std::cout<<"dw:\n";
-        // for(auto it=g.es().begin();it!=g.es().end();++it){
-            // for(size_t s=0;s<n_samples;s++){
-                // std::cout<<"n="<<(n2+g.n_phys_sites())<<" s="<<s<<"\n";
-                // std::cout<<(std::string)dw[n2+g.n_phys_sites()][s].exp_form();
-                // std::cout<<"\n";
-            // }
-            // std::cout<<(std::string)(*it).w().exp_form();
-            // std::cout<<"\n";
-            // n2++;
-        // }
         
-        //joint (projected) gradient descent on all tensors
-        //calculate gradient
-        // std::cout<<"old\n";
-        // for(auto it=g.es().begin();it!=g.es().end();++it){
-            // std::cout<<(std::string) (*it).w()<<"\n";
-        // }
         size_t n=0;
         std::multiset<bond,bmi_comparator> new_es;
         for(auto it=g.es().begin();it!=g.es().end();++it){

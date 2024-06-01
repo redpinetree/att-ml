@@ -44,9 +44,6 @@ namespace sampling{
     std::vector<double> q_mc(std::vector<sample_data>&,size_t,std::vector<double>&);
     double expected_e(std::vector<sample_data>);
     double min_e(std::vector<sample_data>);
-    
-    void write_overlap_output(std::string,std::vector<double>&,double);
-    void write_overlap_output(std::vector<double>&,double);
 }
 
 #endif

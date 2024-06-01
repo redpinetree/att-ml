@@ -308,31 +308,3 @@ double sampling::min_e(std::vector<sample_data> samples){
     }
     return min_e;
 }
-
-void sampling::write_overlap_output(std::string fn,std::vector<double>& data,double beta){
-    std::ofstream ofs(fn,std::ios::app|std::ios::binary);
-    size_t data_size=data.size(); //for casting
-    ofs.write((char*) &beta,sizeof(beta));
-    ofs.write((char*) &data_size,sizeof(data.size()));
-    for(size_t i=0;i<data.size();i++){
-        ofs.write((char*) (&data[i]),sizeof(data[i]));
-    }
-}
-
-void sampling::write_overlap_output(std::vector<double>& data,double beta){
-    std::cout<<"beta="<<beta<<"\n";
-    for(size_t i=0;i<data.size();i++){
-        std::cout<<data[i]<<"\n";
-    }
-}
-
-/*
-overlap output format:
-8b #blocks
-[blocks]
-
-block:
-8b beta
-8b #values
-[values]
-*/
