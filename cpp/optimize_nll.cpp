@@ -275,7 +275,6 @@ std::vector<double> optimize::calc_w(graph<cmp>& g,std::vector<sample_data> samp
     size_t n_samples=samples.size();
     for(size_t n=0;n<g.vs().size();n++){
         if(n<g.n_phys_sites()){ //physical (input) sites do not correspond to tensors, so environment is empty vector
-            //TODO: don't fill with 1s, fill with data. 0s are set to a very very small number?
             std::vector<array1d<double> > vec(n_samples);
             for(size_t s=0;s<n_samples;s++){
                 array1d<double> vec_e(g.vs()[n].rank());

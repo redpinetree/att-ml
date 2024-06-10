@@ -26,6 +26,9 @@ std::vector<double> algorithm::train_nll(graph<cmp>& g,size_t n_cycles,size_t n_
     double best_acceptance_ratio=0;
     graph<bmi_comparator> best_model=g;
     double acceptance_ratio;
+    if(n_cycles==0){
+        return acceptance_ratios;
+    }
     std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,acceptance_ratio);
     acceptance_ratios.push_back(acceptance_ratio);
     for(size_t c=1;c<=n_cycles;c++){

@@ -431,18 +431,19 @@ int main(int argc,char **argv){
                 if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
                 sw.reset();
-                sw.start();
-                sw.split();
-                trial_time+=sw.elapsed();
-                sw.reset();
                 std::stringstream mc_output_line_ss;
                 //MC observables
+                sw.start();
                 std::vector<sample_data> samples=sampling::mh_sample(g,100000);
                 // std::vector<sample_data> samples=sampling::mh_sample(g,n_config_samples);
                 std::vector<double> e_mc_res=sampling::e_mc(samples);
                 std::vector<double> m_mc_res=sampling::m_mc(samples,q);
                 // std::vector<double> overlaps;
                 // std::vector<double> q_mc_res=sampling::q_mc(samples,q,overlaps);
+                sw.split();
+                if(verbose>=3){std::cout<<"mc sampling time: "<<(double) sw.elapsed()<<"ms\n";}
+                trial_time+=sw.elapsed();
+                sw.reset();
                 //derived MC observables
                 double sus_fm_mean,sus_fm_sd,sus_sg_mean,sus_sg_sd,binder_m_mean,binder_m_sd,binder_q_mean,binder_q_sd,c_mean,c_sd;
                 sus_fm_mean=n_phys_sites*m_mc_res[2]; //chi_fm=n*var(m)

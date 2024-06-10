@@ -63,13 +63,56 @@ sample_data sampling::sample(graph<cmp>& g){
         size_t composite_idx=pdf(mpi_utils::prng);
         s[v1]=composite_idx/g.vs()[v2].rank();
         s[v2]=composite_idx%g.vs()[v2].rank();
-        log_w+=log(g.vs()[idx].p_ijk().at(s[v1],s[v2],s[idx]));
+        // log_w+=log(g.vs()[idx].p_ijk().at(s[v1],s[v2],s[idx]));
     }
     for(size_t n=0;n<g.orig_ks().size();n++){
         size_t v1=std::get<0>(g.orig_ks()[n]);
         size_t v2=std::get<1>(g.orig_ks()[n]);
         e-=(s[v1]==s[v2])?std::get<2>(g.orig_ks()[n]):0;
     }
+    
+    //calculate weight of sample tracing out virtual sites
+    std::vector<array1d<double> > contracted_vectors;
+    for(size_t n=0;n<g.vs().size();n++){
+        if(n<g.n_phys_sites()){ //physical (input) sites
+            array1d<double> vec_e(g.vs()[n].rank());
+            for(size_t a=0;a<vec_e.nx();a++){
+                if(a!=s[n]){ //if a==s[n], element is log(1)=0. else log(0)=-inf
+                    vec_e.at(a)=log(1e-100);
+                }
+            }
+            contracted_vectors.push_back(vec_e);
+        }
+        else{ //virtual sites
+            contracted_vectors.push_back(array1d<double>());
+        }
+    }
+    size_t contracted_idx_count=0;
+    while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset repeatedly until all idxs processed
+        for(auto it=g.es().begin();it!=g.es().end();++it){
+            if((contracted_vectors[(*it).v1()].nx()!=0)&&(contracted_vectors[(*it).v2()].nx()!=0)&&(contracted_vectors[(*it).order()].nx()==0)){ //process if children have been contracted and parent is not yet contracted
+                array1d<double> res_vec(g.vs()[(*it).order()].rank());
+                for(size_t k=0;k<(*it).w().nz();k++){
+                    std::vector<double> res_vec_addends;
+                    for(size_t i=0;i<contracted_vectors[(*it).v1()].nx();i++){
+                        for(size_t j=0;j<contracted_vectors[(*it).v2()].nx();j++){
+                            res_vec_addends.push_back(contracted_vectors[(*it).v1()].at(i)+contracted_vectors[(*it).v2()].at(j)+(*it).w().at(i,j,k)); //log space
+                        }
+                    }
+                    res_vec.at(k)=lse(res_vec_addends); //log space
+                }
+                contracted_vectors[(*it).order()]=res_vec;
+                contracted_idx_count++;
+                if(contracted_idx_count==(g.vs().size()-g.n_phys_sites())){break;}
+            }
+        }
+    }
+    std::vector<double> w_addends;
+    for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
+        w_addends.push_back(contracted_vectors[g.vs().size()-1].at(k));
+    }
+    log_w=lse(w_addends);
+    
     // for(size_t m=0;m<s.size();m++){
         // if(m==g.n_phys_sites()){std::cout<<": ";}
         // std::cout<<s[m]<<" ";
@@ -83,6 +126,7 @@ template sample_data sampling::sample(graph<bmi_comparator>&);
 template<typename cmp>
 std::vector<sample_data> sampling::sample(graph<cmp>& g,size_t n_samples){
     std::vector<sample_data> samples;
+    samples.reserve(n_samples);
     for(size_t n=0;n<n_samples;n++){
         sample_data s=sampling::sample(g);
         samples.push_back(s);
@@ -95,6 +139,7 @@ template<typename cmp>
 std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples){
     std::uniform_real_distribution<> unif_dist(0,1.0);
     std::vector<sample_data> samples;
+    samples.reserve(n_samples);
     //no need to equilibrate because draws are global and sampling from tree is perfect
     sample_data mc0=sampling::sample(g);
     double accept_ratio=0;
@@ -103,14 +148,14 @@ std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples){
         sample_data mc1=sampling::sample(g);
         double p1=exp(mc0.log_w()-mc1.log_w());
         double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
-        double p=p1*p2;
+        double p=p1*sqrt(p2);
         double r=unif_dist(mpi_utils::prng);
         if(r<p){
             mc0=mc1;
             accept_ratio++;
         }
         //keep every 10th sample, rest are to approximate acceptance ratio
-        if((n%10)==0){samples.push_back(mc0);}
+        if((n%100)==0){samples.push_back(mc0);}
         n++;
         // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
     }
@@ -124,6 +169,7 @@ template<typename cmp>
 std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,double& acceptance_ratio){
     std::uniform_real_distribution<> unif_dist(0,1.0);
     std::vector<sample_data> samples;
+    samples.reserve(n_samples);
     //no need to equilibrate because draws are global and sampling from tree is perfect
     sample_data mc0=sampling::sample(g);
     double accept_ratio=0;
@@ -132,7 +178,8 @@ std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,doub
         sample_data mc1=sampling::sample(g);
         double p1=exp(mc0.log_w()-mc1.log_w());
         double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
-        double p=p1*p2;
+        double p=p1*sqrt(p2);
+        // std::cout<<p1<<" "<<p2<<" "<<sqrt(p2)<<" "<<(p2/(1+p2))<<"\n";
         double r=unif_dist(mpi_utils::prng);
         if(r<p){
             mc0=mc1;
@@ -215,6 +262,7 @@ std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_or
         }
         m=sqrt(m);
         m/=(double) samples[s].n_phys_sites();
+        // std::cout<<m<<"\n";
         ms.push_back(m);
     }
     //sample means
