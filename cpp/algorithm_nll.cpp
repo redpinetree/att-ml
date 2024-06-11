@@ -6,16 +6,14 @@
 #include "algorithm_nll.hpp"
 #ifdef MODEL_CMD
 #include "cmd/algorithm.hpp"
-#include "cmd/bond.hpp"
 #endif
 #ifdef MODEL_RENYI
 #include "renyi/algorithm.hpp"
-#include "renyi/bond.hpp"
 #endif
 #ifdef MODEL_CPD
 #include "cpd/algorithm.hpp"
-#include "cpd/bond.hpp"
 #endif
+#include "bond.hpp"
 #include "observables.hpp"
 #include "optimize_nll.hpp"
 #include "sampling.hpp"

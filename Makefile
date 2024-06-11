@@ -11,10 +11,10 @@ TARGET_CPD = ./bin/cpd_approx
 
 SRC_OLD_OLD = ./cpp_old_old/tree_approx_potts.cpp ./cpp_old_old/algorithm.cpp ./cpp_old_old/graph.cpp ./cpp_old_old/graph_utils.cpp ./cpp_old_old/site.cpp ./cpp_old_old/bond.cpp ./cpp_old_old/bond_utils.cpp
 SRC_OLD = ./cpp_old/tree_approx_potts.cpp ./cpp_old/observables.cpp ./cpp_old/algorithm.cpp ./cpp_old/graph_utils.cpp ./cpp_old/site.cpp ./cpp_old/bond.cpp ./cpp_old/bond_utils.cpp ./cpp_old/mpi_utils.cpp
-SRC_COMMON = ./cpp/main.cpp ./cpp/observables.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/mpi_utils.cpp
-SRC_CMD = ./cpp/cmd/graph_utils.cpp ./cpp/cmd/algorithm.cpp ./cpp/cmd/optimize.cpp ./cpp/cmd/bond.cpp
-SRC_RENYI = ./cpp/renyi/graph_utils.cpp ./cpp/renyi/algorithm.cpp ./cpp/renyi/optimize.cpp ./cpp/renyi/bond.cpp
-SRC_CPD = ./cpp/cpd/graph_utils.cpp ./cpp/cpd/algorithm.cpp ./cpp/cpd/optimize.cpp ./cpp/cpd/bond.cpp ./cpp/cpd/mat_ops.cpp
+SRC_COMMON = ./cpp/main.cpp ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
+SRC_CMD = ./cpp/cmd/algorithm.cpp ./cpp/cmd/optimize.cpp
+SRC_RENYI = ./cpp/renyi/algorithm.cpp ./cpp/renyi/optimize.cpp
+SRC_CPD = ./cpp/cpd/algorithm.cpp ./cpp/cpd/optimize.cpp ./cpp/cpd/mat_ops.cpp
 
 OBJ_OLD_OLD = $(SRC_OLD_OLD:%.cpp=%.o)
 OBJ_OLD = $(SRC_OLD:%.cpp=%.o)
@@ -65,13 +65,13 @@ $(OBJ_OLD): %.o: %.cpp
 	$(MPICXX) -c $(@:%.o=%.cpp) -o $@ $(CXXFLAGS)
 
 $(OBJ_CMD): %.o: %.cpp
-	$(MPICXX) -I ./cpp/cmd -c $< -o $@ $(CXXFLAGS)
+	$(MPICXX) -I ./cpp/cmd -D MODEL_CMD -c $< -o $@ $(CXXFLAGS)
 
 $(OBJ_RENYI): %.o: %.cpp
-	$(MPICXX) -I ./cpp/renyi -c $< -o $@ $(CXXFLAGS)
+	$(MPICXX) -I ./cpp/renyi -D MODEL_RENYI -c $< -o $@ $(CXXFLAGS)
 
 $(OBJ_CPD): %.o: %.cpp
-	$(MPICXX) -I ./cpp/cpd -c $< -o $@ $(CXXFLAGS)
+	$(MPICXX) -I ./cpp/cpd -D MODEL_CPD -c $< -o $@ $(CXXFLAGS)
 
 clean:
 	# @rm -f ./cpp_old_old/*.o 2>/dev/null || true

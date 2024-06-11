@@ -8,7 +8,7 @@
 #include "../graph.hpp"
 #include "../sampling.hpp"
 #include "../site.hpp"
-#include "bond.hpp"
+#include "../bond.hpp"
 
 namespace optimize{
     array3d<double> calc_aTa(std::vector<array3d<double> >&,std::vector<double>&,size_t);

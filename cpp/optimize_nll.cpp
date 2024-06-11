@@ -37,33 +37,34 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data> samples,size_t i
         std::vector<double> w=optimize::calc_w(g,samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
         std::vector<std::vector<array3d<double> > > dw=optimize::calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
         
-        size_t n=0;
         std::multiset<bond,bmi_comparator> new_es;
         for(auto it=g.es().begin();it!=g.es().end();++it){
             bond current=*it;
+            size_t n=(*it).order();
+            size_t shifted_n=n-g.n_phys_sites();
             array3d<double> grad(current.w().nx(),current.w().ny(),current.w().nz());
             array3d<double> grad_z_term(current.w().nx(),current.w().ny(),current.w().nz());
             array3d<double> grad_w_term(current.w().nx(),current.w().ny(),current.w().nz());
-            // std::cout<<"n="<<(n+g.n_phys_sites())<<"\n";
+            // std::cout<<"n="<<n<<"\n";
             // std::cout<<(std::string) current.w()<<"\n";
             std::vector<double> sum_addends;
             for(size_t i=0;i<grad_z_term.nx();i++){
                 for(size_t j=0;j<grad_z_term.ny();j++){
                     for(size_t k=0;k<grad_z_term.nz();k++){
-                        grad_z_term.at(i,j,k)=dz[n+g.n_phys_sites()].at(i,j,k)-z; //log space
+                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)-z; //log space
                         std::vector<double> grad_w_term_addends;
                         for(size_t s=0;s<n_samples;s++){
-                            grad_w_term_addends.push_back(dw[n+g.n_phys_sites()][s].at(i,j,k)-w[s]); //log space
+                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)-w[s]); //log space
                         }
                         // std::cout<<lse(grad_w_term_addends)<<" "<<log(n_samples)<<"\n";
                         grad_w_term.at(i,j,k)=lse(grad_w_term_addends)-log(n_samples);
                         // grad.at(i,j,k)=(exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k)))*exp(current.w().at(i,j,k));
                         // current.w().at(i,j,k)-=0.1*grad.at(i,j,k);
                         grad.at(i,j,k)=(exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k)))*exp(current.w().at(i,j,k));
-                        m[n].at(i,j,k)=(beta1*m[n].at(i,j,k))+((1-beta1)*grad.at(i,j,k));
-                        v[n].at(i,j,k)=(beta2*v[n].at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
-                        double corrected_m=m[n].at(i,j,k)/(1-pow(beta1,(double) t));
-                        double corrected_v=v[n].at(i,j,k)/(1-pow(beta2,(double) t));
+                        m[shifted_n].at(i,j,k)=(beta1*m[shifted_n].at(i,j,k))+((1-beta1)*grad.at(i,j,k));
+                        v[shifted_n].at(i,j,k)=(beta2*v[shifted_n].at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
+                        double corrected_m=m[shifted_n].at(i,j,k)/(1-pow(beta1,(double) t));
+                        double corrected_v=v[shifted_n].at(i,j,k)/(1-pow(beta2,(double) t));
                         current.w().at(i,j,k)-=alpha*(corrected_m/(sqrt(corrected_v)+epsilon));
                         // std::cout<<current.w().at(i,j,k)<<"\n";
                         sum_addends.push_back(current.w().at(i,j,k));
@@ -83,7 +84,6 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data> samples,size_t i
             // std::cout<<(std::string) grad_w_term.exp_form()<<"\n";
             // std::cout<<(std::string) grad<<"\n";
             new_es.insert(current);
-            n++;
         }
         g.es()=new_es;
         // std::cout<<"new\n";

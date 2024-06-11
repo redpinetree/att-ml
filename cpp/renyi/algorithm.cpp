@@ -5,9 +5,9 @@
 
 #include "algorithm.hpp"
 #include "../algorithm_nll.hpp"
+#include "../bond.hpp"
 #include "../observables.hpp"
 #include "optimize.hpp"
-#include "bond.hpp"
 #include "../site.hpp"
 #include "../stopwatch.hpp"
 #include "../utils.hpp"
@@ -79,8 +79,9 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
             }
         }
         g.vs()[master].vol()+=g.vs()[slave].vol();
+        size_t depth=(g.vs()[master].depth()>g.vs()[slave].depth()?g.vs()[master].depth():g.vs()[slave].depth())+1;
         //create new virtual site
-        g.vs().push_back(site(r_k,g.vs()[master].vol(),current.v1(),current.v2()));
+        g.vs().push_back(site(r_k,g.vs()[master].vol(),depth,current.v1(),current.v2()));
         size_t virtual_idx=g.vs().size()-1;
         //update volume of relevant downstream sites associated with new virtual site for algorithm 1
         size_t current_site=master;
@@ -210,6 +211,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,doubl
             }
         }
         
+        current.depth()=depth;
         current.order()=g.vs().size()-1;
         current.todo()=false;
         

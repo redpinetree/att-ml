@@ -5,18 +5,18 @@
 #include "bond.hpp"
 
 bond::bond(){}
-bond::bond(size_t v1,size_t v2,array3d<double> w):w_(w),virt_count_(0),cost_(0),order_(0),todo_(true){
+bond::bond(size_t v1,size_t v2,size_t depth,array3d<double> w):w_(w),virt_count_(0),depth_(depth),cost_(0),order_(0),todo_(true){
     this->v_=(v1<v2)?std::pair<size_t,size_t>(v1,v2):std::pair<size_t,size_t>(v2,v1);
     this->v_orig_=this->v();
     this->bmi(w);
 }
 
-bond::bond(std::pair<size_t,size_t> v,array3d<double> w):v_(v),v_orig_(v),virt_count_(0),w_(w),cost_(0),order_(0),todo_(true){
+bond::bond(std::pair<size_t,size_t> v,size_t depth,array3d<double> w):v_(v),v_orig_(v),virt_count_(0),depth_(depth),w_(w),cost_(0),order_(0),todo_(true){
     this->bmi(w);
 }
 
 bond::operator std::string() const{
-    return "[("+std::to_string(this->v1())+","+std::to_string(this->v2())+"),("+std::to_string(this->w().nx())+","+std::to_string(this->w().ny())+","+std::to_string(this->w().nz())+"),"+std::to_string(this->bmi())+","+std::to_string(this->cost())+","+std::to_string(this->order())+","+std::to_string(this->todo())+"]";
+    return "[("+std::to_string(this->v1())+","+std::to_string(this->v2())+"),("+std::to_string(this->w().nx())+","+std::to_string(this->w().ny())+","+std::to_string(this->w().nz())+"),"+std::to_string(this->bmi())+","+std::to_string(this->cost())+","+std::to_string(this->depth())+","+std::to_string(this->order())+","+std::to_string(this->todo())+"]";
 }
 
 std::ostream& operator<<(std::ostream& os,const bond& e){
@@ -31,7 +31,11 @@ size_t bond::v2() const{return this->v_.second;}
 size_t bond::v1_orig() const{return this->v_orig_.first;}
 size_t bond::v2_orig() const{return this->v_orig_.second;}
 size_t bond::virt_count() const{return this->virt_count_;}
+size_t bond::depth() const{return this->depth_;}
 array3d<double> bond::w() const{return this->w_;}
+#ifdef MODEL_CMD
+array2d<size_t> bond::f() const{return this->f_;}
+#endif
 double bond::bmi() const{return this->bmi_;}
 double bond::cost() const{return this->cost_;}
 size_t bond::order() const{return this->order_;}
@@ -43,7 +47,11 @@ size_t& bond::v2(){return this->v_.second;}
 size_t& bond::v1_orig(){return this->v_orig_.first;}
 size_t& bond::v2_orig(){return this->v_orig_.second;}
 size_t& bond::virt_count(){return this->virt_count_;}
+size_t& bond::depth(){return this->depth_;}
 array3d<double>& bond::w(){return this->w_;}
+#ifdef MODEL_CMD
+array2d<size_t>& bond::f(){return this->f_;}
+#endif
 double& bond::bmi(){return this->bmi_;}
 double& bond::cost(){return this->cost_;}
 size_t& bond::order(){return this->order_;}

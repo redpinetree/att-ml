@@ -5,10 +5,10 @@
 #include <chrono>
 #include <tuple>
 
-#include "graph_utils.hpp"
-#include "../mpi_utils.hpp"
-#include "../site.hpp"
 #include "bond.hpp"
+#include "graph_utils.hpp"
+#include "mpi_utils.hpp"
+#include "site.hpp"
 
 template<typename distribution,typename cmp>
 graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
@@ -56,9 +56,9 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
                     w.at(i,j,0)=log((i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1)))));
                 }
             }
-            es.insert(bond(v1,v2,w));
-            vs[v1].adj().insert(bond(v1,v2,w));
-            vs[v2].adj().insert(bond(v1,v2,w));
+            es.insert(bond(v1,v2,0,w));
+            vs[v1].adj().insert(bond(v1,v2,0,w));
+            vs[v2].adj().insert(bond(v1,v2,0,w));
         }
     }
     graph<cmp> g(vs,es,beta,orig_ks);
@@ -99,9 +99,9 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
                 w.at(i,j,0)=log((i==j)?(1/(q+(q*(q-1)*exp(-k)))):(1/((q*exp(k))+(q*(q-1)))));
             }
         }
-        es.insert(bond(v1,v2,w));
-        vs[v1].adj().insert(bond(v1,v2,w));
-        vs[v2].adj().insert(bond(v1,v2,w));
+        es.insert(bond(v1,v2,0,w));
+        vs[v1].adj().insert(bond(v1,v2,0,w));
+        vs[v2].adj().insert(bond(v1,v2,0,w));
     }
     return graph<cmp>(vs,es,beta,orig_ks);
 }

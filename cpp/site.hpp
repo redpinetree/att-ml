@@ -15,12 +15,13 @@ class site{
 public:
     site();
     site(size_t,size_t);
-    site(size_t,size_t,size_t,size_t);
-    site(size_t,size_t,std::pair<size_t,size_t>);
+    site(size_t,size_t,size_t,size_t,size_t);
+    site(size_t,size_t,size_t,std::pair<size_t,size_t>);
     operator std::string() const;
     friend std::ostream& operator<<(std::ostream&,const site&);
     size_t rank() const;
     size_t vol() const;
+    size_t depth() const;
     std::multiset<bond,vertices_comparator> adj() const;
     std::vector<size_t> coords() const;
     bool virt() const;
@@ -29,6 +30,7 @@ public:
     size_t p2() const;
     size_t& rank();
     size_t& vol();
+    size_t& depth();
     std::multiset<bond,vertices_comparator>& adj();
     std::vector<size_t>& coords();
     bool& virt();
@@ -44,6 +46,7 @@ public:
 private:
     size_t rank_;
     size_t vol_;
+    size_t depth_;
     std::multiset<bond,vertices_comparator> adj_;
     //only used if a regular lattice is used instead of an arbitrary graph
     std::vector<size_t> coords_;
