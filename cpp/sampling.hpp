@@ -31,6 +31,10 @@ private:
 
 namespace sampling{
     template<typename cmp>
+    double calc_sample_e(graph<cmp>&,std::vector<size_t>&);
+    template<typename cmp>
+    double calc_sample_log_w(graph<cmp>&,std::vector<size_t>&);
+    template<typename cmp>
     sample_data sample(size_t,graph<cmp>&);
     template<typename cmp>
     sample_data sample(graph<cmp>&);

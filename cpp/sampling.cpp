@@ -22,49 +22,8 @@ double& sample_data::log_w(){return this->log_w_;}
 double& sample_data::e(){return this->e_;}
 
 template<typename cmp>
-sample_data sampling::sample(size_t root,graph<cmp>& g){
-    double log_w=0; //weight of sample (log)
+double sampling::calc_sample_e(graph<cmp>& g,std::vector<size_t>& s){
     double e=0; //energy of sample under true hamiltonian
-    std::vector<size_t> s(g.vs().size(),0);
-    std::queue<size_t> todo_idxs;
-    std::discrete_distribution<size_t> pdf(g.vs()[root].p_k().begin(),g.vs()[root].p_k().end());
-    s[root]=pdf(mpi_utils::prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
-    if(g.vs()[root].virt()){
-        todo_idxs.push(root);
-    }
-    while(!todo_idxs.empty()){
-        size_t idx=todo_idxs.front();
-        todo_idxs.pop();
-        size_t v1=g.vs()[idx].p().first;
-        size_t v2=g.vs()[idx].p().second;
-        if(g.vs()[v1].virt()){
-            todo_idxs.push(v1);
-        }
-        if(g.vs()[v2].virt()){
-            todo_idxs.push(v2);
-        }
-        std::vector<double> cond_probs;
-        // std::cout<<(std::string)g.vs()[idx].p_ijk()<<"\n";
-        // for(size_t i=0;i<g.vs()[idx].p_k().size();i++){
-            // std::cout<<g.vs()[idx].p_k()[i]<<" ";
-        // }
-        // std::cout<<"\n";
-        for(size_t i=0;i<g.vs()[v1].rank();i++){
-            for(size_t j=0;j<g.vs()[v2].rank();j++){
-                if(g.vs()[idx].p_k()[s[idx]-1]!=0){
-                    cond_probs.push_back(g.vs()[idx].p_ijk().at(i,j,s[idx]-1)); //no need to normalize, handled by discrete_distribution
-                }
-                else{
-                    cond_probs.push_back(0);
-                }
-            }
-        }
-        pdf=std::discrete_distribution<size_t>(cond_probs.begin(),cond_probs.end());
-        size_t composite_idx=pdf(mpi_utils::prng);
-        s[v1]=(composite_idx/g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
-        s[v2]=(composite_idx%g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
-        // log_w+=log(g.vs()[idx].p_ijk().at(s[v1],s[v2],s[idx]));
-    }
     for(size_t n=0;n<g.orig_ks().size();n++){
         size_t v1=std::get<0>(g.orig_ks()[n]);
         size_t v2=std::get<1>(g.orig_ks()[n]);
@@ -72,7 +31,12 @@ sample_data sampling::sample(size_t root,graph<cmp>& g){
             e-=(s[v1]==s[v2])?std::get<2>(g.orig_ks()[n]):0;
         }
     }
-    
+    return e;
+}
+template double sampling::calc_sample_e(graph<bmi_comparator>&,std::vector<size_t>&);
+
+template<typename cmp>
+double sampling::calc_sample_log_w(graph<cmp>& g,std::vector<size_t>& s){
     //calculate weight of sample tracing out virtual sites
     std::vector<array1d<double> > contracted_vectors;
     for(size_t n=0;n<g.vs().size();n++){
@@ -116,7 +80,54 @@ sample_data sampling::sample(size_t root,graph<cmp>& g){
     for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
         w_addends.push_back(contracted_vectors[g.vs().size()-1].at(k));
     }
-    log_w=lse(w_addends);
+    double log_w=lse(w_addends);
+    return log_w;
+}
+template double sampling::calc_sample_log_w(graph<bmi_comparator>&,std::vector<size_t>&);
+
+template<typename cmp>
+sample_data sampling::sample(size_t root,graph<cmp>& g){
+    std::vector<size_t> s(g.vs().size(),0);
+    std::queue<size_t> todo_idxs;
+    std::discrete_distribution<size_t> pdf(g.vs()[root].p_k().begin(),g.vs()[root].p_k().end());
+    s[root]=pdf(mpi_utils::prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+    if(g.vs()[root].virt()){
+        todo_idxs.push(root);
+    }
+    while(!todo_idxs.empty()){
+        size_t idx=todo_idxs.front();
+        todo_idxs.pop();
+        size_t v1=g.vs()[idx].p().first;
+        size_t v2=g.vs()[idx].p().second;
+        if(g.vs()[v1].virt()){
+            todo_idxs.push(v1);
+        }
+        if(g.vs()[v2].virt()){
+            todo_idxs.push(v2);
+        }
+        std::vector<double> cond_probs;
+        // std::cout<<(std::string)g.vs()[idx].p_ijk()<<"\n";
+        // for(size_t i=0;i<g.vs()[idx].p_k().size();i++){
+            // std::cout<<g.vs()[idx].p_k()[i]<<" ";
+        // }
+        // std::cout<<"\n";
+        for(size_t i=0;i<g.vs()[v1].rank();i++){
+            for(size_t j=0;j<g.vs()[v2].rank();j++){
+                if(g.vs()[idx].p_k()[s[idx]-1]!=0){
+                    cond_probs.push_back(g.vs()[idx].p_ijk().at(i,j,s[idx]-1)); //no need to normalize, handled by discrete_distribution
+                }
+                else{
+                    cond_probs.push_back(0);
+                }
+            }
+        }
+        pdf=std::discrete_distribution<size_t>(cond_probs.begin(),cond_probs.end());
+        size_t composite_idx=pdf(mpi_utils::prng);
+        s[v1]=(composite_idx/g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+        s[v2]=(composite_idx%g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+    }
+    double e=calc_sample_e(g,s); //energy of sample under true hamiltonian
+    double log_w=calc_sample_log_w(g,s); //weight of sample (log)
     
     // for(size_t m=0;m<s.size();m++){
         // if(m==g.n_phys_sites()){std::cout<<": ";}
@@ -127,7 +138,6 @@ sample_data sampling::sample(size_t root,graph<cmp>& g){
     return sample_data(g.n_phys_sites(),s,log_w,e);
 }
 template sample_data sampling::sample(size_t,graph<bmi_comparator>&);
-
 
 template<typename cmp>
 sample_data sampling::sample(graph<cmp>& g){
@@ -150,30 +160,7 @@ template std::vector<sample_data> sampling::sample(graph<bmi_comparator>&,size_t
 
 template<typename cmp>
 std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples){
-    std::uniform_real_distribution<> unif_dist(0,1.0);
-    std::vector<sample_data> samples;
-    samples.reserve(n_samples);
-    //no need to equilibrate because draws are global and sampling from tree is perfect
-    sample_data mc0=sampling::sample(g);
-    double accept_ratio=0;
-    size_t n=0; //markov chain length
-    while(samples.size()<n_samples){
-        sample_data mc1=sampling::sample(g);
-        double p1=exp(mc0.log_w()-mc1.log_w());
-        double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
-        double p=p1*p2;
-        double r=unif_dist(mpi_utils::prng);
-        if(r<p){
-            mc0=mc1;
-            accept_ratio++;
-        }
-        //keep every 10th sample, rest are to approximate acceptance ratio
-        if((n%100)==0){samples.push_back(mc0);}
-        n++;
-        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
-    }
-    accept_ratio/=(double) n;
-    std::cout<<"acceptance ratio: "<<accept_ratio<<"\n";
+    std::vector<sample_data> samples=sampling::mh_sample(g.vs().size()-1,g,n_samples);
     return samples;
 }
 template std::vector<sample_data> sampling::mh_sample(graph<bmi_comparator>&,size_t);
@@ -185,9 +172,10 @@ std::vector<sample_data> sampling::mh_sample(size_t root,graph<cmp>& g,size_t n_
     samples.reserve(n_samples);
     //no need to equilibrate because draws are global and sampling from tree is perfect
     sample_data mc0=sampling::sample(root,g);
-    double accept_ratio=0;
+    double acceptance_ratio=0;
     size_t n=0; //markov chain length
-    while(samples.size()<n_samples){
+    size_t accepted_draw_count=0; //count of accepted configs, not counting symmetric equivs
+    while(accepted_draw_count<n_samples){
         sample_data mc1=sampling::sample(root,g);
         double p1=exp(mc0.log_w()-mc1.log_w());
         double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
@@ -195,15 +183,26 @@ std::vector<sample_data> sampling::mh_sample(size_t root,graph<cmp>& g,size_t n_
         double r=unif_dist(mpi_utils::prng);
         if(r<p){
             mc0=mc1;
-            accept_ratio++;
+            acceptance_ratio++;
         }
-        //keep every 10th sample, rest are to approximate acceptance ratio
-        if((n%100)==0){samples.push_back(mc0);}
+        //keep every 100th sample, rest are to approximate acceptance ratio
+        if((n%100)==0){
+            samples.push_back(mc0);
+            //consider ising symmetry (NEEDS TO BE GENERALIZED)
+            sample_data mc0_flip=mc0;
+            for(size_t e=0;e<mc0_flip.s().size();e++){
+                if(mc0_flip.s()[e]!=0){
+                    mc0_flip.s()[e]=(mc0_flip.s()[e]==1)?2:1; //flip each spin in ising config
+                }
+            }
+            samples.push_back(mc0_flip);
+            accepted_draw_count++;
+        }
         n++;
         // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
     }
-    accept_ratio/=(double) n;
-    std::cout<<"acceptance ratio: "<<accept_ratio<<"\n";
+    acceptance_ratio/=(double) n;
+    std::cout<<"acceptance ratio: "<<acceptance_ratio<<"\n";
     return samples;
 }
 template std::vector<sample_data> sampling::mh_sample(size_t,graph<bmi_comparator>&,size_t);
@@ -217,19 +216,32 @@ std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,doub
     sample_data mc0=sampling::sample(g);
     acceptance_ratio=0;
     size_t n=0; //markov chain length
-    while(samples.size()<n_samples){
+    size_t accepted_draw_count=0; //count of accepted configs, not counting symmetric equivs
+    while(accepted_draw_count<n_samples){
         sample_data mc1=sampling::sample(g);
         double p1=exp(mc0.log_w()-mc1.log_w());
         double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
         double p=p1*p2;
-        // std::cout<<p1<<" "<<p2<<" "<<sqrt(p2)<<" "<<(p2/(1+p2))<<"\n";
         double r=unif_dist(mpi_utils::prng);
         if(r<p){
             mc0=mc1;
             acceptance_ratio++;
         }
-        //keep every 10th sample, rest are to approximate acceptance ratio
-        if((n%10)==0){samples.push_back(mc0);}
+        //keep every 100th sample, rest are to approximate acceptance ratio
+        if((n%100)==0){
+            samples.push_back(mc0);
+            //consider ising symmetry (NEEDS TO BE GENERALIZED)
+            sample_data mc0_flip=mc0;
+            for(size_t e=0;e<mc0_flip.s().size();e++){
+                if(mc0_flip.s()[e]!=0){
+                    mc0_flip.s()[e]=(mc0_flip.s()[e]==1)?2:1; //flip each spin in ising config
+                }
+            }
+            mc0_flip.e()=sampling::calc_sample_e(g,mc0_flip.s());
+            mc0_flip.log_w()=sampling::calc_sample_log_w(g,mc0_flip.s());
+            samples.push_back(mc0_flip);
+            accepted_draw_count++;
+        }
         n++;
         // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
     }
