@@ -22,15 +22,15 @@ double& sample_data::log_w(){return this->log_w_;}
 double& sample_data::e(){return this->e_;}
 
 template<typename cmp>
-sample_data sampling::sample(graph<cmp>& g){
+sample_data sampling::sample(size_t root,graph<cmp>& g){
     double log_w=0; //weight of sample (log)
     double e=0; //energy of sample under true hamiltonian
     std::vector<size_t> s(g.vs().size(),0);
     std::queue<size_t> todo_idxs;
-    std::discrete_distribution<size_t> pdf(g.vs()[g.vs().size()-1].p_k().begin(),g.vs()[g.vs().size()-1].p_k().end());
-    s[g.vs().size()-1]=pdf(mpi_utils::prng);
-    if(g.vs()[g.vs().size()-1].virt()){
-        todo_idxs.push(g.vs().size()-1);
+    std::discrete_distribution<size_t> pdf(g.vs()[root].p_k().begin(),g.vs()[root].p_k().end());
+    s[root]=pdf(mpi_utils::prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+    if(g.vs()[root].virt()){
+        todo_idxs.push(root);
     }
     while(!todo_idxs.empty()){
         size_t idx=todo_idxs.front();
@@ -51,8 +51,8 @@ sample_data sampling::sample(graph<cmp>& g){
         // std::cout<<"\n";
         for(size_t i=0;i<g.vs()[v1].rank();i++){
             for(size_t j=0;j<g.vs()[v2].rank();j++){
-                if(g.vs()[idx].p_k()[s[idx]]!=0){
-                    cond_probs.push_back(g.vs()[idx].p_ijk().at(i,j,s[idx])); //no need to normalize, handled by discrete_distribution
+                if(g.vs()[idx].p_k()[s[idx]-1]!=0){
+                    cond_probs.push_back(g.vs()[idx].p_ijk().at(i,j,s[idx]-1)); //no need to normalize, handled by discrete_distribution
                 }
                 else{
                     cond_probs.push_back(0);
@@ -61,14 +61,16 @@ sample_data sampling::sample(graph<cmp>& g){
         }
         pdf=std::discrete_distribution<size_t>(cond_probs.begin(),cond_probs.end());
         size_t composite_idx=pdf(mpi_utils::prng);
-        s[v1]=composite_idx/g.vs()[v2].rank();
-        s[v2]=composite_idx%g.vs()[v2].rank();
+        s[v1]=(composite_idx/g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+        s[v2]=(composite_idx%g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
         // log_w+=log(g.vs()[idx].p_ijk().at(s[v1],s[v2],s[idx]));
     }
     for(size_t n=0;n<g.orig_ks().size();n++){
         size_t v1=std::get<0>(g.orig_ks()[n]);
         size_t v2=std::get<1>(g.orig_ks()[n]);
-        e-=(s[v1]==s[v2])?std::get<2>(g.orig_ks()[n]):0;
+        if((s[v1]!=0)&&(s[v2]!=0)){
+            e-=(s[v1]==s[v2])?std::get<2>(g.orig_ks()[n]):0;
+        }
     }
     
     //calculate weight of sample tracing out virtual sites
@@ -76,9 +78,12 @@ sample_data sampling::sample(graph<cmp>& g){
     for(size_t n=0;n<g.vs().size();n++){
         if(n<g.n_phys_sites()){ //physical (input) sites
             array1d<double> vec_e(g.vs()[n].rank());
-            for(size_t a=0;a<vec_e.nx();a++){
-                if(a!=s[n]){ //if a==s[n], element is log(1)=0. else log(0)=-inf
-                    vec_e.at(a)=log(1e-100);
+            if(s[n]!=0){
+                for(size_t a=0;a<vec_e.nx();a++){
+                    //traced out spins have state 0 and the vector will be all 1s (but in log form)
+                    if((s[n]-1)!=a){ //if a==s[n]-1, element is log(1)=0. else log(0)=-inf
+                        vec_e.at(a)=log(1e-100);
+                    }
                 }
             }
             contracted_vectors.push_back(vec_e);
@@ -121,6 +126,14 @@ sample_data sampling::sample(graph<cmp>& g){
     // std::cout<<"\n";
     return sample_data(g.n_phys_sites(),s,log_w,e);
 }
+template sample_data sampling::sample(size_t,graph<bmi_comparator>&);
+
+
+template<typename cmp>
+sample_data sampling::sample(graph<cmp>& g){
+    sample_data s=sampling::sample(g.vs().size()-1,g);
+    return s;
+}
 template sample_data sampling::sample(graph<bmi_comparator>&);
 
 template<typename cmp>
@@ -148,7 +161,7 @@ std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples){
         sample_data mc1=sampling::sample(g);
         double p1=exp(mc0.log_w()-mc1.log_w());
         double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
-        double p=p1*sqrt(p2);
+        double p=p1*p2;
         double r=unif_dist(mpi_utils::prng);
         if(r<p){
             mc0=mc1;
@@ -163,7 +176,37 @@ std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples){
     std::cout<<"acceptance ratio: "<<accept_ratio<<"\n";
     return samples;
 }
-template std::vector<sample_data> sampling::mh_sample(graph<bmi_comparator>&,size_t,double&);
+template std::vector<sample_data> sampling::mh_sample(graph<bmi_comparator>&,size_t);
+
+template<typename cmp>
+std::vector<sample_data> sampling::mh_sample(size_t root,graph<cmp>& g,size_t n_samples){
+    std::uniform_real_distribution<> unif_dist(0,1.0);
+    std::vector<sample_data> samples;
+    samples.reserve(n_samples);
+    //no need to equilibrate because draws are global and sampling from tree is perfect
+    sample_data mc0=sampling::sample(root,g);
+    double accept_ratio=0;
+    size_t n=0; //markov chain length
+    while(samples.size()<n_samples){
+        sample_data mc1=sampling::sample(root,g);
+        double p1=exp(mc0.log_w()-mc1.log_w());
+        double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
+        double p=p1*p2;
+        double r=unif_dist(mpi_utils::prng);
+        if(r<p){
+            mc0=mc1;
+            accept_ratio++;
+        }
+        //keep every 10th sample, rest are to approximate acceptance ratio
+        if((n%100)==0){samples.push_back(mc0);}
+        n++;
+        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
+    }
+    accept_ratio/=(double) n;
+    std::cout<<"acceptance ratio: "<<accept_ratio<<"\n";
+    return samples;
+}
+template std::vector<sample_data> sampling::mh_sample(size_t,graph<bmi_comparator>&,size_t);
 
 template<typename cmp>
 std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,double& acceptance_ratio){
@@ -172,31 +215,31 @@ std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,doub
     samples.reserve(n_samples);
     //no need to equilibrate because draws are global and sampling from tree is perfect
     sample_data mc0=sampling::sample(g);
-    double accept_ratio=0;
+    acceptance_ratio=0;
     size_t n=0; //markov chain length
     while(samples.size()<n_samples){
         sample_data mc1=sampling::sample(g);
         double p1=exp(mc0.log_w()-mc1.log_w());
         double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
-        double p=p1*sqrt(p2);
+        double p=p1*p2;
         // std::cout<<p1<<" "<<p2<<" "<<sqrt(p2)<<" "<<(p2/(1+p2))<<"\n";
         double r=unif_dist(mpi_utils::prng);
         if(r<p){
             mc0=mc1;
-            accept_ratio++;
+            acceptance_ratio++;
         }
         //keep every 10th sample, rest are to approximate acceptance ratio
         if((n%10)==0){samples.push_back(mc0);}
         n++;
         // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
     }
-    accept_ratio/=(double) n;
-    std::cout<<"acceptance ratio: "<<accept_ratio<<"\n";
-    acceptance_ratio=accept_ratio; //for output
+    acceptance_ratio/=(double) n;
+    std::cout<<"acceptance ratio: "<<acceptance_ratio<<"\n";
     return samples;
 }
-template std::vector<sample_data> sampling::mh_sample(graph<bmi_comparator>&,size_t);
+template std::vector<sample_data> sampling::mh_sample(graph<bmi_comparator>&,size_t,double&);
 
+//assumes full config
 std::vector<double> sampling::pair_overlaps(std::vector<sample_data> samples,size_t q){
     std::vector<double> overlaps;
     for(size_t n1=0;n1<samples.size();n1++){
@@ -216,6 +259,7 @@ std::vector<double> sampling::pair_overlaps(std::vector<sample_data> samples,siz
     return overlaps;
 }
 
+//assumes full config
 std::vector<double> sampling::e_mc(std::vector<sample_data>& samples){
     //sample means
     double e1_mean=0;
@@ -244,6 +288,7 @@ std::vector<double> sampling::e_mc(std::vector<sample_data>& samples){
     return res;
 }
 
+//assumes full config
 std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_orig){
     //determine potts basis vectors
     std::vector<std::vector<double> > ref_basis=potts_ref_vecs(q_orig);
@@ -251,7 +296,7 @@ std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_or
     for(size_t s=0;s<samples.size();s++){
         std::vector<double> vec_m(q_orig-1,0);
         for(size_t e=0;e<samples[s].n_phys_sites();e++){
-            std::vector<double> ref_vec=ref_basis[samples[s].s()[e]];
+            std::vector<double> ref_vec=ref_basis[samples[s].s()[e]-1];
             for(size_t r=0;r<vec_m.size();r++){
                 vec_m[r]+=ref_vec[r];
             }
@@ -300,6 +345,7 @@ std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_or
     return res;
 }
 
+//assumes full config
 std::vector<double> sampling::q_mc(std::vector<sample_data>& samples,size_t q_orig,std::vector<double>& overlaps){
     std::vector<double> qs=pair_overlaps(samples,q_orig);
     //sample overlaps

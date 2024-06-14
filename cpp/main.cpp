@@ -434,7 +434,7 @@ int main(int argc,char **argv){
                 std::stringstream mc_output_line_ss;
                 //MC observables
                 sw.start();
-                std::vector<sample_data> samples=sampling::mh_sample(g,100000);
+                std::vector<sample_data> samples=sampling::mh_sample(g,10000);
                 // std::vector<sample_data> samples=sampling::mh_sample(g,n_config_samples);
                 std::vector<double> e_mc_res=sampling::e_mc(samples);
                 std::vector<double> m_mc_res=sampling::m_mc(samples,q);

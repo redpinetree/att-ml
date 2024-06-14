@@ -31,11 +31,15 @@ private:
 
 namespace sampling{
     template<typename cmp>
+    sample_data sample(size_t,graph<cmp>&);
+    template<typename cmp>
     sample_data sample(graph<cmp>&);
     template<typename cmp>
     std::vector<sample_data> sample(graph<cmp>&,size_t);
     template<typename cmp>
     std::vector<sample_data> mh_sample(graph<cmp>&,size_t);
+    template<typename cmp>
+    std::vector<sample_data> mh_sample(size_t,graph<cmp>&,size_t);
     template<typename cmp>
     std::vector<sample_data> mh_sample(graph<cmp>&,size_t,double&);
     std::vector<double> pair_overlaps(std::vector<sample_data>,size_t);

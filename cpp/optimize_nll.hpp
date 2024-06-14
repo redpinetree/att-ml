@@ -10,7 +10,9 @@
 
 namespace optimize{
     template<typename cmp>
-    double opt_nll(graph<cmp>&,std::vector<sample_data>,size_t);
+    double opt_nll(graph<cmp>&,std::vector<sample_data>&,size_t);
+    template<typename cmp>
+    double hopt_nll(graph<cmp>&,size_t,size_t);
     std::vector<array3d<double> > calc_dz(std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
     template<typename cmp>
     double calc_z(graph<cmp>&);
