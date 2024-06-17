@@ -52,8 +52,8 @@ namespace observables{
     void print_moments(graph<cmp>&,size_t); //debug
     void write_output(std::string,std::vector<std::string>&);
     void write_output(std::vector<std::string>&);
-    void write_binary_output(std::string,std::vector<double>&,double);
-    void write_binary_output(std::vector<double>&,double);
+    void write_binary_output(std::string,std::vector<std::pair<double,std::vector<double> > >&);
+    void write_binary_output(std::vector<std::pair<double,std::vector<double> > >&);
 }
 
 #endif

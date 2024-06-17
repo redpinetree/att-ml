@@ -797,20 +797,26 @@ void observables::write_output(std::vector<std::string>& lines){
     }
 }
 
-void observables::write_binary_output(std::string fn,std::vector<double>& data,double beta){
-    std::ofstream ofs(fn,std::ios::app|std::ios::binary);
-    size_t data_size=data.size(); //for casting
-    ofs.write((char*) &beta,sizeof(beta));
-    ofs.write((char*) &data_size,sizeof(data.size()));
-    for(size_t i=0;i<data.size();i++){
-        ofs.write((char*) (&data[i]),sizeof(data[i]));
+void observables::write_binary_output(std::string fn,std::vector<std::pair<double,std::vector<double> > >& data){
+    std::ofstream ofs(fn,std::ios::binary);
+    size_t n_betas=data.size();
+    ofs.write((char*) &n_betas,sizeof(n_betas));
+    for(size_t n=0;n<data.size();n++){
+        size_t data_size=data[n].second.size(); //for casting
+        ofs.write((char*) &data[n].first,sizeof(data[n].first));
+        ofs.write((char*) &data_size,sizeof(data[n].second.size()));
+        for(size_t i=0;i<data[n].second.size();i++){
+            ofs.write((char*) (&data[n].second[i]),sizeof(data[n].second[i]));
+        }
     }
 }
 
-void observables::write_binary_output(std::vector<double>& data,double beta){
-    std::cout<<"beta="<<beta<<"\n";
-    for(size_t i=0;i<data.size();i++){
-        std::cout<<data[i]<<"\n";
+void observables::write_binary_output(std::vector<std::pair<double,std::vector<double> > >& data){
+    for(size_t n=0;n<data.size();n++){
+        std::cout<<"beta="<<data[n].first<<"\n";
+        for(size_t i=0;i<data[n].second.size();i++){
+            std::cout<<data[n].second[i]<<"\n";
+        }
     }
 }
 

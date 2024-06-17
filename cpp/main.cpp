@@ -136,9 +136,9 @@ int main(int argc,char **argv){
     std::string solver="nnhals";
     size_t restarts=10;
 #endif
-    size_t n_config_samples=0;
+    size_t n_config_samples=10000;
     size_t n_cycles=0;
-    size_t n_nll_iter_max=1000;
+    size_t n_nll_iter_max=10000;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -352,17 +352,6 @@ int main(int argc,char **argv){
         sample_mc_output_fn+=".txt";
         sample_ar_output_fn+=".dat";
         sample_overlaps_output_fn+=".dat";
-        if(n_config_samples>0){
-            std::ofstream ofs(sample_ar_output_fn,std::ios::binary);
-            size_t n_betas=((max_beta-min_beta)/step_beta)+1;
-            ofs.write((char*) &n_betas,sizeof(n_betas));
-            ofs.close();
-            if(output_overlaps){
-                std::ofstream ofs2(sample_overlaps_output_fn,std::ios::binary);
-                ofs2.write((char*) &n_betas,sizeof(n_betas));
-                ofs2.close();
-            }
-        }
         double beta=min_beta;
         double m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min;
         std::complex<double> q2_k;
@@ -370,6 +359,7 @@ int main(int argc,char **argv){
         std::stringstream header1_ss,header1_vals_ss,header2_ss,header2_mc_ss;
         observables::output_lines.clear(); //flush output lines
         observables::mc_output_lines.clear(); //flush output lines
+        std::vector<std::pair<double,std::vector<double> > > acceptance_ratio_data;
         std::string header1_ls_str;
         if(ls.empty()){
             header1_ls_str+="fn";
@@ -423,7 +413,7 @@ int main(int argc,char **argv){
             trial_time+=sw.elapsed();
             sw.reset();
             size_t n_phys_sites=g.n_phys_sites();
-            if(n_config_samples>0){ //perform MC sampling if config sample count specified
+            if(n_cycles>0){ //perform MC sampling if n_cycles>0
                 sw.start();
                 //nll training
                 std::vector<double> acceptance_ratios=algorithm::train_nll(g,n_cycles,n_config_samples,n_nll_iter_max);
@@ -431,54 +421,47 @@ int main(int argc,char **argv){
                 if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
                 sw.reset();
-                std::stringstream mc_output_line_ss;
-                //MC observables
-                sw.start();
-                std::vector<sample_data> samples=sampling::mh_sample(g,10000);
-                // std::vector<sample_data> samples=sampling::mh_sample(g,n_config_samples);
-                std::vector<double> e_mc_res=sampling::e_mc(samples);
-                std::vector<double> m_mc_res=sampling::m_mc(samples,q);
-                // std::vector<double> overlaps;
-                // std::vector<double> q_mc_res=sampling::q_mc(samples,q,overlaps);
-                sw.split();
-                if(verbose>=3){std::cout<<"mc sampling time: "<<(double) sw.elapsed()<<"ms\n";}
-                trial_time+=sw.elapsed();
-                sw.reset();
-                //derived MC observables
-                double sus_fm_mean,sus_fm_sd,sus_sg_mean,sus_sg_sd,binder_m_mean,binder_m_sd,binder_q_mean,binder_q_sd,c_mean,c_sd;
-                sus_fm_mean=n_phys_sites*m_mc_res[2]; //chi_fm=n*var(m)
-                sus_fm_sd=n_phys_sites*m_mc_res[3]; //formula from above
-                // sus_sg_mean=n_phys_sites*q_mc_res[2]; //chi_sg=n*var(q)
-                // sus_sg_sd=n_phys_sites*q_mc_res[3]; //formula from above
-                binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
-                binder_m_sd=0.5*sqrt(pow(pow(m_mc_res[2],-2.0)*m_mc_res[5],2.0)+pow(2*m_mc_res[4]*m_mc_res[3]*pow(m_mc_res[2],-3.0),2.0));
-                // binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
-                // binder_q_sd=0.5*sqrt(pow(pow(q_mc_res[2],-2.0)*q_mc_res[5],2.0)+pow(2*q_mc_res[4]*q_mc_res[3]*pow(q_mc_res[2],-3.0),2.0)); //formula from above
-                c_mean=n_phys_sites*(e_mc_res[2]-pow(e_mc_res[0],2.0)); //c=var(e)
-                c_sd=n_phys_sites*sqrt(pow(e_mc_res[3],2.0)+pow(2*e_mc_res[0]*e_mc_res[1],2.0)); //formula from above
-                mc_output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" ";
-                for(size_t a=0;a<m_mc_res.size();a++){
-                    mc_output_line_ss<<m_mc_res[a]<<" ";
-                }
-                // for(size_t a=0;a<q_mc_res.size();a++){
-                    // mc_output_line_ss<<q_mc_res[a]<<" ";
-                // }
-                for(size_t a=0;a<e_mc_res.size();a++){
-                    mc_output_line_ss<<e_mc_res[a]<<" ";
-                }
-                // mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
-                mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
-                observables::mc_output_lines.push_back(mc_output_line_ss.str());
-                if(output_set){
-                    observables::write_binary_output(sample_ar_output_fn,acceptance_ratios,beta);
-                    // if(output_overlaps){observables::write_binary_output(sample_overlaps_output_fn,overlaps,beta);} //only if flag is set
-                }
-                else{
-                    observables::write_binary_output(acceptance_ratios,beta);
-                    // if(output_overlaps){observables::write_binary_output(overlaps,beta);} //only if flag is set
-                }
-                std::cout<<"Minimum value of energy: "<<sampling::min_e(samples)<<"\n";
+                acceptance_ratio_data.push_back(std::make_pair(beta,acceptance_ratios));
             }
+            std::stringstream mc_output_line_ss;
+            //MC observables
+            sw.start();
+            std::vector<sample_data> samples=sampling::mh_sample(g,10000);
+            // std::vector<sample_data> samples=sampling::mh_sample(g,n_config_samples);
+            std::vector<double> e_mc_res=sampling::e_mc(samples);
+            std::vector<double> m_mc_res=sampling::m_mc(samples,q);
+            // std::vector<double> overlaps;
+            // std::vector<double> q_mc_res=sampling::q_mc(samples,q,overlaps);
+            sw.split();
+            if(verbose>=3){std::cout<<"mc sampling time: "<<(double) sw.elapsed()<<"ms\n";}
+            trial_time+=sw.elapsed();
+            sw.reset();
+            //derived MC observables
+            double sus_fm_mean,sus_fm_sd,sus_sg_mean,sus_sg_sd,binder_m_mean,binder_m_sd,binder_q_mean,binder_q_sd,c_mean,c_sd;
+            sus_fm_mean=n_phys_sites*m_mc_res[2]; //chi_fm=n*var(m)
+            sus_fm_sd=n_phys_sites*m_mc_res[3]; //formula from above
+            // sus_sg_mean=n_phys_sites*q_mc_res[2]; //chi_sg=n*var(q)
+            // sus_sg_sd=n_phys_sites*q_mc_res[3]; //formula from above
+            binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
+            binder_m_sd=0.5*sqrt(pow(pow(m_mc_res[2],-2.0)*m_mc_res[5],2.0)+pow(2*m_mc_res[4]*m_mc_res[3]*pow(m_mc_res[2],-3.0),2.0));
+            // binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
+            // binder_q_sd=0.5*sqrt(pow(pow(q_mc_res[2],-2.0)*q_mc_res[5],2.0)+pow(2*q_mc_res[4]*q_mc_res[3]*pow(q_mc_res[2],-3.0),2.0)); //formula from above
+            c_mean=n_phys_sites*(e_mc_res[2]-pow(e_mc_res[0],2.0)); //c=var(e)
+            c_sd=n_phys_sites*sqrt(pow(e_mc_res[3],2.0)+pow(2*e_mc_res[0]*e_mc_res[1],2.0)); //formula from above
+            mc_output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" ";
+            for(size_t a=0;a<m_mc_res.size();a++){
+                mc_output_line_ss<<m_mc_res[a]<<" ";
+            }
+            // for(size_t a=0;a<q_mc_res.size();a++){
+                // mc_output_line_ss<<q_mc_res[a]<<" ";
+            // }
+            for(size_t a=0;a<e_mc_res.size();a++){
+                mc_output_line_ss<<e_mc_res[a]<<" ";
+            }
+            // mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+            mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+            observables::mc_output_lines.push_back(mc_output_line_ss.str());
+            std::cout<<"Minimum value of energy: "<<sampling::min_e(samples)<<"\n";
             sw.start();
             if(g.dims().size()!=0){
                 calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min,q2_k);
@@ -524,11 +507,13 @@ int main(int argc,char **argv){
         }
         if(output_set){
             observables::write_output(sample_output_fn,observables::output_lines);
-            if(n_config_samples>0){observables::write_output(sample_mc_output_fn,observables::mc_output_lines);}
+            if(acceptance_ratio_data.size()>0){observables::write_binary_output(sample_ar_output_fn,acceptance_ratio_data);}
+            observables::write_output(sample_mc_output_fn,observables::mc_output_lines);
         }
         else{
             observables::write_output(observables::output_lines);
-            if(n_config_samples>0){observables::write_output(observables::mc_output_lines);}
+            if(acceptance_ratio_data.size()>0){observables::write_binary_output(acceptance_ratio_data);}
+            observables::write_output(observables::mc_output_lines);
         }
     }
     sw_total.split();
