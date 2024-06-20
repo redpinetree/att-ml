@@ -1,5 +1,5 @@
-#ifndef MAT_OPS
-#define MAT_OPS
+#ifndef MAT_OPS_
+#define MAT_OPS_
 
 #include "../ndarray.hpp"
 

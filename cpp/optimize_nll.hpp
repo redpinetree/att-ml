@@ -1,7 +1,6 @@
 #ifndef OPTIMIZE_NLL_
 #define OPTIMIZE_NLL_
 
-#include <map>
 #include <utility>
 #include <vector>
 
@@ -13,14 +12,6 @@ namespace optimize{
     double opt_nll(graph<cmp>&,std::vector<sample_data>&,size_t);
     template<typename cmp>
     double hopt_nll(graph<cmp>&,size_t,size_t);
-    std::vector<array3d<double> > calc_dz(std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
-    template<typename cmp>
-    double calc_z(graph<cmp>&);
-    template<typename cmp>
-    double calc_z(graph<cmp>&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
-    std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
-    template<typename cmp>
-    std::vector<double > calc_w(graph<cmp>&,std::vector<sample_data>,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 };
 
 #endif

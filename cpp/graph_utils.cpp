@@ -49,6 +49,8 @@ graph<cmp> graph_utils::gen_hypercubic(size_t q,std::vector<size_t> ls,bool pbc,
             //input distributions should be scaled appropriately!
             double k=(2*dist(mpi_utils::prng))-1;
             orig_ks.push_back(std::make_tuple(v1,v2,k));
+            vs[v1].orig_ks_idxs().push_back(orig_ks.size()-1);
+            vs[v2].orig_ks_idxs().push_back(orig_ks.size()-1);
             k*=beta;
             array3d<double> w(q,q,1); //bond is still as weight matrix
             for(size_t i=0;i<q;i++){
@@ -92,6 +94,8 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
         line_ss>>v1>>v2>>k;
         k/=1e5;
         orig_ks.push_back(std::make_tuple(v1,v2,k));
+        vs[v1].orig_ks_idxs().push_back(orig_ks.size()-1);
+        vs[v2].orig_ks_idxs().push_back(orig_ks.size()-1);
         k*=beta;
         array3d<double> w(q,q,1); //bond is still as weight matrix
         for(size_t i=0;i<q;i++){

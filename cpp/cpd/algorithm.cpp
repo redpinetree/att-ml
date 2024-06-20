@@ -80,8 +80,10 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,std::
         }
         g.vs()[master].vol()+=g.vs()[slave].vol();
         size_t depth=(g.vs()[master].depth()>g.vs()[slave].depth()?g.vs()[master].depth():g.vs()[slave].depth())+1;
-        //create new virtual site
+        //create new virtual site and update u_idx of children
         g.vs().push_back(site(r_k,g.vs()[master].vol(),depth,current.v1(),current.v2()));
+        g.vs()[current.v1()].u_idx()=g.vs().size()-1;
+        g.vs()[current.v2()].u_idx()=g.vs().size()-1;
         size_t virtual_idx=g.vs().size()-1;
         //update volume of relevant downstream sites associated with new virtual site for algorithm 1
         size_t current_site=master;
@@ -89,7 +91,7 @@ void algorithm::approx(size_t q,graph<cmp>& g,size_t r_max,size_t iter_max,std::
         while(g.vs()[current_site].virt()){
             current_site=next_site;
             if(g.vs()[current_site].virt()){
-                next_site=(g.vs()[g.vs()[current_site].p1()].vol()<g.vs()[g.vs()[current_site].p2()].vol())?g.vs()[current_site].p2():g.vs()[current_site].p1();
+                next_site=(g.vs()[g.vs()[current_site].l_idx()].vol()<g.vs()[g.vs()[current_site].r_idx()].vol())?g.vs()[current_site].r_idx():g.vs()[current_site].l_idx();
                 g.vs()[next_site].vol()=g.vs()[current_site].vol();
             }
         }

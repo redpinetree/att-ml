@@ -88,15 +88,15 @@ std::vector<double> observables::m_vec(graph<cmp>& g,size_t root,size_t r,size_t
             size_t c_val=spin_combos[down][s][0];
             //memoize
             std::vector<double> contrib(r_k-1,0);
-            if(observables::m_vec_cache.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),r,c_val))){
-                contrib=observables::m_vec_cache.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),r,c_val));
+            if(observables::m_vec_cache.count(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),r,c_val))){
+                contrib=observables::m_vec_cache.at(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),r,c_val));
             }
             else{
-                contrib=m_vec(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),r,c_val,depth+1);
-                observables::m_vec_cache[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),r,c_val)]=contrib;
+                contrib=m_vec(g,(down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),r,c_val,depth+1);
+                observables::m_vec_cache[std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),r,c_val)]=contrib;
             }
             double weight=(down==0)?g.vs()[root].p_ik().at(spin_combos[down][s][0],c):g.vs()[root].p_jk().at(spin_combos[down][s][0],c);
-            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].p1():g.vs()[root].p2())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
+            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
             for(size_t i=0;i<contrib.size();i++){
                 res[i]+=weight*contrib[i];
             }
@@ -143,18 +143,18 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             double contrib=0;
-            if(observables::m_known_factors.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals))){
-                contrib=observables::m_known_factors.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals));
+            if(observables::m_known_factors.count(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,r,c_vals))){
+                contrib=observables::m_known_factors.at(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,r,c_vals));
             }
             else{
-                contrib=m(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,depth+1);
-                observables::m_known_factors[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals)]=contrib;
+                contrib=m(g,(down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,r,c_vals,depth+1);
+                observables::m_known_factors[std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,r,c_vals)]=contrib;
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
                 weight*=(down==0)?g.vs()[root].p_ik().at(spin_combos[down][s][i],c[i]):g.vs()[root].p_jk().at(spin_combos[down][s][i],c[i]);
             }
-            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].p1():g.vs()[root].p2())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
+            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
             temp+=weight*contrib;
         }
         // if(depth==0){std::cout<<"subtree "<<down<<":"<<temp<<"\n";}
@@ -173,19 +173,19 @@ double observables::m(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                if(m_known_factors.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0))){
-                    factors[0]=m_known_factors.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0));
+                if(m_known_factors.count(std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,r,c_vals0))){
+                    factors[0]=m_known_factors.at(std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,r,c_vals0));
                 }
                 else{
-                    factors[0]=m(g,g.vs()[root].p1(),n_target,c0,p,r,c_vals0,depth+1);
-                    m_known_factors[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0)]=factors[0];
+                    factors[0]=m(g,g.vs()[root].l_idx(),n_target,c0,p,r,c_vals0,depth+1);
+                    m_known_factors[std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,r,c_vals0)]=factors[0];
                 }
-                if(m_known_factors.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1))){
-                    factors[1]=m_known_factors.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1));
+                if(m_known_factors.count(std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,r,c_vals1))){
+                    factors[1]=m_known_factors.at(std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,r,c_vals1));
                 }
                 else{
-                    factors[1]=m(g,g.vs()[root].p2(),n_target,c1,p,r,c_vals1,depth+1);
-                    m_known_factors[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1)]=factors[1];
+                    factors[1]=m(g,g.vs()[root].r_idx(),n_target,c1,p,r,c_vals1,depth+1);
+                    m_known_factors[std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,r,c_vals1)]=factors[1];
                 }
                 double factor_prod=factors[0]*factors[1];
                 double weight=1;
@@ -300,18 +300,18 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             double contrib=0;
-            if(observables::q_known_factors.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals))){
-                contrib=observables::q_known_factors.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals));
+            if(observables::q_known_factors.count(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,c_vals))){
+                contrib=observables::q_known_factors.at(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,c_vals));
             }
             else{
-                contrib=q(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,depth+1);
-                observables::q_known_factors[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals)]=contrib;
+                contrib=q(g,(down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,c_vals,depth+1);
+                observables::q_known_factors[std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,c_vals)]=contrib;
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
                 weight*=(down==0)?g.vs()[root].p_ik().at(spin_combos[down][s][i],c[i]):g.vs()[root].p_jk().at(spin_combos[down][s][i],c[i]);
             }
-            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].p1():g.vs()[root].p2())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
+            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
             temp+=weight*contrib;
         }
         // if(depth==0){std::cout<<"subtree "<<down<<":"<<temp<<"\n";}
@@ -330,19 +330,19 @@ double observables::q(graph<cmp>& g,size_t root,size_t n_target,size_t n,size_t 
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                if(q_known_factors.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0))){
-                    factors[0]=q_known_factors.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0));
+                if(q_known_factors.count(std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,c_vals0))){
+                    factors[0]=q_known_factors.at(std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,c_vals0));
                 }
                 else{
-                    factors[0]=q(g,g.vs()[root].p1(),n_target,c0,p,c_vals0,depth+1);
-                    q_known_factors[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0)]=factors[0];
+                    factors[0]=q(g,g.vs()[root].l_idx(),n_target,c0,p,c_vals0,depth+1);
+                    q_known_factors[std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,c_vals0)]=factors[0];
                 }
-                if(q_known_factors.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1))){
-                    factors[1]=q_known_factors.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1));
+                if(q_known_factors.count(std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,c_vals1))){
+                    factors[1]=q_known_factors.at(std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,c_vals1));
                 }
                 else{
-                    factors[1]=q(g,g.vs()[root].p2(),n_target,c1,p,c_vals1,depth+1);
-                    q_known_factors[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1)]=factors[1];
+                    factors[1]=q(g,g.vs()[root].r_idx(),n_target,c1,p,c_vals1,depth+1);
+                    q_known_factors[std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,c_vals1)]=factors[1];
                 }
                 double factor_prod=factors[0]*factors[1];
                 double weight=1;
@@ -454,12 +454,12 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n_target,si
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             std::complex<double> contrib=0;
-            if(observables::m_known_factors_complex.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components))){
-                contrib=observables::m_known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components));
+            if(observables::m_known_factors_complex.count(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,r,c_vals,k_components))){
+                contrib=observables::m_known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,r,c_vals,k_components));
             }
             else{
-                contrib=m(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components,depth+1);
-                observables::m_known_factors_complex[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,r,c_vals,k_components)]=contrib;
+                contrib=m(g,(down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,r,c_vals,k_components,depth+1);
+                observables::m_known_factors_complex[std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,r,c_vals,k_components)]=contrib;
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
@@ -484,19 +484,19 @@ std::complex<double> observables::m(graph<cmp>& g,size_t root,size_t n_target,si
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                if(m_known_factors_complex.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k_components))){
-                    factors[0]=m_known_factors_complex.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k_components));
+                if(m_known_factors_complex.count(std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,r,c_vals0,k_components))){
+                    factors[0]=m_known_factors_complex.at(std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,r,c_vals0,k_components));
                 }
                 else{
-                    factors[0]=m(g,g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k_components,depth+1);
-                    m_known_factors_complex[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,r,c_vals0,k_components)]=factors[0];
+                    factors[0]=m(g,g.vs()[root].l_idx(),n_target,c0,p,r,c_vals0,k_components,depth+1);
+                    m_known_factors_complex[std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,r,c_vals0,k_components)]=factors[0];
                 }
-                if(m_known_factors_complex.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k_components))){
-                    factors[1]=m_known_factors_complex.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k_components));
+                if(m_known_factors_complex.count(std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,r,c_vals1,k_components))){
+                    factors[1]=m_known_factors_complex.at(std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,r,c_vals1,k_components));
                 }
                 else{
-                    factors[1]=m(g,g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k_components,depth+1);
-                    m_known_factors_complex[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,r,c_vals1,k_components)]=factors[1];
+                    factors[1]=m(g,g.vs()[root].r_idx(),n_target,c1,p,r,c_vals1,k_components,depth+1);
+                    m_known_factors_complex[std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,r,c_vals1,k_components)]=factors[1];
                 }
                 std::complex<double> factor_prod=factors[0]*std::conj(factors[1]); //(a,b)
                 factor_prod+=std::conj(factors[0])*factors[1]; //(b,a)
@@ -637,18 +637,18 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
             std::vector<size_t> c_vals=spin_combos[down][s];
             //memoize
             std::complex<double> contrib=0;
-            if(observables::q_known_factors_complex.count(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,k_components))){
-                contrib=observables::q_known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,k_components));
+            if(observables::q_known_factors_complex.count(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,c_vals,k_components))){
+                contrib=observables::q_known_factors_complex.at(std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,c_vals,k_components));
             }
             else{
-                contrib=q(g,(down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,k_components,depth+1);
-                observables::q_known_factors_complex[std::make_tuple((down==0)?g.vs()[root].p1():g.vs()[root].p2(),n_target,n,p,c_vals,k_components)]=contrib;
+                contrib=q(g,(down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,c_vals,k_components,depth+1);
+                observables::q_known_factors_complex[std::make_tuple((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx(),n_target,n,p,c_vals,k_components)]=contrib;
             }
             double weight=1;
             for(size_t i=0;i<p;i++){
                 weight*=(down==0)?g.vs()[root].p_ik().at(spin_combos[down][s][i],c[i]):g.vs()[root].p_jk().at(spin_combos[down][s][i],c[i]);
             }
-            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].p1():g.vs()[root].p2())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
+            // if(depth==0){std::cout<<root<<" "<<((down==0)?g.vs()[root].l_idx():g.vs()[root].r_idx())<<" "<<n<<" "<<p<<" "<<weight<<","<<contrib<<"\n";}
             temp+=weight*contrib;
         }
         // if(depth==0){std::cout<<"subtree "<<down<<":"<<temp<<"\n";}
@@ -667,19 +667,19 @@ std::complex<double> observables::q(graph<cmp>& g,size_t root,size_t n_target,si
                 std::vector<size_t> c_vals0=spin_combos[0][s0];
                 std::vector<size_t> c_vals1=spin_combos[1][s1];
                 //memoize
-                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0,k_components))){
-                    factors[0]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0,k_components));
+                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,c_vals0,k_components))){
+                    factors[0]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,c_vals0,k_components));
                 }
                 else{
-                    factors[0]=q(g,g.vs()[root].p1(),n_target,c0,p,c_vals0,k_components,depth+1);
-                    q_known_factors_complex[std::make_tuple(g.vs()[root].p1(),n_target,c0,p,c_vals0,k_components)]=factors[0];
+                    factors[0]=q(g,g.vs()[root].l_idx(),n_target,c0,p,c_vals0,k_components,depth+1);
+                    q_known_factors_complex[std::make_tuple(g.vs()[root].l_idx(),n_target,c0,p,c_vals0,k_components)]=factors[0];
                 }
-                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1,k_components))){
-                    factors[1]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1,k_components));
+                if(q_known_factors_complex.count(std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,c_vals1,k_components))){
+                    factors[1]=q_known_factors_complex.at(std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,c_vals1,k_components));
                 }
                 else{
-                    factors[1]=q(g,g.vs()[root].p2(),n_target,c1,p,c_vals1,k_components,depth+1);
-                    q_known_factors_complex[std::make_tuple(g.vs()[root].p2(),n_target,c1,p,c_vals1,k_components)]=factors[1];
+                    factors[1]=q(g,g.vs()[root].r_idx(),n_target,c1,p,c_vals1,k_components,depth+1);
+                    q_known_factors_complex[std::make_tuple(g.vs()[root].r_idx(),n_target,c1,p,c_vals1,k_components)]=factors[1];
                 }
                 std::complex<double> factor_prod=factors[0]*std::conj(factors[1]); //(a,b)
                 factor_prod+=std::conj(factors[0])*factors[1]; //(b,a)

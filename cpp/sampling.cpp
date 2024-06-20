@@ -97,8 +97,8 @@ sample_data sampling::sample(size_t root,graph<cmp>& g){
     while(!todo_idxs.empty()){
         size_t idx=todo_idxs.front();
         todo_idxs.pop();
-        size_t v1=g.vs()[idx].p().first;
-        size_t v2=g.vs()[idx].p().second;
+        size_t v1=g.vs()[idx].l_idx();
+        size_t v2=g.vs()[idx].r_idx();
         if(g.vs()[v1].virt()){
             todo_idxs.push(v1);
         }
@@ -169,60 +169,18 @@ template<typename cmp>
 std::vector<sample_data> sampling::mh_sample(size_t root,graph<cmp>& g,size_t n_samples){
     std::uniform_real_distribution<> unif_dist(0,1.0);
     std::vector<sample_data> samples;
-    samples.reserve(n_samples);
+    samples.reserve(n_samples*2); //including flip
     //no need to equilibrate because draws are global and sampling from tree is perfect
     sample_data mc0=sampling::sample(root,g);
     double acceptance_ratio=0;
     size_t n=0; //markov chain length
-    size_t accepted_draw_count=0; //count of accepted configs, not counting symmetric equivs
-    while(accepted_draw_count<n_samples){
+    size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
+    while(accepted_count<n_samples){
         sample_data mc1=sampling::sample(root,g);
-        double p1=exp(mc0.log_w()-mc1.log_w());
-        double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
-        double p=p1*p2;
-        double r=unif_dist(mpi_utils::prng);
-        if(r<p){
-            mc0=mc1;
-            acceptance_ratio++;
-        }
-        //keep every 100th sample, rest are to approximate acceptance ratio
-        if((n%100)==0){
-            samples.push_back(mc0);
-            //consider ising symmetry (NEEDS TO BE GENERALIZED)
-            sample_data mc0_flip=mc0;
-            for(size_t e=0;e<mc0_flip.s().size();e++){
-                if(mc0_flip.s()[e]!=0){
-                    mc0_flip.s()[e]=(mc0_flip.s()[e]==1)?2:1; //flip each spin in ising config
-                }
-            }
-            samples.push_back(mc0_flip);
-            accepted_draw_count++;
-        }
-        n++;
-        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
-    }
-    acceptance_ratio/=(double) n;
-    std::cout<<"acceptance ratio: "<<acceptance_ratio<<"\n";
-    return samples;
-}
-template std::vector<sample_data> sampling::mh_sample(size_t,graph<bmi_comparator>&,size_t);
-
-template<typename cmp>
-std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,double& acceptance_ratio){
-    std::uniform_real_distribution<> unif_dist(0,1.0);
-    std::vector<sample_data> samples;
-    samples.reserve(n_samples);
-    //no need to equilibrate because draws are global and sampling from tree is perfect
-    sample_data mc0=sampling::sample(g);
-    acceptance_ratio=0;
-    size_t n=0; //markov chain length
-    size_t accepted_draw_count=0; //count of accepted configs, not counting symmetric equivs
-    while(accepted_draw_count<n_samples){
-        sample_data mc1=sampling::sample(g);
-        double p1=exp(mc0.log_w()-mc1.log_w());
-        double p2=exp(-g.beta()*(mc1.e()-mc0.e()));
-        double p=p1*p2;
-        double r=unif_dist(mpi_utils::prng);
+        double p1=mc0.log_w()-mc1.log_w();
+        double p2=-g.beta()*(mc1.e()-mc0.e());
+        double p=p1+p2;
+        double r=log(unif_dist(mpi_utils::prng));
         if(r<p){
             mc0=mc1;
             acceptance_ratio++;
@@ -240,7 +198,51 @@ std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,doub
             mc0_flip.e()=sampling::calc_sample_e(g,mc0_flip.s());
             mc0_flip.log_w()=sampling::calc_sample_log_w(g,mc0_flip.s());
             samples.push_back(mc0_flip);
-            accepted_draw_count++;
+            accepted_count++;
+        }
+        n++;
+        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
+    }
+    acceptance_ratio/=(double) n;
+    std::cout<<"acceptance ratio: "<<acceptance_ratio<<"\n";
+    return samples;
+}
+template std::vector<sample_data> sampling::mh_sample(size_t,graph<bmi_comparator>&,size_t);
+
+template<typename cmp>
+std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,double& acceptance_ratio){
+    std::uniform_real_distribution<> unif_dist(0,1.0);
+    std::vector<sample_data> samples;
+    samples.reserve(n_samples*2); //including flip
+    //no need to equilibrate because draws are global and sampling from tree is perfect
+    sample_data mc0=sampling::sample(g);
+    acceptance_ratio=0;
+    size_t n=0; //markov chain length
+    size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
+    while(accepted_count<n_samples){
+        sample_data mc1=sampling::sample(g);
+        double p1=mc0.log_w()-mc1.log_w();
+        double p2=-g.beta()*(mc1.e()-mc0.e());
+        double p=p1+p2;
+        double r=log(unif_dist(mpi_utils::prng));
+        if(r<p){
+            mc0=mc1;
+            acceptance_ratio++;
+        }
+        //keep every 100th sample, rest are to approximate acceptance ratio
+        if((n%100)==0){
+            samples.push_back(mc0);
+            //consider ising symmetry (NEEDS TO BE GENERALIZED)
+            sample_data mc0_flip=mc0;
+            for(size_t e=0;e<mc0_flip.s().size();e++){
+                if(mc0_flip.s()[e]!=0){
+                    mc0_flip.s()[e]=(mc0_flip.s()[e]==1)?2:1; //flip each spin in ising config
+                }
+            }
+            mc0_flip.e()=sampling::calc_sample_e(g,mc0_flip.s());
+            mc0_flip.log_w()=sampling::calc_sample_log_w(g,mc0_flip.s());
+            samples.push_back(mc0_flip);
+            accepted_count++;
         }
         n++;
         // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";

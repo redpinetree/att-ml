@@ -26,18 +26,20 @@ public:
     std::vector<size_t> coords() const;
     bool virt() const;
     std::pair<size_t,size_t> p() const;
-    size_t p1() const;
-    size_t p2() const;
+    size_t l_idx() const;
+    size_t r_idx() const;
+    size_t u_idx() const;
     size_t& rank();
     size_t& vol();
     size_t& depth();
     std::multiset<bond,vertices_comparator>& adj();
     std::vector<size_t>& coords();
     bool& virt();
-    std::pair<size_t,size_t>& p();
-    size_t& p1();
-    size_t& p2();
+    size_t& l_idx();
+    size_t& r_idx();
+    size_t& u_idx();
     bond& p_bond();
+    std::vector<size_t>& orig_ks_idxs();
     std::vector<double>& p_k();
     array3d<double>& p_ijk();
     array2d<double>& p_ik();
@@ -52,8 +54,11 @@ private:
     std::vector<size_t> coords_;
     //only used in observable computation
     bool virt_;
-    std::pair<size_t,size_t> p_;
+    size_t l_idx_;
+    size_t r_idx_;
+    size_t u_idx_;
     bond p_bond_;
+    std::vector<size_t> orig_ks_idxs_;
     std::vector<double> p_k_;
     array3d<double> p_ijk_;
     array2d<double> p_ik_;
