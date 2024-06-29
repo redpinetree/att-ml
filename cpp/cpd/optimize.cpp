@@ -266,7 +266,7 @@ array3d<double> optimize::mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3
     return transpose(x);
 }
 
-array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t m,array3d<double>& x,std::vector<double>& weights,double z,double rho){
+array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t m,array3d<double>& x,std::vector<double>& weights,double z,double rho,double& final_cost){
     if(m!=0){
         for(size_t i=0;i<current.w().nx();i++){
             for(size_t j=0;j<current.w().ny();j++){
@@ -545,6 +545,7 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
         
         if((cost>prev_cost)&&(fabs(cost-prev_cost)>1e-12)&&(it>1)){ //at it=1, prev_cost is init's cost
             std::cout<<prev_cost<<" "<<cost<<" objective function increased at iteration "<<it<<"\n";
+            break;
             // exit(1);
         }
         else{
@@ -572,6 +573,7 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
             break;
         }
     }
+    final_cost=prev_cost;
     return transpose(x);
 }
 
@@ -815,8 +817,9 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
     double tr_axTb=optimize::calc_tr_axTb(aTb_legs,old_current,old_cluster,weights);
     double tr_bTb=optimize::calc_tr_bTb(bTb_legs,old_current,old_cluster);
     double prev_err=0;
+    double final_cost;
     double err=(tr_axTax+tr_bTb-(2*tr_axTb))/tr_bTb;
-    std::cout<<"initial rec. error: "<<err<<"\n";
+    std::cout<<"initial cost: "<<err<<"\n";
     for(size_t it=0;it<max_it;it++){
         // std::cout<<"iteration "<<it<<"\n";
         for(size_t m=0;m<cluster.size()+1;m++){
@@ -873,7 +876,7 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
                 x=optimize::mu_kl(aTa,aTb,init);
             }
             else if(solver=="murenyi"){ //solve aTax=aTb via MU
-                x=optimize::mu_renyi(old_current,old_cluster,current,cluster,m,init,weights,z,2);
+                x=optimize::mu_renyi(old_current,old_cluster,current,cluster,m,init,weights,z,2,final_cost);
             }
             // std::cout<<(std::string)x<<"\n";
             
@@ -903,7 +906,12 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
         //calculate reconstruction error |ax-b|^2_F, normalized by tr_bTb
         tr_axTax=optimize::calc_tr_axTax(aTa_legs,weights);
         tr_axTb=optimize::calc_tr_axTb(aTb_legs,old_current,old_cluster,weights);
-        err=(tr_axTax+tr_bTb-(2*tr_axTb))/tr_bTb;
+        if(solver!="murenyi"){
+            err=(tr_axTax+tr_bTb-(2*tr_axTb))/tr_bTb;
+        }
+        else{
+            err=final_cost;
+        }
         if((it>0)&&(fabs(prev_err-err)<1e-8)){
             std::cout<<"CPD converged after "<<it<<" iterations.\n";
             break;
@@ -1009,7 +1017,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site>& si
             err=optimize::tree_cpd(master,slave,sites,old_current,old_cluster,trial_current,trial_cluster,max_it,init_method,solver,1);
         }
         // double kl=kl_div(sites,old_current,old_cluster,current,cluster);
-        std::cout<<"rec. error: "<<err<<"\n";
+        std::cout<<"cost: "<<err<<"\n";
         
         //check if better and update best result
         if(fabs(err)<best_err){

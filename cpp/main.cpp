@@ -426,7 +426,7 @@ int main(int argc,char **argv){
             std::stringstream mc_output_line_ss;
             //MC observables
             sw.start();
-            std::vector<sample_data> samples=sampling::mh_sample(g,10000);
+            std::vector<sample_data> samples=sampling::mh_sample(g,100000);
             // std::vector<sample_data> samples=sampling::mh_sample(g,n_config_samples);
             std::vector<double> e_mc_res=sampling::e_mc(samples);
             std::vector<double> m_mc_res=sampling::m_mc(samples,q);
@@ -484,7 +484,7 @@ int main(int argc,char **argv){
             //compute output quantities
             q2_var=q4-pow(q2,2);
             q2_std=sqrt(q2_var);
-            sus_fm=n_phys_sites*m1_2_abs; //chi_fm=n*var(m)
+            sus_fm=n_phys_sites*m2_1; //chi_fm=n*var(m)
             sus_sg=n_phys_sites*q2; //chi_sg=n*var(q)
             binder_m=0.5*(3-(m4_1/pow(m2_1,2)));
             binder_q=0.5*(3-(q4/pow(q2,2)));

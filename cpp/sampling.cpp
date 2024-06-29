@@ -271,8 +271,7 @@ std::vector<sample_data> sampling::local_mh_sample(size_t root,graph<cmp>& g,siz
     // double acceptance_ratio=0;
     size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
     while(accepted_count<n_samples){
-        for(size_t k=0;k<1;k++){ //number of sweeps
-            size_t phys_site_update_count=0;
+        for(size_t k=0;k<10;k++){ //number of sweeps
             for(size_t n=0;n<g.n_phys_sites();n++){
                 // std::cout<<"n: "<<n<<"\n";
                 bond current=g.vs()[g.vs()[n].u_idx()].p_bond();
@@ -283,7 +282,7 @@ std::vector<sample_data> sampling::local_mh_sample(size_t root,graph<cmp>& g,siz
                     std::vector<std::vector<array1d<double> > > r_env;
                     std::vector<std::vector<array1d<double> > > u_env;
                     calc_w(g,v,l_env,r_env,u_env);
-                    array1d<double> x((n==current.v1())?current.w().nx():current.w().ny()); //TODO: calculate weight vector via calc_w(g,v,l_env,r_env,u_env) where v is a vector containing mc0 then contract tensors
+                    array1d<double> x((n==current.v1())?current.w().nx():current.w().ny()); //calculate weight vector
                     std::vector<double> sum_addends;
                     for(size_t i=0;i<current.w().nx();i++){
                         std::vector<double> addends;

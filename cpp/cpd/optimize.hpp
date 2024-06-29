@@ -18,7 +18,7 @@ namespace optimize{
     double calc_tr_bTb(std::vector<array3d<double> >&,bond&,std::vector<bond>&);
     array3d<double> nn_hals(array3d<double>&,array3d<double>&,array3d<double>&);
     array3d<double> mu_ls(array3d<double>&,array3d<double>&,array3d<double>&);
-    array3d<double> mu_renyi(bond&,std::vector<bond>&,bond&,std::vector<bond>&,size_t,array3d<double>&,std::vector<double>&,double,double);
+    array3d<double> mu_renyi(bond&,std::vector<bond>&,bond&,std::vector<bond>&,size_t,array3d<double>&,std::vector<double>&,double,double,double&);
     array3d<double> mu_kl(array3d<double>&,array3d<double>&,array3d<double>&);
     void normalize(bond&,std::vector<bond>&,std::vector<double>&);
     void unnormalize(bond&,std::vector<double>&);
