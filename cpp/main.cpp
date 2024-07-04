@@ -28,6 +28,7 @@ void print_usage(){
     std::cerr<<"options:\n";
     std::cerr<<"\t--open-bc: generate graph connectivity with open boundary conditions.\n";
     std::cerr<<"\t--use-t: min_beta, max_beta, and step_beta refer to temperature instead.\n";
+    std::cerr<<"\t--rand-mc: MC is done with random initial state for the Markov chain instead of using the tree approximation.\n";
     std::cerr<<"\t-h,--help: display this message\n";
     std::cerr<<"\t-v,--verbose:\n\t\t0->nothing printed to stdout (forced for MPI)\n\t\t1->sample number and aggregate timing data\n\t\t2->per-instance timing\n\t\t3->more detailed timing breakdown\n\t\t4->graph contents, debug observable data\n";
     std::cerr<<"\t-i,--input: path to specified input file containing graph description. the graph is assumed to not contain multiedges.\n";
@@ -110,6 +111,7 @@ int main(int argc,char **argv){
     //argument handling
     int open_bc=0;
     int use_t=0;
+    int rand_mc=0;
     int output_overlaps=0;
     size_t verbose=0;
     bool input_set=false;
@@ -144,6 +146,7 @@ int main(int argc,char **argv){
         static struct option long_opts[]={
             {"open-bc",no_argument,&open_bc,1},
             {"use-t",no_argument,&use_t,1},
+            {"rand-mc",no_argument,&rand_mc,1},
             {"output-overlaps",no_argument,&output_overlaps,1},
             {"help",no_argument,0,'h'},
             {"verbose",required_argument,0,'v'},
@@ -426,8 +429,11 @@ int main(int argc,char **argv){
             std::stringstream mc_output_line_ss;
             //MC observables
             sw.start();
-            std::vector<sample_data> samples=sampling::mh_sample(g,100000);
-            // std::vector<sample_data> samples=sampling::mh_sample(g,n_config_samples);
+            if(rand_mc){
+                std::cout<<"Random MC initialization chosen.\n";
+            }
+            std::vector<sample_data> samples=sampling::local_mh_sample(g,1000,rand_mc);
+            // std::vector<sample_data> samples=sampling::mh_sample(g,1000,rand_mc);
             std::vector<double> e_mc_res=sampling::e_mc(samples);
             std::vector<double> m_mc_res=sampling::m_mc(samples,q);
             // std::vector<double> overlaps;

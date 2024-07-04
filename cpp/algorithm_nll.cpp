@@ -27,10 +27,10 @@ std::vector<double> algorithm::train_nll(graph<cmp>& g,size_t n_cycles,size_t n_
     if(n_cycles==0){
         return acceptance_ratios;
     }
-    std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples);
+    std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,0);
     std::cout<<n_samples<<" samples generated via local MH\n";
-    sampling::mh_sample(g,n_samples,acceptance_ratio);
-    // std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,acceptance_ratio);
+    sampling::mh_sample(g,n_samples,acceptance_ratio,0);
+    // std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,acceptance_ratio,0);
     acceptance_ratios.push_back(acceptance_ratio);
     // for(size_t s=0;s<n_samples;s+=2){
         // for(size_t m=0;m<g.n_phys_sites();m++){
@@ -42,14 +42,15 @@ std::vector<double> algorithm::train_nll(graph<cmp>& g,size_t n_cycles,size_t n_
         std::cout<<"cycle "<<c<<"\n";
         double nll=optimize::opt_nll(g,samples,iter_max);
         // double nll=optimize::hopt_nll(g,n_samples,iter_max);
+        // double nll=optimize::hopt_nll2(g,n_samples,iter_max);
         for(auto it=g.es().begin();it!=g.es().end();++it){
             bond current=*it;
             algorithm::calculate_site_probs(g,current);
         }
-        samples=sampling::local_mh_sample(g,n_samples);
+        samples=sampling::local_mh_sample(g,n_samples,0);
         std::cout<<n_samples<<" samples generated via local MH\n";
-        sampling::mh_sample(g,n_samples,acceptance_ratio);
-        // samples=sampling::mh_sample(g,n_samples,acceptance_ratio);
+        sampling::mh_sample(g,n_samples,acceptance_ratio,0);
+        // samples=sampling::mh_sample(g,n_samples,acceptance_ratio,0);
         acceptance_ratios.push_back(acceptance_ratio);
         if(acceptance_ratio>best_acceptance_ratio){
             best_acceptance_ratio=acceptance_ratio;
