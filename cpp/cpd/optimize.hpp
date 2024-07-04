@@ -27,6 +27,7 @@ namespace optimize{
     
     double calc_cmd(size_t,size_t,std::vector<site>&,bond&,std::vector<bond>&,bond&,std::vector<bond>&,std::vector<double>&,std::vector<double>&,double);
     double kl_div(double,double,std::vector<double>&,std::vector<double>&,bond&,std::vector<bond>&,bond&,std::vector<bond>&,array2d<size_t>&);
+    double renyi_div(bond&,std::vector<bond>&,bond&,std::vector<bond>&,std::vector<double>&,double,double);
 };
 
 #endif

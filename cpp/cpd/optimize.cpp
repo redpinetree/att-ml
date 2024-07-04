@@ -308,7 +308,7 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
     }
     array3d<double> prev_x=x;
         
-    double eps=1e-16;
+    double eps=1e-100;
     double delta_first=0;
     double prev_cost=1e50;
     for(size_t it=0;it<1000;it++){
@@ -818,7 +818,14 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
     double tr_bTb=optimize::calc_tr_bTb(bTb_legs,old_current,old_cluster);
     double prev_err=0;
     double final_cost;
-    double err=(tr_axTax+tr_bTb-(2*tr_axTb))/tr_bTb;
+    double err;
+    if(solver!="murenyi"){
+        err=(tr_axTax+tr_bTb-(2*tr_axTb))/tr_bTb;
+    }
+    else{
+        err=renyi_div(old_current,old_cluster,current,cluster,weights,z,2);
+    }
+    
     std::cout<<"initial cost: "<<err<<"\n";
     for(size_t it=0;it<max_it;it++){
         // std::cout<<"iteration "<<it<<"\n";
@@ -1345,7 +1352,7 @@ double optimize::calc_cmd(size_t master,size_t slave,std::vector<site>& sites,bo
     for(size_t n=0;n<trial_cluster.size();n++){
         cluster[n].w()=trial_cluster[n].w();
     }
-    std::cout<<"final cost: "<<cost<<"\n";
+    std::cout<<"final KL cost: "<<cost<<"\n";
     return cost;
 }
 
@@ -1467,4 +1474,140 @@ double optimize::kl_div(double z,double z_prime,std::vector<double>& gi,std::vec
     
     double res=((a/z)+(b/z)-log(z))-((a_prime/z)+(b_prime/z)-log(z_prime));
     return res;
+}
+
+double optimize::renyi_div(bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,std::vector<double>& weights,double z,double rho){
+    bond current_bk=current;
+    for(size_t i=0;i<current.w().nx();i++){
+        for(size_t j=0;j<current.w().ny();j++){
+            for(size_t k=0;k<current.w().nz();k++){
+                current.w().at(i,j,k)*=weights[k];
+            }
+        }
+    }
+    size_t r_i=current.w().nx();
+    size_t r_j=current.w().ny();
+    size_t r_k=current.w().nz();
+    
+    double cost=0;
+        
+    //calculate G'_i(S_k) and G'_j(S_k)
+    std::vector<double> gi_prime(r_k,1);
+    std::vector<double> gj_prime(r_k,1);
+    for(size_t k=0;k<r_k;k++){
+        std::vector<double> gi_prime_factors;
+        std::vector<double> gj_prime_factors;
+        for(size_t n=0;n<cluster.size();n++){
+            if((old_cluster[n].v1()==old_current.v1())||(old_cluster[n].v2()==old_current.v1())){ //connected to site i
+                gi_prime_factors.push_back((cluster[n].w().sum_over_axis(0,2))[k]);
+            }
+            else{ //connected to site j
+                gj_prime_factors.push_back((cluster[n].w().sum_over_axis(0,2))[k]);
+            }
+        }
+        gi_prime[k]=vec_mult_float(gi_prime_factors);
+        gj_prime[k]=vec_mult_float(gj_prime_factors);
+    }
+    //calculate F'_i(S_i,S_k,S_k',a) and F'_j(S_j,S_k,S_k',a) and keep F factors
+    std::vector<array3d<double> > f_factors;
+    array3d<double> fi_prime(current.w().nx(),r_k,r_k);
+    array3d<double> fj_prime(current.w().ny(),r_k,r_k);
+    for(size_t n=0;n<cluster.size();n++){
+        if((old_cluster[n].v1()==old_current.v1())||(old_cluster[n].v2()==old_current.v1())){ //connected to site i
+            f_factors.push_back(array3d<double>(current.w().nx(),r_k,r_k));
+        }
+        else{ //connected to site j
+            f_factors.push_back(array3d<double>(current.w().ny(),r_k,r_k));
+        }
+    }
+    for(size_t k=0;k<r_k;k++){
+        for(size_t k2=0;k2<r_k;k2++){
+            std::vector<std::vector<double> > fi_prime_factors;
+            std::vector<std::vector<double> > fj_prime_factors;
+            for(size_t i=0;i<current.w().nx();i++){
+                fi_prime_factors.push_back(std::vector<double>());
+            }
+            for(size_t j=0;j<current.w().ny();j++){
+                fj_prime_factors.push_back(std::vector<double>());
+            }
+            for(size_t n=0;n<cluster.size();n++){
+                if((old_cluster[n].v1()==old_current.v1())||(old_cluster[n].v2()==old_current.v1())){ //connected to site i
+                    for(size_t i=0;i<old_current.w().nx();i++){
+                        std::vector<double> sum_addends;
+                        for(size_t imu=0;imu<cluster[n].w().nx();imu++){
+                            double num=cluster[n].w().at(imu,k2,0);
+                            double denom;
+                            if(old_cluster[n].v1()==current.v1()){ //site imu > site i
+                                denom=old_cluster[n].w().at(i,imu,0);
+                            }
+                            else{ //site imu < site i
+                                denom=old_cluster[n].w().at(imu,i,0);
+                            }
+                            sum_addends.push_back(pow(cluster[n].w().at(imu,k,0),1/(rho-1))*num/denom);
+                        }
+                        double sum=vec_add_float(sum_addends);
+                        fi_prime_factors[i].push_back(sum);
+                        f_factors[n].at(i,k,k2)=sum;
+                    }
+                }
+                else{ //connected to site j
+                    for(size_t j=0;j<old_current.w().ny();j++){
+                        std::vector<double> sum_addends;
+                        for(size_t imu=0;imu<cluster[n].w().nx();imu++){
+                            double num=cluster[n].w().at(imu,k2,0);
+                            double denom;
+                            if(old_cluster[n].v1()==current.v2()){ //site imu > site j
+                                denom=old_cluster[n].w().at(j,imu,0);
+                            }
+                            else{ //site imu < site j
+                                denom=old_cluster[n].w().at(imu,j,0);
+                            }
+                            sum_addends.push_back(pow(cluster[n].w().at(imu,k,0),1/(rho-1))*num/denom);
+                        }
+                        double sum=vec_add_float(sum_addends);
+                        fj_prime_factors[j].push_back(sum);
+                        f_factors[n].at(j,k,k2)=sum;
+                    }
+                }
+            }
+            for(size_t i=0;i<current.w().nx();i++){
+                fi_prime.at(i,k,k2)=vec_mult_float(fi_prime_factors[i]);
+            }
+            for(size_t j=0;j<current.w().ny();j++){
+                fj_prime.at(j,k,k2)=vec_mult_float(fj_prime_factors[j]);
+            }
+        }
+    }
+    //calculate P'_{ki_\mu} and Z' (as sum_p_prime_env)
+    std::vector<double> sum_p_prime_addends;
+    for(size_t i=0;i<current.w().nx();i++){
+        for(size_t j=0;j<current.w().ny();j++){
+            for(size_t k=0;k<current.w().nz();k++){
+                std::vector<double> factors_env;
+                factors_env.push_back(gi_prime[k]);
+                factors_env.push_back(gj_prime[k]);
+                factors_env.push_back(current.w().at(i,j,k));
+                sum_p_prime_addends.push_back(vec_mult_float(factors_env));
+            }
+        }
+    }
+    double z_prime=vec_add_float(sum_p_prime_addends);
+    
+    //calculate intermediate factors (and cost function in the process)
+    std::vector<double> sum_factors_addends;
+    for(size_t i=0;i<current.w().nx();i++){
+        for(size_t j=0;j<current.w().ny();j++){
+            for(size_t k=0;k<current.w().nz();k++){
+                std::vector<double> k2_sum_addends;
+                for(size_t k2=0;k2<current.w().nz();k2++){
+                    k2_sum_addends.push_back(current.w().at(i,j,k2)/old_current.w().at(i,j,0)*fi_prime.at(i,k,k2)*fj_prime.at(j,k,k2));
+                }
+                sum_factors_addends.push_back(current.w().at(i,j,k)*pow(vec_add_float(k2_sum_addends),rho-1));
+            }
+        }
+    }
+    double sum_factors=vec_add_float(sum_factors_addends);
+    cost=log(sum_factors*pow(z,rho-1)/pow(z_prime,rho));
+    current=current_bk;
+    return cost;
 }
