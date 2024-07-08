@@ -47,19 +47,25 @@ namespace sampling{
     template<typename cmp>
     std::vector<sample_data> mh_sample(graph<cmp>&,size_t,bool);
     template<typename cmp>
-    std::vector<sample_data> mh_sample(size_t,graph<cmp>&,size_t,bool);
-    template<typename cmp>
     std::vector<sample_data> mh_sample(graph<cmp>&,size_t,double&,bool);
     template<typename cmp>
-    std::vector<sample_data> local_mh_sample(graph<cmp>&,size_t,bool);
+    std::vector<sample_data> mh_sample(size_t,graph<cmp>&,size_t,double&,bool);
     template<typename cmp>
-    std::vector<sample_data> local_mh_sample(size_t,graph<cmp>&,size_t,bool);
+    std::vector<sample_data> local_mh_sample(graph<cmp>&,size_t,size_t,bool);
+    template<typename cmp>
+    std::vector<sample_data> local_mh_sample(size_t,graph<cmp>&,size_t,size_t,bool);
+    template<typename cmp>
+    std::vector<sample_data> hybrid_mh_sample(graph<cmp>&,size_t,size_t,bool);
+    template<typename cmp>
+    std::vector<sample_data> hybrid_mh_sample(size_t,graph<cmp>&,size_t,size_t,bool);
     std::vector<sample_data> symmetrize_samples(std::vector<sample_data>&);
     template<typename cmp>
     void update_samples(size_t,graph<cmp>&,std::vector<sample_data>&);
     std::vector<double> pair_overlaps(std::vector<sample_data>,size_t);
-    std::vector<double> e_mc(std::vector<sample_data>&);
-    std::vector<double> m_mc(std::vector<sample_data>&,size_t);
+    template<typename cmp>
+    std::vector<double> e_mc(graph<cmp>&,std::vector<sample_data>&);
+    template<typename cmp>
+    std::vector<double> m_mc(graph<cmp>&,std::vector<sample_data>&,size_t);
     std::vector<double> q_mc(std::vector<sample_data>&,size_t,std::vector<double>&);
     double expected_e(std::vector<sample_data>);
     double min_e(std::vector<sample_data>);

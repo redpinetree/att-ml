@@ -3,7 +3,8 @@
 #include "ttn_ops.hpp"
 
 template<typename cmp>
-double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t iter_max){
+double optimize::opt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
+    if(iter_max==0){return 0;}
     double prev_nll=1e50;
     double nll=0;
     //adam variables
@@ -21,6 +22,9 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
         v[n]=array3d<double>(current.w().nx(),current.w().ny(),current.w().nz());
     }
     
+    // std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,0); //consider subtree rooted at n
+    // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
+    std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
     //symmetrize samples
     std::vector<sample_data> sym_samples=sampling::symmetrize_samples(samples);
     
@@ -110,10 +114,10 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
     }
     return nll;
 }
-template double optimize::opt_nll(graph<bmi_comparator>&,std::vector<sample_data>&,size_t);
+template double optimize::opt_nll(graph<bmi_comparator>&,size_t,size_t,size_t);
 
 template<typename cmp>
-double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t iter_max){
+double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
     double nll=0;
     //adam variables
     double alpha=0.01;
@@ -143,7 +147,8 @@ double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t iter_max){
         //construct sample data, only when considering tensors at max layer or at next layer
         if(current_depth>=max_depth){
             std::cout<<"constructing new dataset rooted at tensor "<<n<<"\n";
-            std::vector<sample_data> samples=sampling::local_mh_sample(n,g,n_samples,0); //consider subtree rooted at n
+            // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
+            std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
             //symmetrize samples
             sym_samples=sampling::symmetrize_samples(samples);
         }
@@ -260,10 +265,10 @@ double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t iter_max){
     
     return nll;
 }
-template double optimize::hopt_nll(graph<bmi_comparator>&,size_t,size_t);
+template double optimize::hopt_nll(graph<bmi_comparator>&,size_t,size_t,size_t);
 
 template<typename cmp>
-double optimize::hopt_nll2(graph<cmp>& g,size_t n_samples,size_t iter_max){
+double optimize::hopt_nll2(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
     double nll=0;
     //adam variables
     double alpha=0.01;
@@ -283,7 +288,8 @@ double optimize::hopt_nll2(graph<cmp>& g,size_t n_samples,size_t iter_max){
     size_t current_depth=1;
     size_t max_depth=1;
     auto it=g.es().begin();
-    std::vector<sample_data> samples=sampling::local_mh_sample(g.vs().size()-1,g,n_samples,0);
+    // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
+    std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
     std::vector<sample_data> sym_samples=sampling::symmetrize_samples(samples);
     std::multiset<bond,bmi_comparator> new_es;
     while(it!=g.es().end()){ //due to comparator, bonds are already sorted by depth
@@ -418,4 +424,4 @@ double optimize::hopt_nll2(graph<cmp>& g,size_t n_samples,size_t iter_max){
     
     return nll;
 }
-template double optimize::hopt_nll2(graph<bmi_comparator>&,size_t,size_t);
+template double optimize::hopt_nll2(graph<bmi_comparator>&,size_t,size_t,size_t);

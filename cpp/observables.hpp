@@ -9,6 +9,7 @@
 
 #include "graph.hpp"
 #include "ndarray.hpp"
+#include "sampling.hpp"
 
 namespace observables{
     extern std::vector<std::string> output_lines;
@@ -50,6 +51,10 @@ namespace observables{
     
     template<typename cmp>
     void print_moments(graph<cmp>&,size_t); //debug
+    template<typename cmp>
+    void calc_tree_observables(graph<cmp>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,bool);
+    template<typename cmp>
+    void calc_mc_observables(graph<cmp>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,size_t,size_t,size_t,bool);
     void write_output(std::string,std::vector<std::string>&);
     void write_output(std::vector<std::string>&);
     void write_binary_output(std::string,std::vector<std::pair<double,std::vector<double> > >&);

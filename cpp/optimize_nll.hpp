@@ -9,11 +9,11 @@
 
 namespace optimize{
     template<typename cmp>
-    double opt_nll(graph<cmp>&,std::vector<sample_data>&,size_t);
+    double opt_nll(graph<cmp>&,size_t,size_t,size_t);
     template<typename cmp>
-    double hopt_nll(graph<cmp>&,size_t,size_t);
+    double hopt_nll(graph<cmp>&,size_t,size_t,size_t);
     template<typename cmp>
-    double hopt_nll2(graph<cmp>&,size_t,size_t);
+    double hopt_nll2(graph<cmp>&,size_t,size_t,size_t);
 };
 
 #endif

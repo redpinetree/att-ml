@@ -167,12 +167,12 @@ sample_data sampling::tree_sample(graph<cmp>& g){
 template sample_data sampling::tree_sample(graph<bmi_comparator>&);
 
 template<typename cmp>
-std::vector<sample_data> sampling::sample(graph<cmp>& g,size_t n_samples,bool random){
+std::vector<sample_data> sampling::sample(graph<cmp>& g,size_t n_samples,bool rand_mc){
     std::vector<sample_data> samples;
     samples.reserve(n_samples);
     for(size_t n=0;n<n_samples;n++){
         sample_data s;
-        if(random){
+        if(rand_mc){
             s=sampling::random_sample(g);
         }
         else{
@@ -185,119 +185,82 @@ std::vector<sample_data> sampling::sample(graph<cmp>& g,size_t n_samples,bool ra
 template std::vector<sample_data> sampling::sample(graph<bmi_comparator>&,size_t,bool);
 
 template<typename cmp>
-std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,bool random){
-    std::vector<sample_data> samples=sampling::mh_sample(g.vs().size()-1,g,n_samples,random);
+std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,bool rand_mc){
+    double acceptance_ratio; //dummy variable
+    std::vector<sample_data> samples=sampling::mh_sample(g.vs().size()-1,g,n_samples,acceptance_ratio,rand_mc);
     return samples;
 }
 template std::vector<sample_data> sampling::mh_sample(graph<bmi_comparator>&,size_t,bool);
 
 template<typename cmp>
-std::vector<sample_data> sampling::mh_sample(size_t root,graph<cmp>& g,size_t n_samples,bool random){
-    std::uniform_real_distribution<> unif_dist(0,1.0);
-    std::vector<sample_data> samples;
-    samples.reserve(n_samples*2); //including flip
-    //no need to equilibrate because draws are global and sampling from tree is perfect
-    sample_data mc0;
-    if(random){
-        mc0=sampling::random_sample(root,g);
-    }
-    else{
-        mc0=sampling::tree_sample(root,g);
-    }
-    double acceptance_ratio=0;
-    size_t n=0; //markov chain length
-    size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
-    while(accepted_count<n_samples){
-        sample_data mc1;
-        if(random){
-            mc1=sampling::random_sample(g);
-        }
-        else{
-            mc1=sampling::tree_sample(g);
-        }
-        double p1=mc0.log_w()-mc1.log_w();
-        double p2=-g.beta()*(mc1.e()-mc0.e());
-        double p=p1+p2;
-        double r=log(unif_dist(mpi_utils::prng));
-        if(r<p){
-            mc0=mc1;
-            acceptance_ratio++;
-        }
-        //keep every 100th sample, rest are to approximate acceptance ratio
-        if((n%100)==0){
-            samples.push_back(mc0);
-            accepted_count++;
-        }
-        n++;
-        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
-    }
-    acceptance_ratio/=(double) n;
-    std::cout<<"acceptance ratio: "<<acceptance_ratio<<"\n";
-    return samples;
-}
-template std::vector<sample_data> sampling::mh_sample(size_t,graph<bmi_comparator>&,size_t,bool);
-
-template<typename cmp>
-std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,double& acceptance_ratio,bool random){
-    std::uniform_real_distribution<> unif_dist(0,1.0);
-    std::vector<sample_data> samples;
-    samples.reserve(n_samples*2); //including flip
-    //no need to equilibrate because draws are global and sampling from tree is perfect
-    sample_data mc0;
-    if(random){
-        mc0=sampling::random_sample(g);
-    }
-    else{
-        mc0=sampling::tree_sample(g);
-    }
-    acceptance_ratio=0;
-    size_t n=0; //markov chain length
-    size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
-    while(accepted_count<n_samples){
-        sample_data mc1;
-        if(random){
-            mc1=sampling::random_sample(g);
-        }
-        else{
-            mc1=sampling::tree_sample(g);
-        }
-        double p1=mc0.log_w()-mc1.log_w();
-        double p2=-g.beta()*(mc1.e()-mc0.e());
-        double p=p1+p2;
-        double r=log(unif_dist(mpi_utils::prng));
-        if(r<p){
-            mc0=mc1;
-            acceptance_ratio++;
-        }
-        //keep every 100th sample, rest are to approximate acceptance ratio
-        if((n%100)==0){
-            samples.push_back(mc0);
-            accepted_count++;
-        }
-        n++;
-        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
-    }
-    acceptance_ratio/=(double) n;
+std::vector<sample_data> sampling::mh_sample(graph<cmp>& g,size_t n_samples,double& acceptance_ratio,bool rand_mc){
+    std::vector<sample_data> samples=sampling::mh_sample(g.vs().size()-1,g,n_samples,acceptance_ratio,rand_mc);
     std::cout<<"acceptance ratio: "<<acceptance_ratio<<"\n";
     return samples;
 }
 template std::vector<sample_data> sampling::mh_sample(graph<bmi_comparator>&,size_t,double&,bool);
 
 template<typename cmp>
-std::vector<sample_data> sampling::local_mh_sample(graph<cmp>& g,size_t n_samples,bool random){
-    std::vector<sample_data> samples=sampling::local_mh_sample(g.vs().size()-1,g,n_samples,random);
-    return samples;
-}
-template std::vector<sample_data> sampling::local_mh_sample(graph<bmi_comparator>&,size_t,bool);
-
-template<typename cmp>
-std::vector<sample_data> sampling::local_mh_sample(size_t root,graph<cmp>& g,size_t n_samples,bool random){
+std::vector<sample_data> sampling::mh_sample(size_t root,graph<cmp>& g,size_t n_samples,double& acceptance_ratio,bool rand_mc){
     std::uniform_real_distribution<> unif_dist(0,1.0);
     std::vector<sample_data> samples;
     samples.reserve(n_samples*2); //including flip
     //no need to equilibrate because draws are global and sampling from tree is perfect
     sample_data mc0;
-    if(random){
+    if(rand_mc){
+        mc0=sampling::random_sample(root,g);
+    }
+    else{
+        mc0=sampling::tree_sample(root,g);
+    }
+    acceptance_ratio=0;
+    size_t n=0; //markov chain length
+    size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
+    while(accepted_count<n_samples){
+        sample_data mc1;
+        if(rand_mc){
+            mc1=sampling::random_sample(g);
+        }
+        else{
+            mc1=sampling::tree_sample(g);
+        }
+        double p1=mc0.log_w()-mc1.log_w();
+        double p2=-g.beta()*(mc1.e()-mc0.e());
+        double p=p1+p2;
+        double r=log(unif_dist(mpi_utils::prng));
+        if(r<p){
+            mc0=mc1;
+            acceptance_ratio++;
+        }
+        //keep every 100th sample, rest are to approximate acceptance ratio
+        if((n%100)==0){
+            samples.push_back(mc0);
+            accepted_count++;
+        }
+        n++;
+        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
+    }
+    acceptance_ratio/=(double) n;
+    // std::cout<<"acceptance ratio: "<<acceptance_ratio<<"\n";
+    return samples;
+}
+template std::vector<sample_data> sampling::mh_sample(size_t,graph<bmi_comparator>&,size_t,double&,bool);
+
+template<typename cmp>
+std::vector<sample_data> sampling::local_mh_sample(graph<cmp>& g,size_t n_samples,size_t n_sweeps,bool rand_mc){
+    std::vector<sample_data> samples=sampling::local_mh_sample(g.vs().size()-1,g,n_samples,n_sweeps,rand_mc);
+    return samples;
+}
+template std::vector<sample_data> sampling::local_mh_sample(graph<bmi_comparator>&,size_t,size_t,bool);
+
+template<typename cmp>
+std::vector<sample_data> sampling::local_mh_sample(size_t root,graph<cmp>& g,size_t n_samples,size_t n_sweeps,bool rand_mc){
+    std::uniform_real_distribution<> unif_dist(0,1.0);
+    std::vector<sample_data> samples;
+    samples.reserve(n_samples);
+    //no need to equilibrate because draws are global and sampling from tree is perfect
+    sample_data mc0;
+    if(rand_mc){
         mc0=sampling::random_sample(root,g);
     }
     else{
@@ -306,71 +269,80 @@ std::vector<sample_data> sampling::local_mh_sample(size_t root,graph<cmp>& g,siz
     // double acceptance_ratio=0;
     size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
     while(accepted_count<n_samples){
-        for(size_t sweep=0;sweep<100;sweep++){ //number of sweeps
+        for(size_t sweep=0;sweep<n_sweeps;sweep++){ //number of sweeps
+            // for(size_t n=0;n<g.n_phys_sites();n++){
+                // std::cout<<mc0.s()[n]<<" ";
+            // }
+            // std::cout<<"\n";
             for(size_t n=0;n<g.n_phys_sites();n++){
                 // std::cout<<"n: "<<n<<"\n";
                 size_t new_s;
                 double p1,p2;
-                // if(random){
-                if(1){
-                    new_s=(mpi_utils::prng()%g.vs()[n].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+                // if(rand_mc){
+                if(mc0.s()[n]!=0){
+                    do{
+                        new_s=(mpi_utils::prng()%g.vs()[n].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+                    }
+                    while(mc0.s()[n]==new_s);
                     p1=0; //log(1)=0
                 }
-                else{
-                    bond current=g.vs()[g.vs()[n].u_idx()].p_bond();
-                    if(mc0.s()[n]!=0){ //ignore traced out sites
-                        std::vector<sample_data> v;
-                        v.push_back(mc0);
-                        std::vector<std::vector<array1d<double> > > l_env;
-                        std::vector<std::vector<array1d<double> > > r_env;
-                        std::vector<std::vector<array1d<double> > > u_env;
-                        calc_w(g,v,l_env,r_env,u_env);
-                        array1d<double> x((n==current.v1())?current.w().nx():current.w().ny()); //calculate weight vector
-                        std::vector<double> sum_addends;
-                        for(size_t i=0;i<current.w().nx();i++){
-                            std::vector<double> addends;
-                            for(size_t j=0;j<current.w().ny();j++){
-                                for(size_t k=0;k<current.w().nz();k++){
-                                    double contrib=current.w().at(i,j,k)+u_env[current.order()][0].at(k)+((n==current.v1())?r_env[current.order()][0].at(j):l_env[current.order()][0].at(i));
-                                    addends.push_back(contrib);
-                                    sum_addends.push_back(contrib);
-                                }
-                            }
-                            x.at(i)=lse(addends);
-                        }
-                        double sum=lse(sum_addends);
-                        for(size_t i=0;i<x.nx();i++){
-                            x.at(i)-=sum;
-                        }
-                        array1d<double> exp_x=x.exp_form();
-                        std::discrete_distribution<size_t> pdf=std::discrete_distribution<size_t>(exp_x.e().begin(),exp_x.e().end());
-                        new_s=pdf(mpi_utils::prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
-                        p1=x.at(mc0.s()[n])-x.at(new_s);
+                // else{
+                    // bond current=g.vs()[g.vs()[n].u_idx()].p_bond();
+                    // if(mc0.s()[n]!=0){ //ignore traced out sites
+                        // std::vector<sample_data> v;
+                        // v.push_back(mc0);
+                        // std::vector<std::vector<array1d<double> > > l_env;
+                        // std::vector<std::vector<array1d<double> > > r_env;
+                        // std::vector<std::vector<array1d<double> > > u_env;
+                        // calc_w(g,v,l_env,r_env,u_env);
+                        // array1d<double> x((n==current.v1())?current.w().nx():current.w().ny()); //calculate weight vector
+                        // std::vector<double> sum_addends;
+                        // for(size_t i=0;i<current.w().nx();i++){
+                            // std::vector<double> addends;
+                            // for(size_t j=0;j<current.w().ny();j++){
+                                // for(size_t k=0;k<current.w().nz();k++){
+                                    // double contrib=current.w().at(i,j,k)+u_env[current.order()][0].at(k)+((n==current.v1())?r_env[current.order()][0].at(j):l_env[current.order()][0].at(i));
+                                    // addends.push_back(contrib);
+                                    // sum_addends.push_back(contrib);
+                                // }
+                            // }
+                            // x.at(i)=lse(addends);
+                        // }
+                        // double sum=lse(sum_addends);
+                        // for(size_t i=0;i<x.nx();i++){
+                            // x.at(i)-=sum;
+                        // }
+                        // array1d<double> exp_x=x.exp_form();
+                        // std::discrete_distribution<size_t> pdf=std::discrete_distribution<size_t>(exp_x.e().begin(),exp_x.e().end());
+                        // do{
+                            // new_s=pdf(mpi_utils::prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+                        // }
+                        // while(mc0.s()[n]==new_s);
+                        // p1=x.at(mc0.s()[n])-x.at(new_s);
+                    // }
+                // }
+                double delta_e=0;
+                for(size_t m=0;m<g.vs()[n].orig_ks_idxs().size();m++){
+                    std::tuple<size_t,size_t,double> k_obj=g.orig_ks()[g.vs()[n].orig_ks_idxs()[m]];
+                    size_t v1=std::get<0>(k_obj);
+                    size_t v2=std::get<1>(k_obj);
+                    // std::cout<<std::get<0>(k_obj)<<" "<<std::get<1>(k_obj)<<" "<<std::get<2>(k_obj) <<"\n";
+                    if(v1==n){
+                        // std::cout<<g.vs()[n].orig_ks_idxs()[m]<<","<<v1<<","<<v2<<" "<<new_s<<","<<mc0.s()[v2]<<"\n";
+                        delta_e+=(new_s!=mc0.s()[v2])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                    }
+                    else{
+                        // std::cout<<g.vs()[n].orig_ks_idxs()[m]<<","<<v1<<","<<v2<<" "<<new_s<<","<<mc0.s()[v1]<<"\n";
+                        delta_e+=(new_s!=mc0.s()[v1])?std::get<2>(k_obj):-std::get<2>(k_obj);
                     }
                 }
-                if((mc0.s()[n]!=0)&&(mc0.s()[n]!=new_s)){
-                    double delta_e=0;
-                    for(size_t m=0;m<g.vs()[n].orig_ks_idxs().size();m++){
-                        std::tuple<size_t,size_t,double> k_obj=g.orig_ks()[g.vs()[n].orig_ks_idxs()[m]];
-                        size_t v1=std::get<0>(k_obj);
-                        size_t v2=std::get<1>(k_obj);
-                        if(v1==n){
-                            // std::cout<<g.vs()[n].orig_ks_idxs()[m]<<","<<v1<<","<<v2<<" "<<new_s<<","<<mc0.s()[v2]<<"\n";
-                            delta_e+=(new_s!=mc0.s()[v2])?std::get<2>(k_obj):0;
-                        }
-                        else{
-                            // std::cout<<g.vs()[n].orig_ks_idxs()[m]<<","<<v1<<","<<v2<<" "<<new_s<<","<<mc0.s()[v1]<<"\n";
-                            delta_e+=(new_s!=mc0.s()[v1])?std::get<2>(k_obj):0;
-                        }
-                    }
-                    p2=-g.beta()*delta_e;
-                    double p=p1+p2;
-                    double r=log(unif_dist(mpi_utils::prng));
-                    if(r<p){
-                        mc0.s()[n]=new_s;
-                    }
-                    // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
+                p2=-g.beta()*delta_e;
+                double p=p1+p2;
+                double r=log(unif_dist(mpi_utils::prng));
+                if(r<p){
+                    mc0.s()[n]=new_s;
                 }
+                // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<r<<" "<<(r<p?"accept":"reject")<<"\n";
             }
         }
         mc0.e()=sampling::calc_sample_e(g,mc0.s());
@@ -379,7 +351,70 @@ std::vector<sample_data> sampling::local_mh_sample(size_t root,graph<cmp>& g,siz
     }
     return samples;
 }
-template std::vector<sample_data> sampling::local_mh_sample(size_t,graph<bmi_comparator>&,size_t,bool);
+template std::vector<sample_data> sampling::local_mh_sample(size_t,graph<bmi_comparator>&,size_t,size_t,bool);
+
+template<typename cmp>
+std::vector<sample_data> sampling::hybrid_mh_sample(graph<cmp>& g,size_t n_samples,size_t n_sweeps,bool rand_mc){
+    std::vector<sample_data> samples=sampling::hybrid_mh_sample(g.vs().size()-1,g,n_samples,n_sweeps,rand_mc);
+    return samples;
+}
+template std::vector<sample_data> sampling::hybrid_mh_sample(graph<bmi_comparator>&,size_t,size_t,bool);
+
+template<typename cmp>
+std::vector<sample_data> sampling::hybrid_mh_sample(size_t root,graph<cmp>& g,size_t n_samples,size_t n_sweeps,bool rand_mc){
+    std::uniform_real_distribution<> unif_dist(0,1.0);
+    std::vector<sample_data> samples;
+    samples.reserve(n_samples*2); //including flip
+    //no need to equilibrate because draws are global and sampling from tree is perfect
+    size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
+    while(accepted_count<n_samples){
+        sample_data mc0;
+        if(rand_mc){
+            mc0=sampling::random_sample(g);
+        }
+        else{
+            mc0=sampling::tree_sample(g);
+        }
+        for(size_t sweep=0;sweep<n_sweeps;sweep++){ //number of sweeps
+            for(size_t n=0;n<g.n_phys_sites();n++){
+                // std::cout<<"n: "<<n<<"\n";
+                size_t new_s;
+                double p1,p2;
+                if(mc0.s()[n]!=0){
+                    do{
+                        new_s=(mpi_utils::prng()%g.vs()[n].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+                    }
+                    while(mc0.s()[n]==new_s);
+                    p1=0; //log(1)=0
+                }
+                double delta_e=0;
+                for(size_t m=0;m<g.vs()[n].orig_ks_idxs().size();m++){
+                    std::tuple<size_t,size_t,double> k_obj=g.orig_ks()[g.vs()[n].orig_ks_idxs()[m]];
+                    size_t v1=std::get<0>(k_obj);
+                    size_t v2=std::get<1>(k_obj);
+                    if(v1==n){
+                        delta_e+=(new_s!=mc0.s()[v2])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                    }
+                    else{
+                        delta_e+=(new_s!=mc0.s()[v1])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                    }
+                }
+                p2=-g.beta()*delta_e;
+                double p=p1+p2;
+                double r=log(unif_dist(mpi_utils::prng));
+                if(r<p){
+                    mc0.s()[n]=new_s;
+                }
+                // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<r<<" "<<(r<p?"accept":"reject")<<"\n";
+            }
+        }
+        samples.push_back(mc0);
+        accepted_count++;
+        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
+    }
+    return samples;
+}
+template std::vector<sample_data> sampling::hybrid_mh_sample(size_t,graph<bmi_comparator>&,size_t,size_t,bool);
 
 std::vector<sample_data> sampling::symmetrize_samples(std::vector<sample_data>& samples){
     std::vector<sample_data> sym_samples=samples;
@@ -503,8 +538,9 @@ std::vector<double> sampling::pair_overlaps(std::vector<sample_data> samples,siz
 }
 
 //assumes full config
-std::vector<double> sampling::e_mc(std::vector<sample_data>& samples){
-    //sample means
+template<typename cmp>
+std::vector<double> sampling::e_mc(graph<cmp>& g,std::vector<sample_data>& samples){
+    //sample mean
     double e1_mean=0;
     double e2_mean=0;
     for(size_t n=0;n<samples.size();n++){
@@ -513,26 +549,18 @@ std::vector<double> sampling::e_mc(std::vector<sample_data>& samples){
     }
     e1_mean/=(double) samples.size();
     e2_mean/=(double) samples.size();
-    //sample sds
-    double e1_sd=0;
-    double e2_sd=0;
-    for(size_t n=0;n<samples.size();n++){
-        e1_sd+=pow((samples[n].e()/(double) samples[n].n_phys_sites())-e1_mean,2.0);
-        e2_sd+=pow(pow(samples[n].e()/(double) samples[n].n_phys_sites(),2.0)-e2_mean,2.0);
-    }
-    e1_sd=sqrt(e1_sd/(double) (samples.size()-1));
-    e2_sd=sqrt(e2_sd/(double) (samples.size()-1));
+    
     //prepare output vector
     std::vector<double> res;
     res.push_back(e1_mean);
-    res.push_back(e1_sd);
     res.push_back(e2_mean);
-    res.push_back(e2_sd);
     return res;
 }
+template std::vector<double> sampling::e_mc(graph<bmi_comparator>&,std::vector<sample_data>&);
 
 //assumes full config
-std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_orig){
+template<typename cmp>
+std::vector<double> sampling::m_mc(graph<cmp>& g,std::vector<sample_data>& samples,size_t q_orig){
     //determine potts basis vectors
     std::vector<std::vector<double> > ref_basis=potts_ref_vecs(q_orig);
     std::vector<double> ms;
@@ -565,28 +593,15 @@ std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_or
     m1_abs_mean/=(double) ms.size();
     m2_mean/=(double) ms.size();
     m4_mean/=(double) ms.size();
-    //sample sds
-    double m1_abs_sd=0;
-    double m2_sd=0;
-    double m4_sd=0;
-    for(size_t n=0;n<ms.size();n++){
-        m1_abs_sd+=pow(fabs(ms[n])-m1_abs_mean,2.0);
-        m2_sd+=pow(pow(ms[n],2.0)-m2_mean,2.0);
-        m4_sd+=pow(pow(ms[n],4.0)-m4_mean,4.0);
-    }
-    m1_abs_sd=sqrt(m1_abs_sd/(double) (ms.size()-1));
-    m2_sd=sqrt(m2_sd/(double) (ms.size()-1));
-    m4_sd=sqrt(m4_sd/(double) (ms.size()-1));
+    
     //prepare output vector
     std::vector<double> res;
     res.push_back(m1_abs_mean);
-    res.push_back(m1_abs_sd);
     res.push_back(m2_mean);
-    res.push_back(m2_sd);
     res.push_back(m4_mean);
-    res.push_back(m4_sd);
     return res;
 }
+template std::vector<double> sampling::m_mc(graph<bmi_comparator>&,std::vector<sample_data>&,size_t);
 
 //assumes full config
 std::vector<double> sampling::q_mc(std::vector<sample_data>& samples,size_t q_orig,std::vector<double>& overlaps){
@@ -604,26 +619,26 @@ std::vector<double> sampling::q_mc(std::vector<sample_data>& samples,size_t q_or
     q2_mean/=(double) qs.size();
     q4_mean/=(double) qs.size();
     //sample sds
-    double q1_abs_sd=0;
-    double q2_sd=0;
-    double q4_sd=0;
+    double q1_abs_sem=0;
+    double q2_sem=0;
+    double q4_sem=0;
     for(size_t n=0;n<qs.size();n++){
-        q1_abs_sd+=pow(fabs(qs[n])-q1_abs_mean,2.0);
-        q2_sd+=pow(pow(qs[n],2.0)-q2_mean,2.0);
-        q4_sd+=pow(pow(qs[n],4.0)-q4_mean,4.0);
+        q1_abs_sem+=pow(fabs(qs[n])-q1_abs_mean,2.0);
+        q2_sem+=pow(pow(qs[n],2.0)-q2_mean,2.0);
+        q4_sem+=pow(pow(qs[n],4.0)-q4_mean,2.0);
     }
-    q1_abs_sd=sqrt(q1_abs_sd/(double) (qs.size()-1));
-    q2_sd=sqrt(q2_sd/(double) (qs.size()-1));
-    q4_sd=sqrt(q4_sd/(double) (qs.size()-1));
+    q1_abs_sem=sqrt(q1_abs_sem/(double) (qs.size()-1))/sqrt(samples.size());
+    q2_sem=sqrt(q2_sem/(double) (qs.size()-1))/sqrt(samples.size());
+    q4_sem=sqrt(q4_sem/(double) (qs.size()-1))/sqrt(samples.size());
     overlaps=qs; //for output
     //prepare output vector
     std::vector<double> res;
     res.push_back(q1_abs_mean);
-    res.push_back(q1_abs_sd);
+    res.push_back(q1_abs_sem);
     res.push_back(q2_mean);
-    res.push_back(q2_sd);
+    res.push_back(q2_sem);
     res.push_back(q4_mean);
-    res.push_back(q4_sd);
+    res.push_back(q4_sem);
     return res;
 }
 

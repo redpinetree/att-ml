@@ -18,8 +18,6 @@
 #include "algorithm_nll.hpp"
 #include "observables.hpp"
 
-#define PI 3.14159265358979323846
-
 void print_usage(){
     std::cerr<<"usage: cmd/renyi_approx [--options] <q> <n_samples> <d> <{l|l0,l1,...}> <min_beta> <max_beta> <step_beta>\n";
     std::cerr<<"usage: cmd/renyi_approx [--options] <q> 0 <min_beta> <max_beta> <step_beta>\n";
@@ -48,6 +46,7 @@ void print_usage(){
     std::cerr<<"\t-s,--samples: number of samples to obtain per temperature\n";
     std::cerr<<"\t-c,--cycles: number of NLL training cycles per temperature\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
+    std::cerr<<"\t-w,--n-sweeps: number of sweeps in local MH update before drawing sample\n";
 }
 
 template<typename cmp>
@@ -69,40 +68,6 @@ graph<cmp> gen_lattice(size_t q,std::vector<size_t> ls,bool open_bc,std::string 
         g=graph_utils::gen_hypercubic<std::uniform_real_distribution<double>,cmp>(q,ls,!open_bc,dist,beta);
     }
     return g;
-}
-
-template<typename cmp>
-void calc_observables(graph<cmp>& g,size_t q_orig,double& m1_1_abs,double& m1_2_abs,double& m2_1,double& m2_2,double& m4_1,double& m4_2,double& q2,double& q4){
-    //use bottom-up approach to compute observables, avoiding stack overflow
-    q2=observables::q(g,q_orig,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
-    q4=observables::q(g,q_orig,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
-    m1_1_abs=observables::m(g,q_orig,g.vs().size()-1,1,1,1)/g.n_phys_sites();
-    m1_2_abs=observables::m(g,q_orig,g.vs().size()-1,1,2,1)/g.n_phys_sites();
-    m2_1=observables::m(g,q_orig,g.vs().size()-1,2,1,0)/pow(g.n_phys_sites(),2);
-    m2_2=observables::m(g,q_orig,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
-    m4_1=observables::m(g,q_orig,g.vs().size()-1,4,1,0)/pow(g.n_phys_sites(),4);
-    m4_2=observables::m(g,q_orig,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
-}
-
-template<typename cmp>
-void calc_observables(graph<cmp>& g,size_t q_orig,double& m1_1_abs,double& m1_2_abs,double& m2_1,double& m2_2,double& m4_1,double& m4_2,double& q2,double& q4,double& k_min,std::complex<double>& q2_k){
-    //use bottom-up approach to compute observables, avoiding stack overflow
-    q2=observables::q(g,q_orig,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
-    q4=observables::q(g,q_orig,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
-    m1_1_abs=observables::m(g,q_orig,g.vs().size()-1,1,1,1)/g.n_phys_sites();
-    m1_2_abs=observables::m(g,q_orig,g.vs().size()-1,1,2,1)/g.n_phys_sites();
-    m2_1=observables::m(g,q_orig,g.vs().size()-1,2,1,0)/pow(g.n_phys_sites(),2);
-    m2_2=observables::m(g,q_orig,g.vs().size()-1,2,2,0)/pow(g.n_phys_sites(),2);
-    m4_1=observables::m(g,q_orig,g.vs().size()-1,4,1,0)/pow(g.n_phys_sites(),4);
-    m4_2=observables::m(g,q_orig,g.vs().size()-1,4,2,0)/pow(g.n_phys_sites(),4);
-    if(g.dims().size()!=0){
-        std::vector<double> k(g.dims().size(),0);
-        auto max_it=std::max_element(g.dims().begin(),g.dims().end());
-        size_t max_idx=max_it-g.dims().begin();
-        k_min=2*PI/(*max_it); //max dim yields min k
-        k[max_idx]=k_min;
-        q2_k=observables::m(g,q_orig,g.vs().size()-1,2,2,k,0)/pow(g.n_phys_sites(),2);
-    }
 }
 
 int main(int argc,char **argv){
@@ -141,6 +106,7 @@ int main(int argc,char **argv){
     size_t n_config_samples=10000;
     size_t n_cycles=0;
     size_t n_nll_iter_max=10000;
+    size_t n_sweeps=100;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -167,11 +133,12 @@ int main(int argc,char **argv){
             {"samples",required_argument,0,'s'},
             {"cycles",required_argument,0,'c'},
             {"nll-iter-max",required_argument,0,'N'},
+            {"n-sweeps",required_argument,0,'w'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
 #ifdef MODEL_CPD
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:S:R:s:c:N:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:S:R:s:c:N:w:",long_opts,&opt_idx);
 #else
         int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:s:c:N:",long_opts,&opt_idx);
 #endif
@@ -200,6 +167,7 @@ int main(int argc,char **argv){
             case 's': n_config_samples=(size_t) atoi(optarg); break;
             case 'c': n_cycles=(size_t) atoi(optarg); break;
             case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
+            case 'w': n_sweeps=(size_t) atoi(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -356,9 +324,6 @@ int main(int argc,char **argv){
         sample_ar_output_fn+=".dat";
         sample_overlaps_output_fn+=".dat";
         double beta=min_beta;
-        double m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min;
-        std::complex<double> q2_k;
-        double q2_var,q2_std,sus_fm,sus_sg,binder_m,binder_q,sus_sg_k,corr_len_sg;
         std::stringstream header1_ss,header1_vals_ss,header2_ss,header2_mc_ss;
         observables::output_lines.clear(); //flush output lines
         observables::mc_output_lines.clear(); //flush output lines
@@ -392,7 +357,7 @@ int main(int argc,char **argv){
             header2_ss<<"idx q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q total_c\n";
         }
         // header2_mc_ss<<"idx q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd q1_abs_mean q1_abs_sd q2_mean q2_sd q4_mean q4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd sus_sg_mean sus_sg_sd binder_m_mean binder_m_sd binder_q_mean binder_q_sd c_mean c_sd\n";
-        header2_mc_ss<<"idx q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd binder_m_mean binder_m_sd c_mean c_sd\n";
+        header2_mc_ss<<"idx c w q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd binder_m_mean binder_m_sd c_mean c_sd\n";
         observables::output_lines.push_back(header2_ss.str());
         observables::mc_output_lines.push_back(header2_mc_ss.str());
         while(beta<=max_beta){
@@ -415,98 +380,55 @@ int main(int argc,char **argv){
             if(verbose>=3){std::cout<<"approx time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
-            size_t n_phys_sites=g.n_phys_sites();
-            if(n_cycles>0){ //perform MC sampling if n_cycles>0
-                sw.start();
-                //nll training
-                std::vector<double> acceptance_ratios=algorithm::train_nll(g,n_cycles,n_config_samples,n_nll_iter_max);
-                sw.split();
-                if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
-                trial_time+=sw.elapsed();
-                sw.reset();
-                acceptance_ratio_data.push_back(std::make_pair(beta,acceptance_ratios));
-            }
-            std::stringstream mc_output_line_ss;
             //MC observables
+            std::vector<double> acceptance_ratios;
+            double acceptance_ratio;
             sw.start();
-            if(rand_mc){
-                std::cout<<"Random MC initialization chosen.\n";
-            }
-            std::vector<sample_data> samples=sampling::local_mh_sample(g,1000,rand_mc);
-            // std::vector<sample_data> samples=sampling::mh_sample(g,1000,rand_mc);
-            std::vector<double> e_mc_res=sampling::e_mc(samples);
-            std::vector<double> m_mc_res=sampling::m_mc(samples,q);
-            // std::vector<double> overlaps;
-            // std::vector<double> q_mc_res=sampling::q_mc(samples,q,overlaps);
+            sampling::mh_sample(g,1000,acceptance_ratio,rand_mc);
+            acceptance_ratios.push_back(acceptance_ratio);
             sw.split();
             if(verbose>=3){std::cout<<"mc sampling time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
-            //derived MC observables
-            double sus_fm_mean,sus_fm_sd,sus_sg_mean,sus_sg_sd,binder_m_mean,binder_m_sd,binder_q_mean,binder_q_sd,c_mean,c_sd;
-            sus_fm_mean=n_phys_sites*m_mc_res[2]; //chi_fm=n*var(m)
-            sus_fm_sd=n_phys_sites*m_mc_res[3]; //formula from above
-            // sus_sg_mean=n_phys_sites*q_mc_res[2]; //chi_sg=n*var(q)
-            // sus_sg_sd=n_phys_sites*q_mc_res[3]; //formula from above
-            binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
-            binder_m_sd=0.5*sqrt(pow(pow(m_mc_res[2],-2.0)*m_mc_res[5],2.0)+pow(2*m_mc_res[4]*m_mc_res[3]*pow(m_mc_res[2],-3.0),2.0));
-            // binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
-            // binder_q_sd=0.5*sqrt(pow(pow(q_mc_res[2],-2.0)*q_mc_res[5],2.0)+pow(2*q_mc_res[4]*q_mc_res[3]*pow(q_mc_res[2],-3.0),2.0)); //formula from above
-            c_mean=n_phys_sites*(e_mc_res[2]-pow(e_mc_res[0],2.0)); //c=var(e)
-            c_sd=n_phys_sites*sqrt(pow(e_mc_res[3],2.0)+pow(2*e_mc_res[0]*e_mc_res[1],2.0)); //formula from above
-            mc_output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" ";
-            for(size_t a=0;a<m_mc_res.size();a++){
-                mc_output_line_ss<<m_mc_res[a]<<" ";
-            }
-            // for(size_t a=0;a<q_mc_res.size();a++){
-                // mc_output_line_ss<<q_mc_res[a]<<" ";
-            // }
-            for(size_t a=0;a<e_mc_res.size();a++){
-                mc_output_line_ss<<e_mc_res[a]<<" ";
-            }
-            // mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
-            mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
-            observables::mc_output_lines.push_back(mc_output_line_ss.str());
-            std::cout<<"Minimum value of energy: "<<sampling::min_e(samples)<<"\n";
+            
             sw.start();
-            if(g.dims().size()!=0){
-                calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4,k_min,q2_k);
-            }
-            else{
-                calc_observables(g,q,m1_1_abs,m1_2_abs,m2_1,m2_2,m4_1,m4_2,q2,q4);
-            }
+            size_t n_samples_per_mc=100;
+            size_t n_mc_repeats=1000;
+            observables::calc_tree_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,(g.dims().size()!=0));
+            observables::calc_mc_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps,n_mc_repeats,rand_mc);
             sw.split();
             if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
             sw.reset();
-            if(verbose>=4){observables::print_moments(g,q);}
-            if(verbose>=4){std::cout<<std::string(g);}
+            for(size_t c=0;c<n_cycles;c++){ //perform MC sampling if n_cycles>0
+                std::cout<<"cycle "<<(c+1)<<"\n";
+                sw.start();
+                algorithm::train_nll(g,n_config_samples,n_sweeps,n_nll_iter_max); //nll training
+                sw.split();
+                if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
+                trial_time+=sw.elapsed();
+                sw.reset();
+                
+                sw.start();
+                sampling::mh_sample(g,1000,acceptance_ratio,rand_mc);
+                acceptance_ratios.push_back(acceptance_ratio);
+                sw.split();
+                if(verbose>=3){std::cout<<"mc sampling time: "<<(double) sw.elapsed()<<"ms\n";}
+                trial_time+=sw.elapsed();
+                sw.reset();
+                
+                sw.start();
+                observables::calc_tree_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,(g.dims().size()!=0));
+                observables::calc_mc_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps,n_mc_repeats,rand_mc);
+                sw.split();
+                if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
+                trial_time+=sw.elapsed();
+                sw.reset();
+            }
+            acceptance_ratio_data.push_back(std::make_pair(beta,acceptance_ratios));
             
-            //compute cumulative cost
-            double total_cost=0;
-            for (auto it=g.es().begin();it!=g.es().end();++it){
-                total_cost+=(*it).cost();
-            }
             //compute output quantities
-            q2_var=q4-pow(q2,2);
-            q2_std=sqrt(q2_var);
-            sus_fm=n_phys_sites*m2_1; //chi_fm=n*var(m)
-            sus_sg=n_phys_sites*q2; //chi_sg=n*var(q)
-            binder_m=0.5*(3-(m4_1/pow(m2_1,2)));
-            binder_q=0.5*(3-(q4/pow(q2,2)));
-            if(add_suffix){ //hypercubic lattice is used
-                sus_sg_k=n_phys_sites*sqrt(std::norm(q2_k));
-                corr_len_sg=sqrt((sus_sg/sus_sg_k)-1)/(2*sin(k_min/2));
-            }
-            //prepare output lines
-            std::stringstream output_line_ss;
-            if(add_suffix){ //hypercubic lattice is used
-                output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<" "<<total_cost<<"\n";
-            }
-            else{
-                output_line_ss<<std::scientific<<sample<<" "<<q<<" "<<ls.size()<<" "<<r_max<<" "<<header1_ls_vals_str<<" "<<((use_t)?1/beta:beta)<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<total_cost<<"\n";
-            }
-            observables::output_lines.push_back(output_line_ss.str());
+            if(verbose>=4){std::cout<<std::string(g);}
             if(verbose>=2){std::cout<<"Time elapsed for this beta/temp: "<<trial_time<<"ms\n";}
             times.push_back(trial_time);
             beta+=step_beta;
