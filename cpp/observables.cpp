@@ -821,10 +821,10 @@ void observables::calc_tree_observables(graph<cmp>& g,size_t sample,size_t cycle
     //prepare output lines
     std::stringstream output_line_ss;
     if(k_calc){ //hypercubic lattice is used
-        output_line_ss<<std::scientific<<sample<<" "<<q_orig<<" "<<cycle_count<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<" "<<total_cost<<"\n";
+        output_line_ss<<std::scientific<<sample<<" "<<cycle_count<<" "<<q_orig<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<corr_len_sg<<" "<<total_cost<<"\n";
     }
     else{
-        output_line_ss<<std::scientific<<sample<<" "<<q_orig<<" "<<cycle_count<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<total_cost<<"\n";
+        output_line_ss<<std::scientific<<sample<<" "<<cycle_count<<" "<<q_orig<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" "<<m1_1_abs<<" "<<m1_2_abs<<" "<<m2_1<<" "<<m2_2<<" "<<m4_1<<" "<<m4_2<<" "<<q2<<" "<<q4<<" "<<q2_std<<" "<<sus_fm<<" "<<sus_sg<<" "<<binder_m<<" "<<binder_q<<" "<<total_cost<<"\n";
     }
     observables::output_lines.push_back(output_line_ss.str());
 }
@@ -907,7 +907,7 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
     c_sd=g.n_phys_sites()*sqrt(pow(e_mc_res[3],2.0)+pow(2*e_mc_res[0]*e_mc_res[1],2.0)); //formula from above
     
     std::stringstream mc_output_line_ss;
-    mc_output_line_ss<<std::scientific<<sample<<" "<<cycle_count<<" "<<n_sweeps<<" "<<q_orig<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" ";
+    mc_output_line_ss<<std::scientific<<sample<<" "<<cycle_count<<" "<<n_sweeps<<" "<<n_samples<<" "<<q_orig<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" ";
     for(size_t a=0;a<m_mc_res.size();a++){
         mc_output_line_ss<<m_mc_res[a]<<" ";
     }
