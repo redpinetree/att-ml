@@ -46,7 +46,9 @@ void print_usage(){
     std::cerr<<"\t-s,--samples: number of samples to obtain per temperature\n";
     std::cerr<<"\t-c,--cycles: number of NLL training cycles per temperature\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
-    std::cerr<<"\t-w,--n-sweeps: number of sweeps in local MH update before drawing sample\n";
+    std::cerr<<"\t-w,--min-n-sweeps: minimum number of sweeps in local MH update before drawing sample\n";
+    std::cerr<<"\t-W,--max-n-sweeps: maximum number of sweeps in local MH update before drawing sample\n";
+    std::cerr<<"\t-D,--step-n-sweeps: step in n_sweeps\n";
 }
 
 template<typename cmp>
@@ -106,7 +108,9 @@ int main(int argc,char **argv){
     size_t n_config_samples=10000;
     size_t n_cycles=0;
     size_t n_nll_iter_max=10000;
-    size_t n_sweeps=100;
+    size_t min_n_sweeps=100;
+    size_t max_n_sweeps=100;
+    size_t step_n_sweeps=10;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -133,14 +137,16 @@ int main(int argc,char **argv){
             {"samples",required_argument,0,'s'},
             {"cycles",required_argument,0,'c'},
             {"nll-iter-max",required_argument,0,'N'},
-            {"n-sweeps",required_argument,0,'w'},
+            {"min-n-sweeps",required_argument,0,'w'},
+            {"max-n-sweeps",required_argument,0,'W'},
+            {"step-n-sweeps",required_argument,0,'D'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
 #ifdef MODEL_CPD
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:S:R:s:c:N:w:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:I:S:R:s:c:N:w:W:D:",long_opts,&opt_idx);
 #else
-        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:s:c:N:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:d:1:2:r:n:l:R:s:c:N:w:W:D:",long_opts,&opt_idx);
 #endif
         if(c==-1){break;} //end of options
         switch(c){
@@ -167,7 +173,9 @@ int main(int argc,char **argv){
             case 's': n_config_samples=(size_t) atoi(optarg); break;
             case 'c': n_cycles=(size_t) atoi(optarg); break;
             case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
-            case 'w': n_sweeps=(size_t) atoi(optarg); break;
+            case 'w': min_n_sweeps=(size_t) atoi(optarg); break;
+            case 'W': max_n_sweeps=(size_t) atoi(optarg); break;
+            case 'D': step_n_sweeps=(size_t) atoi(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -360,7 +368,7 @@ int main(int argc,char **argv){
         header2_mc_ss<<"idx c w n q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd binder_m_mean binder_m_sd c_mean c_sd\n";
         observables::output_lines.push_back(header2_ss.str());
         observables::mc_output_lines.push_back(header2_mc_ss.str());
-        while(beta<=max_beta){
+        do{
             //flush caches for observable computation
             observables::m_known_factors.clear();
             observables::m_known_factors_complex.clear();
@@ -395,7 +403,12 @@ int main(int argc,char **argv){
             size_t n_samples_per_mc=100;
             size_t n_mc_repeats=1000;
             observables::calc_tree_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,(g.dims().size()!=0));
-            observables::calc_mc_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps,n_mc_repeats,rand_mc);
+            double n_sweeps=min_n_sweeps;
+            do{
+                observables::calc_mc_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps,n_mc_repeats,rand_mc);
+                n_sweeps+=step_n_sweeps;
+            }
+            while(n_sweeps<=max_n_sweeps);
             sw.split();
             if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
@@ -419,7 +432,12 @@ int main(int argc,char **argv){
                 
                 sw.start();
                 observables::calc_tree_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,(g.dims().size()!=0));
-                observables::calc_mc_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps,n_mc_repeats,rand_mc);
+                double n_sweeps=min_n_sweeps;
+                do{
+                    observables::calc_mc_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps,n_mc_repeats,rand_mc);
+                    n_sweeps+=step_n_sweeps;
+                }
+                while(n_sweeps<=max_n_sweeps);
                 sw.split();
                 if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
@@ -433,6 +451,7 @@ int main(int argc,char **argv){
             times.push_back(trial_time);
             beta+=step_beta;
         }
+        while(beta<=max_beta);
         if(output_set){
             observables::write_output(sample_output_fn,observables::output_lines);
             if(acceptance_ratio_data.size()>0){observables::write_binary_output(sample_ar_output_fn,acceptance_ratio_data);}

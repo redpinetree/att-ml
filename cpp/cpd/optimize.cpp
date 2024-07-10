@@ -1009,12 +1009,12 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site>& si
             if(restarts==1){ //first attempt uses padded target data
                 hybrid_init_method="prev";
             }
-            else if(restarts==2){ //second attempt uses least-squares approximation
-                hybrid_init_method="lstsq";
-            }
-            else if((restarts==3)&&(r_i==r_j)&&(r_j==r_k)){ //third attempt uses cmd initialization, if possible
+            else if((restarts==2)&&(r_i==r_j)&&(r_j==r_k)){ //second attempt uses cmd initialization, if possible
                 hybrid_init_method="cmd";
             }
+            // else if(restarts==3){ //third attempt uses least-squares approximation
+                // hybrid_init_method="lstsq";
+            // }
             else{ //remaining attempts use random initialization
                 hybrid_init_method="rand";
             }
