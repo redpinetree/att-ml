@@ -547,8 +547,7 @@ std::vector<double> sampling::pair_overlaps(std::vector<sample_data> samples,siz
 }
 
 //assumes full config
-template<typename cmp>
-std::vector<double> sampling::e_mc(graph<cmp>& g,std::vector<sample_data>& samples){
+std::vector<double> sampling::e_mc(std::vector<sample_data>& samples){
     //sample mean
     double e1_mean=0;
     double e2_mean=0;
@@ -565,11 +564,9 @@ std::vector<double> sampling::e_mc(graph<cmp>& g,std::vector<sample_data>& sampl
     res.push_back(e2_mean);
     return res;
 }
-template std::vector<double> sampling::e_mc(graph<bmi_comparator>&,std::vector<sample_data>&);
 
 //assumes full config
-template<typename cmp>
-std::vector<double> sampling::m_mc(graph<cmp>& g,std::vector<sample_data>& samples,size_t q_orig){
+std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_orig){
     //determine potts basis vectors
     std::vector<std::vector<double> > ref_basis=potts_ref_vecs(q_orig);
     std::vector<double> ms;
@@ -610,7 +607,6 @@ std::vector<double> sampling::m_mc(graph<cmp>& g,std::vector<sample_data>& sampl
     res.push_back(m4_mean);
     return res;
 }
-template std::vector<double> sampling::m_mc(graph<bmi_comparator>&,std::vector<sample_data>&,size_t);
 
 //assumes full config
 std::vector<double> sampling::q_mc(std::vector<sample_data>& samples,size_t q_orig,std::vector<double>& overlaps){
@@ -627,27 +623,12 @@ std::vector<double> sampling::q_mc(std::vector<sample_data>& samples,size_t q_or
     q1_abs_mean/=(double) qs.size();
     q2_mean/=(double) qs.size();
     q4_mean/=(double) qs.size();
-    //sample sds
-    double q1_abs_sem=0;
-    double q2_sem=0;
-    double q4_sem=0;
-    for(size_t n=0;n<qs.size();n++){
-        q1_abs_sem+=pow(fabs(qs[n])-q1_abs_mean,2.0);
-        q2_sem+=pow(pow(qs[n],2.0)-q2_mean,2.0);
-        q4_sem+=pow(pow(qs[n],4.0)-q4_mean,2.0);
-    }
-    q1_abs_sem=sqrt(q1_abs_sem/(double) (qs.size()-1))/sqrt(samples.size());
-    q2_sem=sqrt(q2_sem/(double) (qs.size()-1))/sqrt(samples.size());
-    q4_sem=sqrt(q4_sem/(double) (qs.size()-1))/sqrt(samples.size());
     overlaps=qs; //for output
     //prepare output vector
     std::vector<double> res;
     res.push_back(q1_abs_mean);
-    res.push_back(q1_abs_sem);
     res.push_back(q2_mean);
-    res.push_back(q2_sem);
     res.push_back(q4_mean);
-    res.push_back(q4_sem);
     return res;
 }
 

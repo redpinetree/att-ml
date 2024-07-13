@@ -835,22 +835,16 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
     if(rand_mc){
         std::cout<<"Random MC initialization chosen.\n";
     }
-    double sus_fm_mean,sus_fm_sd,binder_m_mean,binder_m_sd,c_mean,c_sd;
+    double c_mean,c_sd;
+    double sus_fm_mean,sus_fm_sd,binder_m_mean,binder_m_sd;
+    double sus_sg_mean,sus_sg_sd,binder_q_mean,binder_q_sd;
     
     std::vector<double> e_mc_res(4,0);
-    std::vector<double> m_mc_res(6,0);
     std::vector<double> e1_mc_ests,e2_mc_ests;
-    double e1_mc_est_mean=0;
-    double e2_mc_est_mean=0;
-    double e1_mc_est_sd=0;
-    double e2_mc_est_sd=0;
+    std::vector<double> m_mc_res(6,0);
     std::vector<double> m1_abs_mc_ests,m2_mc_ests,m4_mc_ests;
-    double m1_abs_mc_est_mean=0;
-    double m2_mc_est_mean=0;
-    double m4_mc_est_mean=0;
-    double m1_abs_mc_est_sd=0;
-    double m2_mc_est_sd=0;
-    double m4_mc_est_sd=0;
+    std::vector<double> q_mc_res(6,0);
+    std::vector<double> q1_abs_mc_ests,q2_mc_ests,q4_mc_ests;
     
     //mc estimator mean and sd
     for(size_t i=0;i<n_repeats;i++){
@@ -860,10 +854,10 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
         // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,rand_mc);
         std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,rand_mc);
     
-        std::vector<double> e_res=sampling::e_mc(g,samples);
-        std::vector<double> m_res=sampling::m_mc(g,samples,q_orig);
-        // std::vector<double> overlaps;
-        // std::vector<double> q_mc_res=sampling::q_mc(samples,q_orig,overlaps);
+        std::vector<double> e_res=sampling::e_mc(samples);
+        std::vector<double> m_res=sampling::m_mc(samples,q_orig);
+        std::vector<double> overlaps;
+        std::vector<double> q_res=sampling::q_mc(samples,q_orig,overlaps);
         e1_mc_ests.push_back(e_res[0]);
         e2_mc_ests.push_back(e_res[1]);
         e_mc_res[0]+=e_res[0];
@@ -874,12 +868,22 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
         m_mc_res[0]+=m_res[0];
         m_mc_res[2]+=m_res[1];
         m_mc_res[4]+=m_res[2];
+        q1_abs_mc_ests.push_back(q_res[0]);
+        q2_mc_ests.push_back(q_res[1]);
+        q4_mc_ests.push_back(q_res[2]);
+        q_mc_res[0]+=q_res[0];
+        q_mc_res[2]+=q_res[1];
+        q_mc_res[4]+=q_res[2];
     }
     e_mc_res[0]/=n_repeats;
     e_mc_res[2]/=n_repeats;
     m_mc_res[0]/=n_repeats;
     m_mc_res[2]/=n_repeats;
     m_mc_res[4]/=n_repeats;
+    q_mc_res[0]/=n_repeats;
+    q_mc_res[2]/=n_repeats;
+    q_mc_res[4]/=n_repeats;
+    
     for(size_t i=0;i<n_repeats;i++){
         e_mc_res[1]+=pow(e1_mc_ests[i]-e_mc_res[0],2.0);
         e_mc_res[3]+=pow(e2_mc_ests[i]-e_mc_res[2],2.0);
@@ -894,30 +898,39 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
     m_mc_res[1]=sqrt(m_mc_res[1]/(double) (n_repeats-1));
     m_mc_res[3]=sqrt(m_mc_res[3]/(double) (n_repeats-1));
     m_mc_res[5]=sqrt(m_mc_res[5]/(double) (n_repeats-1));
+    for(size_t i=0;i<n_repeats;i++){
+        q_mc_res[1]+=pow(q1_abs_mc_ests[i]-q_mc_res[0],2.0);
+        q_mc_res[3]+=pow(q2_mc_ests[i]-q_mc_res[2],2.0);
+        q_mc_res[5]+=pow(q4_mc_ests[i]-q_mc_res[4],2.0);
+    }
+    q_mc_res[1]=sqrt(q_mc_res[1]/(double) (n_repeats-1));
+    q_mc_res[3]=sqrt(q_mc_res[3]/(double) (n_repeats-1));
+    q_mc_res[5]=sqrt(q_mc_res[5]/(double) (n_repeats-1));
     
-    sus_fm_mean=g.n_phys_sites()*m_mc_res[2]; //chi_fm=n*var(m)
-    sus_fm_sd=g.n_phys_sites()*m_mc_res[3]; //formula from above
-    // sus_sg_mean=n_phys_sites*q_mc_res[2]; //chi_sg=n*var(q_orig)
-    // sus_sg_sem=n_phys_sites*q_mc_res[3]; //formula from above
-    binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
-    binder_m_sd=0.5*sqrt(pow(pow(m_mc_res[2],-2.0)*m_mc_res[5],2.0)+pow(2*m_mc_res[4]*m_mc_res[3]*pow(m_mc_res[2],-3.0),2.0));
-    // binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
-    // binder_q_sem=0.5*sqrt(pow(pow(q_mc_res[2],-2.0)*q_mc_res[5],2.0)+pow(2*q_mc_res[4]*q_mc_res[3]*pow(q_mc_res[2],-3.0),2.0)); //formula from above
     c_mean=g.n_phys_sites()*(e_mc_res[2]-pow(e_mc_res[0],2.0)); //c=var(e)
     c_sd=g.n_phys_sites()*sqrt(pow(e_mc_res[3],2.0)+pow(2*e_mc_res[0]*e_mc_res[1],2.0)); //formula from above
+    sus_fm_mean=g.n_phys_sites()*m_mc_res[2]; //chi_fm=n*var(m)
+    sus_fm_sd=g.n_phys_sites()*m_mc_res[3]; //formula from above
+    binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
+    binder_m_sd=0.5*sqrt(pow(pow(m_mc_res[2],-2.0)*m_mc_res[5],2.0)+pow(2*m_mc_res[4]*m_mc_res[3]*pow(m_mc_res[2],-3.0),2.0));
+    sus_sg_mean=g.n_phys_sites()*q_mc_res[2]; //chi_sg=n*var(q_orig)
+    sus_sg_sd=g.n_phys_sites()*q_mc_res[3]; //formula from above
+    binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
+    binder_q_sd=0.5*sqrt(pow(pow(q_mc_res[2],-2.0)*q_mc_res[5],2.0)+pow(2*q_mc_res[4]*q_mc_res[3]*pow(q_mc_res[2],-3.0),2.0)); //formula from above
     
     std::stringstream mc_output_line_ss;
     mc_output_line_ss<<std::scientific<<sample<<" "<<cycle_count<<" "<<n_sweeps<<" "<<n_repeats<<" "<<q_orig<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" ";
     for(size_t a=0;a<m_mc_res.size();a++){
         mc_output_line_ss<<m_mc_res[a]<<" ";
     }
-    // for(size_t a=0;a<q_mc_res.size();a++){
-        // mc_output_line_ss<<q_mc_res[a]<<" ";
-    // }
+    for(size_t a=0;a<q_mc_res.size();a++){
+        mc_output_line_ss<<q_mc_res[a]<<" ";
+    }
     for(size_t a=0;a<e_mc_res.size();a++){
         mc_output_line_ss<<e_mc_res[a]<<" ";
     }
-    mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+    // mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+    mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
     observables::mc_output_lines.push_back(mc_output_line_ss.str());
 }
 template void observables::calc_mc_observables(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,size_t,size_t,size_t,bool);
