@@ -155,6 +155,7 @@ array3d<double> optimize::nn_hals(array3d<double>& aTa,array3d<double>& aTb,arra
         exit(1);
     }
     array3d<double> prev_x=x;
+    double eps=1e-16;
     double delta_first=0;
     for(size_t it=0;it<1000;it++){
         for(size_t k=0;k<aTb.nx();k++){
@@ -178,10 +179,10 @@ array3d<double> optimize::nn_hals(array3d<double>& aTa,array3d<double>& aTb,arra
                 }
                 
                 //columns should not be zero
-                if(zero_check<1e-32){
+                if(zero_check<eps){
                     double x_max_val=*std::max_element(x.e().begin(),x.e().end());
                     for(size_t col=0;col<x.ny();col++){
-                        x.at(k,col,0)=1e-16*x_max_val;
+                        x.at(k,col,0)=eps*x_max_val;
                     }
                 }
             }
@@ -198,7 +199,7 @@ array3d<double> optimize::nn_hals(array3d<double>& aTa,array3d<double>& aTb,arra
             delta_first=delta;
             continue;
         }
-        if(delta<=(1e-8*delta_first)){ //eps=1e-8
+        if(delta<=(eps*delta_first)){
             // std::cout<<"HALS stopped early after "<<it<<" iterations.\n";
             break;
         }
@@ -247,7 +248,7 @@ array3d<double> optimize::mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3
             delta_first=delta;
             continue;
         }
-        if(delta<=(1e-8*delta_first)){ //eps=1e-8
+        if(delta<=(eps*delta_first)){
             // std::cout<<"MU-LS stopped early after "<<it<<" iterations.\n";
             break;
         }
@@ -308,7 +309,7 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
     }
     array3d<double> prev_x=x;
         
-    double eps=1e-100;
+    double eps=1e-16;
     double delta_first=0;
     double prev_cost=1e50;
     for(size_t it=0;it<1000;it++){
@@ -528,8 +529,8 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
         for(size_t k=0;k<x.nx();k++){
             for(size_t imu=0;imu<x.ny();imu++){
                 x.at(k,imu,0)/=sum;
-                if(x.at(k,imu,0)<eps){ //in case the weight is too small
-                    x.at(k,imu,0)=eps;
+                if(x.at(k,imu,0)<1e-100){ //in case the weight is too small
+                    x.at(k,imu,0)=1e-100;
                 }
             }
         }
@@ -543,7 +544,7 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
             cluster[m-1].w()=xT;
         }
         
-        if((cost>prev_cost)&&(fabs(cost-prev_cost)>1e-12)&&(it>1)){ //at it=1, prev_cost is init's cost
+        if((cost>prev_cost)&&(fabs(cost-prev_cost)>1e-16)&&(it>1)){ //at it=1, prev_cost is init's cost
             std::cout<<prev_cost<<" "<<cost<<" objective function increased at iteration "<<it<<"\n";
             break;
             // exit(1);
@@ -561,14 +562,14 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
         }
         delta=sqrt(delta);
         prev_x=x;
-        if(fabs(cost)<1e-12){
+        if(fabs(cost)<eps){
             // std::cout<<"MU-Renyi stopped early after "<<it<<" iterations (cost).\n";
             break;
         }
         else if(it==0){
             delta_first=delta;
         }
-        else if(delta<=(1e-8*delta_first)){ //eps=1e-8
+        else if(delta<=(eps*delta_first)){
             // std::cout<<"MU-Renyi stopped early after "<<it<<" iterations (delta).\n";
             break;
         }
@@ -610,7 +611,7 @@ array3d<double> optimize::mu_kl(array3d<double>& aTa,array3d<double>& aTb,array3
             delta_first=delta;
             continue;
         }
-        if(delta<=(1e-8*delta_first)){ //eps=1e-8
+        if(delta<=(eps*delta_first)){
             // std::cout<<"MU-KL stopped early after "<<it<<" iterations.\n";
             break;
         }
@@ -701,7 +702,7 @@ void optimize::unnormalize(bond& current,std::vector<double>& weights){
 }
 
 double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,std::string init_method,std::string solver,bool unnormalize_flag){
-    std::uniform_real_distribution<> unif_dist(1e-10,1.0);
+    std::uniform_real_distribution<> unif_dist(1e-16,1.0);
     size_t r_i=current.w().nx();
     size_t r_j=current.w().ny();
     size_t r_k=current.w().nz();
@@ -919,7 +920,7 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
         else{
             err=final_cost;
         }
-        if((it>0)&&(fabs(prev_err-err)<1e-8)){
+        if((it>0)&&(fabs(prev_err-err)<1e-16)){
             std::cout<<"CPD converged after "<<it<<" iterations.\n";
             break;
         }
@@ -935,7 +936,7 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
 
 double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site>& sites,bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t max_it,std::string init_method,std::string solver,size_t max_restarts){
     std::cout<<"cluster size: "<<cluster.size()<<"\n";
-    std::uniform_real_distribution<> unif_dist(1e-10,1.0);
+    std::uniform_real_distribution<> unif_dist(1e-16,1.0);
     double best_err=1;
     if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="rand")&&(init_method!="hybrid")&&(init_method!="cmd")){
         std::cout<<"Invalid initializer for HALS subroutine ("<<init_method<<" was passed), aborting...\n";
@@ -1200,7 +1201,7 @@ double optimize::calc_cmd(size_t master,size_t slave,std::vector<site>& sites,bo
         std::vector<double> sum_addends;
         for(size_t i=0;i<p_ij.nx();i++){
             for(size_t j=0;j<p_ij.ny();j++){
-                trial_current.w().at(i,j,f.at(i,j))=p_ij.at(i,j)-((fabs(p_prime_ij_env.at(i,j))<1e-10)?0:p_prime_ij_env.at(i,j));
+                trial_current.w().at(i,j,f.at(i,j))=p_ij.at(i,j)-((fabs(p_prime_ij_env.at(i,j))<1e-16)?0:p_prime_ij_env.at(i,j));
                 sum_addends.push_back(trial_current.w().at(i,j,f.at(i,j)));
             }
         }
@@ -1303,7 +1304,7 @@ double optimize::calc_cmd(size_t master,size_t slave,std::vector<site>& sites,bo
             std::vector<double> sum_addends;
             for(size_t imu=0;imu<p_ki.nx();imu++){
                 for(size_t k=0;k<p_ki.ny();k++){
-                    trial_cluster[n].w().at(imu,k,0)=p_ki.at(imu,k)-((fabs(p_prime_ki_env.at(imu,k))<1e-10)?0:p_prime_ki_env.at(imu,k));
+                    trial_cluster[n].w().at(imu,k,0)=p_ki.at(imu,k)-((fabs(p_prime_ki_env.at(imu,k))<1e-16)?0:p_prime_ki_env.at(imu,k));
                     sum_addends.push_back(trial_cluster[n].w().at(imu,k,0));
                 }
             }
@@ -1321,7 +1322,7 @@ double optimize::calc_cmd(size_t master,size_t slave,std::vector<site>& sites,bo
         
         // std::cout<<cost<<"\n";
         if(t>0){
-            if(fabs(prev_cost-cost)<1e-5){
+            if(fabs(prev_cost-cost)<1e-16){
                 std::cout<<"converged after "<<(t+1)<<" iterations (cost)\n";
                 break;
             }
