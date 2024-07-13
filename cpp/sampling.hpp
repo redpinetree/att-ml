@@ -35,13 +35,13 @@ namespace sampling{
     template<typename cmp>
     double calc_sample_log_w(graph<cmp>&,std::vector<size_t>&);
     template<typename cmp>
-    sample_data random_sample(size_t,graph<cmp>&);
+    std::vector<sample_data> random_sample(size_t,graph<cmp>&,size_t);
     template<typename cmp>
-    sample_data random_sample(graph<cmp>&);
+    std::vector<sample_data> random_sample(graph<cmp>&,size_t);
     template<typename cmp>
-    sample_data tree_sample(size_t,graph<cmp>&);
+    std::vector<sample_data> tree_sample(size_t,graph<cmp>&,size_t);
     template<typename cmp>
-    sample_data tree_sample(graph<cmp>&);
+    std::vector<sample_data> tree_sample(graph<cmp>&,size_t);
     template<typename cmp>
     std::vector<sample_data> sample(graph<cmp>&,size_t,bool);
     template<typename cmp>

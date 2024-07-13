@@ -87,30 +87,44 @@ double sampling::calc_sample_log_w(graph<cmp>& g,std::vector<size_t>& s){
 template double sampling::calc_sample_log_w(graph<bmi_comparator>&,std::vector<size_t>&);
 
 template<typename cmp>
-sample_data sampling::random_sample(size_t root,graph<cmp>& g){
-    std::vector<size_t> s(g.vs().size(),0);
-    for(size_t e=0;e<s.size();e++){
-        s[e]=(mpi_utils::prng()%g.vs()[e].rank())+1;
+std::vector<sample_data> sampling::random_sample(size_t root,graph<cmp>& g,size_t n_samples){
+    std::vector<sample_data> s_vec;
+    for(size_t n=0;n<n_samples;n++){
+        std::vector<size_t> s(g.vs().size(),0);
+        for(size_t e=0;e<s.size();e++){
+            s[e]=(mpi_utils::prng()%g.vs()[e].rank())+1;
+        }
+        double e=calc_sample_e(g,s); //energy of sample under true hamiltonian
+        double log_w=-2*g.n_phys_sites(); //weight of sample (log)
+        s_vec.push_back(sample_data(g.n_phys_sites(),s,log_w,e));
+
+        // for(size_t m=0;m<s_vec[n].s().size();m++){
+            // if(m==g.n_phys_sites()){std::cout<<": ";}
+            // std::cout<<s_vec[n].s()[m]<<" ";
+        // }
+        // std::cout<<exp(log_w)<<" "<<e;
+        // std::cout<<"\n";
     }
-    double e=calc_sample_e(g,s); //energy of sample under true hamiltonian
-    double log_w=-2*g.n_phys_sites(); //weight of sample (log)
-    return sample_data(g.n_phys_sites(),s,log_w,e);
+    return s_vec;
 }
-template sample_data sampling::random_sample(size_t,graph<bmi_comparator>&);
+template std::vector<sample_data> sampling::random_sample(size_t,graph<bmi_comparator>&,size_t);
 
 template<typename cmp>
-sample_data sampling::random_sample(graph<cmp>& g){
-    sample_data s=sampling::random_sample(g.vs().size()-1,g);
-    return s;
+std::vector<sample_data> sampling::random_sample(graph<cmp>& g,size_t n_samples){
+    std::vector<sample_data> s_vec=sampling::random_sample(g.vs().size()-1,g,n_samples);
+    return s_vec;
 }
-template sample_data sampling::random_sample(graph<bmi_comparator>&);
+template std::vector<sample_data> sampling::random_sample(graph<bmi_comparator>&,size_t);
 
 template<typename cmp>
-sample_data sampling::tree_sample(size_t root,graph<cmp>& g){
-    std::vector<size_t> s(g.vs().size(),0);
+std::vector<sample_data> sampling::tree_sample(size_t root,graph<cmp>& g,size_t n_samples){
     std::queue<size_t> todo_idxs;
     std::discrete_distribution<size_t> pdf(g.vs()[root].p_k().begin(),g.vs()[root].p_k().end());
-    s[root]=pdf(mpi_utils::prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+    std::vector<sample_data> s_vec;
+    for(size_t n=0;n<n_samples;n++){
+        s_vec.push_back(sample_data(g.n_phys_sites(),std::vector<size_t>(g.vs().size(),0),0,0));
+        s_vec[n].s()[root]=pdf(mpi_utils::prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+    }
     if(g.vs()[root].virt()){
         todo_idxs.push(root);
     }
@@ -125,62 +139,63 @@ sample_data sampling::tree_sample(size_t root,graph<cmp>& g){
         if(g.vs()[v2].virt()){
             todo_idxs.push(v2);
         }
-        std::vector<double> cond_probs;
+        std::vector<std::discrete_distribution<size_t> > cond_prob_dists;
         // std::cout<<(std::string)g.vs()[idx].p_ijk()<<"\n";
         // for(size_t i=0;i<g.vs()[idx].p_k().size();i++){
             // std::cout<<g.vs()[idx].p_k()[i]<<" ";
         // }
         // std::cout<<"\n";
-        for(size_t i=0;i<g.vs()[v1].rank();i++){
-            for(size_t j=0;j<g.vs()[v2].rank();j++){
-                if(g.vs()[idx].p_k()[s[idx]-1]!=0){
-                    cond_probs.push_back(g.vs()[idx].p_ijk().at(i,j,s[idx]-1)); //no need to normalize, handled by discrete_distribution
-                }
-                else{
-                    cond_probs.push_back(0);
+        for(size_t k=0;k<g.vs()[idx].rank();k++){
+            std::vector<double> cond_probs;
+            for(size_t i=0;i<g.vs()[v1].rank();i++){
+                for(size_t j=0;j<g.vs()[v2].rank();j++){
+                    cond_probs.push_back(g.vs()[idx].p_ijk().at(i,j,k)); //no need to normalize, handled by discrete_distribution
                 }
             }
+            cond_prob_dists.push_back(std::discrete_distribution<size_t>(cond_probs.begin(),cond_probs.end()));
         }
-        pdf=std::discrete_distribution<size_t>(cond_probs.begin(),cond_probs.end());
-        size_t composite_idx=pdf(mpi_utils::prng);
-        s[v1]=(composite_idx/g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
-        s[v2]=(composite_idx%g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+        for(size_t n=0;n<n_samples;n++){
+            if(s_vec[n].s()[idx]!=0){
+                pdf=cond_prob_dists[s_vec[n].s()[idx]-1];
+                size_t composite_idx=pdf(mpi_utils::prng);
+                s_vec[n].s()[v1]=(composite_idx/g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+                s_vec[n].s()[v2]=(composite_idx%g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+            }
+        }
     }
-    double e=calc_sample_e(g,s); //energy of sample under true hamiltonian
-    double log_w=calc_sample_log_w(g,s); //weight of sample (log)
-    
-    // for(size_t m=0;m<s.size();m++){
-        // if(m==g.n_phys_sites()){std::cout<<": ";}
-        // std::cout<<s[m]<<" ";
-    // }
-    // std::cout<<exp(log_w)<<" "<<e;
-    // std::cout<<"\n";
-    return sample_data(g.n_phys_sites(),s,log_w,e);
+    for(size_t n=0;n<n_samples;n++){
+        double e=calc_sample_e(g,s_vec[n].s()); //energy of sample under true hamiltonian
+        double log_w=calc_sample_log_w(g,s_vec[n].s()); //weight of sample (log)
+        s_vec[n].e()=e;
+        s_vec[n].log_w()=log_w;
+        // for(size_t m=0;m<s_vec[n].s().size();m++){
+            // if(m==g.n_phys_sites()){std::cout<<": ";}
+            // std::cout<<s_vec[n].s()[m]<<" ";
+        // }
+        // std::cout<<exp(log_w)<<" "<<e;
+        // std::cout<<"\n";
+    }
+    return s_vec;
 }
-template sample_data sampling::tree_sample(size_t,graph<bmi_comparator>&);
+template std::vector<sample_data> sampling::tree_sample(size_t,graph<bmi_comparator>&,size_t);
 
 template<typename cmp>
-sample_data sampling::tree_sample(graph<cmp>& g){
-    sample_data s=sampling::tree_sample(g.vs().size()-1,g);
-    return s;
+std::vector<sample_data> sampling::tree_sample(graph<cmp>& g,size_t n_samples){
+    std::vector<sample_data> s_vec=sampling::tree_sample(g.vs().size()-1,g,n_samples);
+    return s_vec;
 }
-template sample_data sampling::tree_sample(graph<bmi_comparator>&);
+template std::vector<sample_data> sampling::tree_sample(graph<bmi_comparator>&,size_t);
 
 template<typename cmp>
 std::vector<sample_data> sampling::sample(graph<cmp>& g,size_t n_samples,bool rand_mc){
-    std::vector<sample_data> samples;
-    samples.reserve(n_samples);
-    for(size_t n=0;n<n_samples;n++){
-        sample_data s;
-        if(rand_mc){
-            s=sampling::random_sample(g);
-        }
-        else{
-            s=sampling::tree_sample(g);
-        }
-        samples.push_back(s);
+    std::vector<sample_data> s_vec;
+    if(rand_mc){
+        s_vec=sampling::random_sample(g,n_samples);
     }
-    return samples;
+    else{
+        s_vec=sampling::tree_sample(g,n_samples);
+    }
+    return s_vec;
 }
 template std::vector<sample_data> sampling::sample(graph<bmi_comparator>&,size_t,bool);
 
@@ -204,14 +219,13 @@ template<typename cmp>
 std::vector<sample_data> sampling::mh_sample(size_t root,graph<cmp>& g,size_t n_samples,double& acceptance_ratio,bool rand_mc){
     std::uniform_real_distribution<> unif_dist(0,1.0);
     std::vector<sample_data> samples;
-    samples.reserve(n_samples*2); //including flip
     //no need to equilibrate because draws are global and sampling from tree is perfect
     sample_data mc0;
     if(rand_mc){
-        mc0=sampling::random_sample(root,g);
+        mc0=sampling::random_sample(root,g,1)[0];
     }
     else{
-        mc0=sampling::tree_sample(root,g);
+        mc0=sampling::tree_sample(root,g,1)[0];
     }
     acceptance_ratio=0;
     size_t n=0; //markov chain length
@@ -219,10 +233,10 @@ std::vector<sample_data> sampling::mh_sample(size_t root,graph<cmp>& g,size_t n_
     while(accepted_count<n_samples){
         sample_data mc1;
         if(rand_mc){
-            mc1=sampling::random_sample(g);
+            mc1=sampling::random_sample(g,1)[0];
         }
         else{
-            mc1=sampling::tree_sample(g);
+            mc1=sampling::tree_sample(g,1)[0];
         }
         double p1=mc0.log_w()-mc1.log_w();
         double p2=-g.beta()*(mc1.e()-mc0.e());
@@ -261,10 +275,10 @@ std::vector<sample_data> sampling::local_mh_sample(size_t root,graph<cmp>& g,siz
     //no need to equilibrate because draws are global and sampling from tree is perfect
     sample_data mc0;
     if(rand_mc){
-        mc0=sampling::random_sample(root,g);
+        mc0=sampling::random_sample(root,g,1)[0];
     }
     else{
-        mc0=sampling::tree_sample(root,g);
+        mc0=sampling::tree_sample(root,g,1)[0];
     }
     // double acceptance_ratio=0;
     size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
@@ -363,28 +377,25 @@ template std::vector<sample_data> sampling::hybrid_mh_sample(graph<bmi_comparato
 template<typename cmp>
 std::vector<sample_data> sampling::hybrid_mh_sample(size_t root,graph<cmp>& g,size_t n_samples,size_t n_sweeps,bool rand_mc){
     std::uniform_real_distribution<> unif_dist(0,1.0);
-    std::vector<sample_data> samples;
-    samples.reserve(n_samples*2); //including flip
     //no need to equilibrate because draws are global and sampling from tree is perfect
-    size_t accepted_count=0; //count of accepted configs, not counting symmetric equivs
-    while(accepted_count<n_samples){
-        sample_data mc0;
-        if(rand_mc){
-            mc0=sampling::random_sample(g);
-        }
-        else{
-            mc0=sampling::tree_sample(g);
-        }
+    std::vector<sample_data> samples;
+    if(rand_mc){
+        samples=sampling::random_sample(g,n_samples);
+    }
+    else{
+        samples=sampling::tree_sample(g,n_samples);
+    }
+    for(size_t idx=0;idx<n_samples;idx++){
         for(size_t sweep=0;sweep<n_sweeps;sweep++){ //number of sweeps
             for(size_t n=0;n<g.n_phys_sites();n++){
                 // std::cout<<"n: "<<n<<"\n";
                 size_t new_s;
                 double p1,p2;
-                if(mc0.s()[n]!=0){
+                if(samples[idx].s()[n]!=0){
                     do{
                         new_s=(mpi_utils::prng()%g.vs()[n].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
                     }
-                    while(mc0.s()[n]==new_s);
+                    while(samples[idx].s()[n]==new_s);
                     p1=0; //log(1)=0
                 }
                 double delta_e=0;
@@ -393,23 +404,21 @@ std::vector<sample_data> sampling::hybrid_mh_sample(size_t root,graph<cmp>& g,si
                     size_t v1=std::get<0>(k_obj);
                     size_t v2=std::get<1>(k_obj);
                     if(v1==n){
-                        delta_e+=(new_s!=mc0.s()[v2])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                        delta_e+=(new_s!=samples[idx].s()[v2])?std::get<2>(k_obj):-std::get<2>(k_obj);
                     }
                     else{
-                        delta_e+=(new_s!=mc0.s()[v1])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                        delta_e+=(new_s!=samples[idx].s()[v1])?std::get<2>(k_obj):-std::get<2>(k_obj);
                     }
                 }
                 p2=-g.beta()*delta_e;
                 double p=p1+p2;
                 double r=log(unif_dist(mpi_utils::prng));
                 if(r<p){
-                    mc0.s()[n]=new_s;
+                    samples[idx].s()[n]=new_s;
                 }
                 // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<r<<" "<<(r<p?"accept":"reject")<<"\n";
             }
         }
-        samples.push_back(mc0);
-        accepted_count++;
         // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
     }
     return samples;
