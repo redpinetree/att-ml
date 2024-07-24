@@ -410,11 +410,10 @@ std::vector<sample_data> sampling::hybrid_mh_sample(size_t root,graph<cmp>& g,si
                     std::tuple<size_t,size_t,double> k_obj=g.orig_ks()[g.vs()[n].orig_ks_idxs()[m]];
                     size_t v1=std::get<0>(k_obj);
                     size_t v2=std::get<1>(k_obj);
-                    if(v1==n){
-                        delta_e+=(new_s!=samples[idx].s()[v2])?std::get<2>(k_obj):-std::get<2>(k_obj);
-                    }
-                    else{
-                        delta_e+=(new_s!=samples[idx].s()[v1])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                    bool old_s_matches=(samples[idx].s()[v1]==samples[idx].s()[v2]);
+                    bool new_s_matches=(v1==n)?(new_s==samples[idx].s()[v2]):(new_s==samples[idx].s()[v1]);
+                    if(old_s_matches!=new_s_matches){ //check if exactly one between old and new spins match. when both don't match, delta_e=0
+                        delta_e+=old_s_matches?std::get<2>(k_obj):-std::get<2>(k_obj);
                     }
                 }
                 p2=-g.beta()*delta_e;
@@ -422,6 +421,7 @@ std::vector<sample_data> sampling::hybrid_mh_sample(size_t root,graph<cmp>& g,si
                 double r=log(unif_dist(mpi_utils::prng));
                 if(r<p){
                     samples[idx].s()[n]=new_s;
+                    samples[idx].e()+=delta_e;
                 }
                 // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<r<<" "<<(r<p?"accept":"reject")<<"\n";
             }
@@ -463,11 +463,10 @@ std::vector<std::vector<sample_data> > sampling::hybrid_mh_sample(size_t root,gr
                     std::tuple<size_t,size_t,double> k_obj=g.orig_ks()[g.vs()[n].orig_ks_idxs()[m]];
                     size_t v1=std::get<0>(k_obj);
                     size_t v2=std::get<1>(k_obj);
-                    if(v1==n){
-                        delta_e+=(new_s!=samples[idx].s()[v2])?std::get<2>(k_obj):-std::get<2>(k_obj);
-                    }
-                    else{
-                        delta_e+=(new_s!=samples[idx].s()[v1])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                    bool old_s_matches=(samples[idx].s()[v1]==samples[idx].s()[v2]);
+                    bool new_s_matches=(v1==n)?(new_s==samples[idx].s()[v2]):(new_s==samples[idx].s()[v1]);
+                    if(old_s_matches!=new_s_matches){ //check if exactly one between old and new spins match. when both don't match, delta_e=0
+                        delta_e+=old_s_matches?std::get<2>(k_obj):-std::get<2>(k_obj);
                     }
                 }
                 p2=-g.beta()*delta_e;
@@ -475,6 +474,7 @@ std::vector<std::vector<sample_data> > sampling::hybrid_mh_sample(size_t root,gr
                 double r=log(unif_dist(mpi_utils::prng));
                 if(r<p){
                     samples[idx].s()[n]=new_s;
+                    samples[idx].e()+=delta_e;
                 }
                 // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<r<<" "<<(r<p?"accept":"reject")<<"\n";
             }
@@ -650,9 +650,25 @@ std::vector<double> sampling::m_mc(std::vector<sample_data>& samples,size_t q_or
         }
         m=sqrt(m);
         m/=(double) samples[s].n_phys_sites();
+        
+        //alternate calculation scheme
+        // std::vector<double> freqs(q_orig,0);
+        // for(size_t e=0;e<samples[s].n_phys_sites();e++){
+            // freqs[samples[s].s()[e]-1]++;
+        // }
+        // size_t max_freq=0;
+        // for(size_t n=0;n<q_orig;n++){
+            // if(freqs[n]>max_freq){
+                // max_freq=freqs[n];
+            // }
+        // }
+        // double m=fabs(((q_orig*max_freq/(double) (samples[s].n_phys_sites()))-1)/(double) (q_orig-1));
+        
         // std::cout<<m<<"\n";
         ms.push_back(m);
     }
+    
+    
     //sample means
     double m1_abs_mean=0;
     double m2_mean=0;
