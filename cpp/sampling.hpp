@@ -57,7 +57,11 @@ namespace sampling{
     template<typename cmp>
     std::vector<sample_data> hybrid_mh_sample(graph<cmp>&,size_t,size_t,bool);
     template<typename cmp>
+    std::vector<std::vector<sample_data> > hybrid_mh_sample(graph<cmp>&,size_t,std::vector<size_t>&,bool);
+    template<typename cmp>
     std::vector<sample_data> hybrid_mh_sample(size_t,graph<cmp>&,size_t,size_t,bool);
+    template<typename cmp>
+    std::vector<std::vector<sample_data> > hybrid_mh_sample(size_t,graph<cmp>&,size_t,std::vector<size_t>&,bool);
     std::vector<sample_data> symmetrize_samples(std::vector<sample_data>&);
     template<typename cmp>
     void update_samples(size_t,graph<cmp>&,std::vector<sample_data>&);

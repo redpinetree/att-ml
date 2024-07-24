@@ -313,6 +313,10 @@ int main(int argc,char **argv){
     sw_total.start();
     bool add_suffix=(n_samples==0)?false:true;
     size_t n_samples_counter=(n_samples==0)?1:n_samples;
+    std::vector<size_t> n_sweeps_vec;
+    for(size_t sweep=min_n_sweeps;sweep<=max_n_sweeps;sweep+=step_n_sweeps){
+        n_sweeps_vec.push_back(sweep);
+    }
     for(size_t sample=mpi_utils::proc_rank;sample<n_samples_counter;sample+=mpi_utils::proc_num){
         std::string sample_output_fn=output;
         std::string sample_mc_output_fn=output+"_mc";
@@ -365,7 +369,7 @@ int main(int argc,char **argv){
             header2_ss<<"idx c q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q total_c\n";
         }
         // header2_mc_ss<<"idx c w n q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd binder_m_mean binder_m_sd c_mean c_sd\n";
-        header2_mc_ss<<"idx c q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd q1_abs_mean q1_abs_sd q2_mean q2_sd q4_mean q4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd sus_sg_mean sus_sg_sd binder_m_mean binder_m_sd binder_q_mean binder_q_sd c_mean c_sd\n";
+        header2_mc_ss<<"idx c w n q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd q1_abs_mean q1_abs_sd q2_mean q2_sd q4_mean q4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd sus_sg_mean sus_sg_sd binder_m_mean binder_m_sd binder_q_mean binder_q_sd c_mean c_sd\n";
         observables::output_lines.push_back(header2_ss.str());
         observables::mc_output_lines.push_back(header2_mc_ss.str());
         do{
@@ -400,15 +404,10 @@ int main(int argc,char **argv){
             sw.reset();
             
             sw.start();
-            size_t n_samples_per_mc=100;
-            size_t n_mc_repeats=1000;
+            size_t n_samples_per_mc=1000;
+            size_t n_mc_repeats=100;
             observables::calc_tree_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,(g.dims().size()!=0));
-            double n_sweeps=min_n_sweeps;
-            do{
-                observables::calc_mc_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps,n_mc_repeats,rand_mc);
-                n_sweeps+=step_n_sweeps;
-            }
-            while(n_sweeps<=max_n_sweeps);
+            observables::calc_mc_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps_vec,n_mc_repeats,rand_mc);
             sw.split();
             if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
@@ -416,7 +415,7 @@ int main(int argc,char **argv){
             for(size_t c=0;c<n_cycles;c++){ //perform MC sampling if n_cycles>0
                 std::cout<<"cycle "<<(c+1)<<"\n";
                 sw.start();
-                algorithm::train_nll(g,n_config_samples,n_sweeps,n_nll_iter_max); //nll training
+                algorithm::train_nll(g,n_config_samples,max_n_sweeps,n_nll_iter_max); //nll training
                 sw.split();
                 if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
@@ -432,12 +431,7 @@ int main(int argc,char **argv){
                 
                 sw.start();
                 observables::calc_tree_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,(g.dims().size()!=0));
-                double n_sweeps=min_n_sweeps;
-                do{
-                    observables::calc_mc_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps,n_mc_repeats,rand_mc);
-                    n_sweeps+=step_n_sweeps;
-                }
-                while(n_sweeps<=max_n_sweeps);
+                observables::calc_mc_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps_vec,n_mc_repeats,rand_mc);
                 sw.split();
                 if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();

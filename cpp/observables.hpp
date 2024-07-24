@@ -54,7 +54,7 @@ namespace observables{
     template<typename cmp>
     void calc_tree_observables(graph<cmp>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,bool);
     template<typename cmp>
-    void calc_mc_observables(graph<cmp>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,size_t,size_t,size_t,bool);
+    void calc_mc_observables(graph<cmp>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,size_t,std::vector<size_t>&,size_t,bool);
     void write_output(std::string,std::vector<std::string>&);
     void write_output(std::vector<std::string>&);
     void write_binary_output(std::string,std::vector<std::pair<double,std::vector<double> > >&);

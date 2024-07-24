@@ -375,6 +375,13 @@ std::vector<sample_data> sampling::hybrid_mh_sample(graph<cmp>& g,size_t n_sampl
 template std::vector<sample_data> sampling::hybrid_mh_sample(graph<bmi_comparator>&,size_t,size_t,bool);
 
 template<typename cmp>
+std::vector<std::vector<sample_data> > sampling::hybrid_mh_sample(graph<cmp>& g,size_t n_samples,std::vector<size_t>& n_sweeps_vec,bool rand_mc){
+    std::vector<std::vector<sample_data> > samples=sampling::hybrid_mh_sample(g.vs().size()-1,g,n_samples,n_sweeps_vec,rand_mc);
+    return samples;
+}
+template std::vector<std::vector<sample_data> > sampling::hybrid_mh_sample(graph<bmi_comparator>&,size_t,std::vector<size_t>&,bool);
+
+template<typename cmp>
 std::vector<sample_data> sampling::hybrid_mh_sample(size_t root,graph<cmp>& g,size_t n_samples,size_t n_sweeps,bool rand_mc){
     std::uniform_real_distribution<> unif_dist(0,1.0);
     //no need to equilibrate because draws are global and sampling from tree is perfect
@@ -424,6 +431,65 @@ std::vector<sample_data> sampling::hybrid_mh_sample(size_t root,graph<cmp>& g,si
     return samples;
 }
 template std::vector<sample_data> sampling::hybrid_mh_sample(size_t,graph<bmi_comparator>&,size_t,size_t,bool);
+
+template<typename cmp>
+std::vector<std::vector<sample_data> > sampling::hybrid_mh_sample(size_t root,graph<cmp>& g,size_t n_samples,std::vector<size_t>& n_sweeps_vec,bool rand_mc){
+    std::vector<std::vector<sample_data> > res_vec(n_sweeps_vec.size());
+    size_t max_n_sweeps=*(std::max_element(n_sweeps_vec.begin(),n_sweeps_vec.end()));
+    std::uniform_real_distribution<> unif_dist(0,1.0);
+    //no need to equilibrate because draws are global and sampling from tree is perfect
+    std::vector<sample_data> samples;
+    if(rand_mc){
+        samples=sampling::random_sample(g,n_samples);
+    }
+    else{
+        samples=sampling::tree_sample(g,n_samples);
+    }
+    for(size_t idx=0;idx<n_samples;idx++){
+        for(size_t sweep=0;sweep<max_n_sweeps;sweep++){ //number of sweeps
+            for(size_t n=0;n<g.n_phys_sites();n++){
+                // std::cout<<"n: "<<n<<"\n";
+                size_t new_s;
+                double p1,p2;
+                if(samples[idx].s()[n]!=0){
+                    do{
+                        new_s=(mpi_utils::prng()%g.vs()[n].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+                    }
+                    while(samples[idx].s()[n]==new_s);
+                    p1=0; //log(1)=0
+                }
+                double delta_e=0;
+                for(size_t m=0;m<g.vs()[n].orig_ks_idxs().size();m++){
+                    std::tuple<size_t,size_t,double> k_obj=g.orig_ks()[g.vs()[n].orig_ks_idxs()[m]];
+                    size_t v1=std::get<0>(k_obj);
+                    size_t v2=std::get<1>(k_obj);
+                    if(v1==n){
+                        delta_e+=(new_s!=samples[idx].s()[v2])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                    }
+                    else{
+                        delta_e+=(new_s!=samples[idx].s()[v1])?std::get<2>(k_obj):-std::get<2>(k_obj);
+                    }
+                }
+                p2=-g.beta()*delta_e;
+                double p=p1+p2;
+                double r=log(unif_dist(mpi_utils::prng));
+                if(r<p){
+                    samples[idx].s()[n]=new_s;
+                }
+                // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<r<<" "<<(r<p?"accept":"reject")<<"\n";
+            }
+            for(size_t sweep_idx=0;sweep_idx<n_sweeps_vec.size();sweep_idx++){
+                if((sweep+1)==n_sweeps_vec[sweep_idx]){ //collect intermediate configurations up to max_n_sweeps
+                    res_vec[sweep_idx].push_back(samples[idx]);
+                    break;
+                }
+            }
+        }
+        // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
+    }
+    return res_vec;
+}
+template std::vector<std::vector<sample_data> > sampling::hybrid_mh_sample(size_t,graph<bmi_comparator>&,size_t,std::vector<size_t>&,bool);
 
 std::vector<sample_data> sampling::symmetrize_samples(std::vector<sample_data>& samples){
     std::vector<sample_data> sym_samples=samples;

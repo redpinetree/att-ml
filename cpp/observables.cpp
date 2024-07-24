@@ -831,20 +831,31 @@ void observables::calc_tree_observables(graph<cmp>& g,size_t sample,size_t cycle
 template void observables::calc_tree_observables(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,bool);
 
 template<typename cmp>
-void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_count,size_t q_orig,size_t dim_count,size_t r_max,double beta,std::string& header,size_t n_samples,size_t n_sweeps,size_t n_repeats,bool rand_mc){
+void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_count,size_t q_orig,size_t dim_count,size_t r_max,double beta,std::string& header,size_t n_samples,std::vector<size_t>& n_sweeps_vec,size_t n_repeats,bool rand_mc){
     if(rand_mc){
         std::cout<<"Random MC initialization chosen.\n";
     }
-    double c_mean,c_sd;
-    double sus_fm_mean,sus_fm_sd,binder_m_mean,binder_m_sd;
-    double sus_sg_mean,sus_sg_sd,binder_q_mean,binder_q_sd;
     
-    std::vector<double> e_mc_res(4,0);
-    std::vector<double> e1_mc_ests,e2_mc_ests;
-    std::vector<double> m_mc_res(6,0);
-    std::vector<double> m1_abs_mc_ests,m2_mc_ests,m4_mc_ests;
-    std::vector<double> q_mc_res(6,0);
-    std::vector<double> q1_abs_mc_ests,q2_mc_ests,q4_mc_ests;
+    std::vector<std::vector<double> > e_mc_res;
+    for(size_t n=0;n<n_sweeps_vec.size();n++){
+        e_mc_res.push_back(std::vector<double>(4,0));
+    }
+    std::vector<std::vector<double> > e1_mc_ests(n_sweeps_vec.size());
+    std::vector<std::vector<double> > e2_mc_ests(n_sweeps_vec.size());
+    std::vector<std::vector<double> > m_mc_res;
+    for(size_t n=0;n<n_sweeps_vec.size();n++){
+        m_mc_res.push_back(std::vector<double>(6,0));
+    }
+    std::vector<std::vector<double> > m1_abs_mc_ests(n_sweeps_vec.size());
+    std::vector<std::vector<double> > m2_mc_ests(n_sweeps_vec.size());
+    std::vector<std::vector<double> > m4_mc_ests(n_sweeps_vec.size());
+    std::vector<std::vector<double> > q_mc_res;
+    for(size_t n=0;n<n_sweeps_vec.size();n++){
+        q_mc_res.push_back(std::vector<double>(6,0));
+    }
+    std::vector<std::vector<double> > q1_abs_mc_ests(n_sweeps_vec.size());
+    std::vector<std::vector<double> > q2_mc_ests(n_sweeps_vec.size());
+    std::vector<std::vector<double> > q4_mc_ests(n_sweeps_vec.size());
     
     //mc estimator mean and sd
     for(size_t i=0;i<n_repeats;i++){
@@ -852,88 +863,100 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
         // std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,test,rand_mc);
         // std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,rand_mc);
         // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,rand_mc);
-        std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,rand_mc);
+        std::vector<std::vector<sample_data> > samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps_vec,rand_mc);
     
-        std::vector<double> e_res=sampling::e_mc(samples);
-        std::vector<double> m_res=sampling::m_mc(samples,q_orig);
-        std::vector<double> overlaps;
-        std::vector<double> q_res=sampling::q_mc(samples,q_orig,overlaps);
-        e1_mc_ests.push_back(e_res[0]);
-        e2_mc_ests.push_back(e_res[1]);
-        e_mc_res[0]+=e_res[0];
-        e_mc_res[2]+=e_res[1];
-        m1_abs_mc_ests.push_back(m_res[0]);
-        m2_mc_ests.push_back(m_res[1]);
-        m4_mc_ests.push_back(m_res[2]);
-        m_mc_res[0]+=m_res[0];
-        m_mc_res[2]+=m_res[1];
-        m_mc_res[4]+=m_res[2];
-        q1_abs_mc_ests.push_back(q_res[0]);
-        q2_mc_ests.push_back(q_res[1]);
-        q4_mc_ests.push_back(q_res[2]);
-        q_mc_res[0]+=q_res[0];
-        q_mc_res[2]+=q_res[1];
-        q_mc_res[4]+=q_res[2];
+        std::vector<std::vector<double> > e_res(n_sweeps_vec.size());
+        std::vector<std::vector<double> > m_res(n_sweeps_vec.size());
+        std::vector<std::vector<double> > q_res(n_sweeps_vec.size());
+        for(size_t sweep_idx=0;sweep_idx<n_sweeps_vec.size();sweep_idx++){
+            e_res[sweep_idx]=sampling::e_mc(samples[sweep_idx]);
+            m_res[sweep_idx]=sampling::m_mc(samples[sweep_idx],q_orig);
+            std::vector<double> overlaps;
+            q_res[sweep_idx]=sampling::q_mc(samples[sweep_idx],q_orig,overlaps);
+            e1_mc_ests[sweep_idx].push_back(e_res[sweep_idx][0]);
+            e2_mc_ests[sweep_idx].push_back(e_res[sweep_idx][1]);
+            e_mc_res[sweep_idx][0]+=e_res[sweep_idx][0];
+            e_mc_res[sweep_idx][2]+=e_res[sweep_idx][1];
+            m1_abs_mc_ests[sweep_idx].push_back(m_res[sweep_idx][0]);
+            m2_mc_ests[sweep_idx].push_back(m_res[sweep_idx][1]);
+            m4_mc_ests[sweep_idx].push_back(m_res[sweep_idx][2]);
+            m_mc_res[sweep_idx][0]+=m_res[sweep_idx][0];
+            m_mc_res[sweep_idx][2]+=m_res[sweep_idx][1];
+            m_mc_res[sweep_idx][4]+=m_res[sweep_idx][2];
+            q1_abs_mc_ests[sweep_idx].push_back(q_res[sweep_idx][0]);
+            q2_mc_ests[sweep_idx].push_back(q_res[sweep_idx][1]);
+            q4_mc_ests[sweep_idx].push_back(q_res[sweep_idx][2]);
+            q_mc_res[sweep_idx][0]+=q_res[sweep_idx][0];
+            q_mc_res[sweep_idx][2]+=q_res[sweep_idx][1];
+            q_mc_res[sweep_idx][4]+=q_res[sweep_idx][2];
+        }
     }
-    e_mc_res[0]/=n_repeats;
-    e_mc_res[2]/=n_repeats;
-    m_mc_res[0]/=n_repeats;
-    m_mc_res[2]/=n_repeats;
-    m_mc_res[4]/=n_repeats;
-    q_mc_res[0]/=n_repeats;
-    q_mc_res[2]/=n_repeats;
-    q_mc_res[4]/=n_repeats;
-    
-    for(size_t i=0;i<n_repeats;i++){
-        e_mc_res[1]+=pow(e1_mc_ests[i]-e_mc_res[0],2.0);
-        e_mc_res[3]+=pow(e2_mc_ests[i]-e_mc_res[2],2.0);
+        
+    for(size_t sweep_idx=0;sweep_idx<n_sweeps_vec.size();sweep_idx++){
+        e_mc_res[sweep_idx][0]/=n_repeats;
+        e_mc_res[sweep_idx][2]/=n_repeats;
+        m_mc_res[sweep_idx][0]/=n_repeats;
+        m_mc_res[sweep_idx][2]/=n_repeats;
+        m_mc_res[sweep_idx][4]/=n_repeats;
+        q_mc_res[sweep_idx][0]/=n_repeats;
+        q_mc_res[sweep_idx][2]/=n_repeats;
+        q_mc_res[sweep_idx][4]/=n_repeats;
+        
+        for(size_t i=0;i<n_repeats;i++){
+            e_mc_res[sweep_idx][1]+=pow(e1_mc_ests[sweep_idx][i]-e_mc_res[sweep_idx][0],2.0);
+            e_mc_res[sweep_idx][3]+=pow(e2_mc_ests[sweep_idx][i]-e_mc_res[sweep_idx][2],2.0);
+        }
+        e_mc_res[sweep_idx][1]=sqrt(e_mc_res[sweep_idx][1]/(double) (n_repeats-1));
+        e_mc_res[sweep_idx][3]=sqrt(e_mc_res[sweep_idx][3]/(double) (n_repeats-1));
+        for(size_t i=0;i<n_repeats;i++){
+            m_mc_res[sweep_idx][1]+=pow(m1_abs_mc_ests[sweep_idx][i]-m_mc_res[sweep_idx][0],2.0);
+            m_mc_res[sweep_idx][3]+=pow(m2_mc_ests[sweep_idx][i]-m_mc_res[sweep_idx][2],2.0);
+            m_mc_res[sweep_idx][5]+=pow(m4_mc_ests[sweep_idx][i]-m_mc_res[sweep_idx][4],2.0);
+        }
+        m_mc_res[sweep_idx][1]=sqrt(m_mc_res[sweep_idx][1]/(double) (n_repeats-1));
+        m_mc_res[sweep_idx][3]=sqrt(m_mc_res[sweep_idx][3]/(double) (n_repeats-1));
+        m_mc_res[sweep_idx][5]=sqrt(m_mc_res[sweep_idx][5]/(double) (n_repeats-1));
+        for(size_t i=0;i<n_repeats;i++){
+            q_mc_res[sweep_idx][1]+=pow(q1_abs_mc_ests[sweep_idx][i]-q_mc_res[sweep_idx][0],2.0);
+            q_mc_res[sweep_idx][3]+=pow(q2_mc_ests[sweep_idx][i]-q_mc_res[sweep_idx][2],2.0);
+            q_mc_res[sweep_idx][5]+=pow(q4_mc_ests[sweep_idx][i]-q_mc_res[sweep_idx][4],2.0);
+        }
+        q_mc_res[sweep_idx][1]=sqrt(q_mc_res[sweep_idx][1]/(double) (n_repeats-1));
+        q_mc_res[sweep_idx][3]=sqrt(q_mc_res[sweep_idx][3]/(double) (n_repeats-1));
+        q_mc_res[sweep_idx][5]=sqrt(q_mc_res[sweep_idx][5]/(double) (n_repeats-1));
+        
+        double c_mean,c_sd;
+        double sus_fm_mean,sus_fm_sd,binder_m_mean,binder_m_sd;
+        double sus_sg_mean,sus_sg_sd,binder_q_mean,binder_q_sd;
+        
+        c_mean=g.n_phys_sites()*(e_mc_res[sweep_idx][2]-pow(e_mc_res[sweep_idx][0],2.0)); //c=var(e)
+        c_sd=g.n_phys_sites()*sqrt(pow(e_mc_res[sweep_idx][3],2.0)+pow(2*e_mc_res[sweep_idx][0]*e_mc_res[sweep_idx][1],2.0)); //formula from above
+        sus_fm_mean=g.n_phys_sites()*m_mc_res[sweep_idx][2]; //chi_fm=n*var(m)
+        sus_fm_sd=g.n_phys_sites()*m_mc_res[sweep_idx][3]; //formula from above
+        binder_m_mean=0.5*(3-(m_mc_res[sweep_idx][4]/pow(m_mc_res[sweep_idx][2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
+        binder_m_sd=0.5*sqrt(pow(pow(m_mc_res[sweep_idx][2],-2.0)*m_mc_res[sweep_idx][5],2.0)+pow(2*m_mc_res[sweep_idx][4]*m_mc_res[sweep_idx][3]*pow(m_mc_res[sweep_idx][2],-3.0),2.0));
+        sus_sg_mean=g.n_phys_sites()*q_mc_res[sweep_idx][2]; //chi_sg=n*var(q_orig)
+        sus_sg_sd=g.n_phys_sites()*q_mc_res[sweep_idx][3]; //formula from above
+        binder_q_mean=0.5*(3-(q_mc_res[sweep_idx][4]/pow(q_mc_res[sweep_idx][2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
+        binder_q_sd=0.5*sqrt(pow(pow(q_mc_res[sweep_idx][2],-2.0)*q_mc_res[sweep_idx][5],2.0)+pow(2*q_mc_res[sweep_idx][4]*q_mc_res[sweep_idx][3]*pow(q_mc_res[sweep_idx][2],-3.0),2.0)); //formula from above
+        
+        std::stringstream mc_output_line_ss;
+        mc_output_line_ss<<std::scientific<<sample<<" "<<cycle_count<<" "<<n_sweeps_vec[sweep_idx]<<" "<<n_repeats<<" "<<q_orig<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" ";
+        for(size_t a=0;a<m_mc_res[sweep_idx].size();a++){
+            mc_output_line_ss<<m_mc_res[sweep_idx][a]<<" ";
+        }
+        for(size_t a=0;a<q_mc_res[sweep_idx].size();a++){
+            mc_output_line_ss<<q_mc_res[sweep_idx][a]<<" ";
+        }
+        for(size_t a=0;a<e_mc_res[sweep_idx].size();a++){
+            mc_output_line_ss<<e_mc_res[sweep_idx][a]<<" ";
+        }
+        // mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+        mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+        observables::mc_output_lines.push_back(mc_output_line_ss.str());
     }
-    e_mc_res[1]=sqrt(e_mc_res[1]/(double) (n_repeats-1));
-    e_mc_res[3]=sqrt(e_mc_res[3]/(double) (n_repeats-1));
-    for(size_t i=0;i<n_repeats;i++){
-        m_mc_res[1]+=pow(m1_abs_mc_ests[i]-m_mc_res[0],2.0);
-        m_mc_res[3]+=pow(m2_mc_ests[i]-m_mc_res[2],2.0);
-        m_mc_res[5]+=pow(m4_mc_ests[i]-m_mc_res[4],2.0);
-    }
-    m_mc_res[1]=sqrt(m_mc_res[1]/(double) (n_repeats-1));
-    m_mc_res[3]=sqrt(m_mc_res[3]/(double) (n_repeats-1));
-    m_mc_res[5]=sqrt(m_mc_res[5]/(double) (n_repeats-1));
-    for(size_t i=0;i<n_repeats;i++){
-        q_mc_res[1]+=pow(q1_abs_mc_ests[i]-q_mc_res[0],2.0);
-        q_mc_res[3]+=pow(q2_mc_ests[i]-q_mc_res[2],2.0);
-        q_mc_res[5]+=pow(q4_mc_ests[i]-q_mc_res[4],2.0);
-    }
-    q_mc_res[1]=sqrt(q_mc_res[1]/(double) (n_repeats-1));
-    q_mc_res[3]=sqrt(q_mc_res[3]/(double) (n_repeats-1));
-    q_mc_res[5]=sqrt(q_mc_res[5]/(double) (n_repeats-1));
-    
-    c_mean=g.n_phys_sites()*(e_mc_res[2]-pow(e_mc_res[0],2.0)); //c=var(e)
-    c_sd=g.n_phys_sites()*sqrt(pow(e_mc_res[3],2.0)+pow(2*e_mc_res[0]*e_mc_res[1],2.0)); //formula from above
-    sus_fm_mean=g.n_phys_sites()*m_mc_res[2]; //chi_fm=n*var(m)
-    sus_fm_sd=g.n_phys_sites()*m_mc_res[3]; //formula from above
-    binder_m_mean=0.5*(3-(m_mc_res[4]/pow(m_mc_res[2],2.0))); //g_m=0.5*(3-(m4/pow(m2,2)))
-    binder_m_sd=0.5*sqrt(pow(pow(m_mc_res[2],-2.0)*m_mc_res[5],2.0)+pow(2*m_mc_res[4]*m_mc_res[3]*pow(m_mc_res[2],-3.0),2.0));
-    sus_sg_mean=g.n_phys_sites()*q_mc_res[2]; //chi_sg=n*var(q_orig)
-    sus_sg_sd=g.n_phys_sites()*q_mc_res[3]; //formula from above
-    binder_q_mean=0.5*(3-(q_mc_res[4]/pow(q_mc_res[2],2.0))); //g_q=0.5*(3-(q4/pow(q2,2)))
-    binder_q_sd=0.5*sqrt(pow(pow(q_mc_res[2],-2.0)*q_mc_res[5],2.0)+pow(2*q_mc_res[4]*q_mc_res[3]*pow(q_mc_res[2],-3.0),2.0)); //formula from above
-    
-    std::stringstream mc_output_line_ss;
-    mc_output_line_ss<<std::scientific<<sample<<" "<<cycle_count<<" "<<n_sweeps<<" "<<n_repeats<<" "<<q_orig<<" "<<dim_count<<" "<<r_max<<" "<<header<<" "<<beta<<" ";
-    for(size_t a=0;a<m_mc_res.size();a++){
-        mc_output_line_ss<<m_mc_res[a]<<" ";
-    }
-    for(size_t a=0;a<q_mc_res.size();a++){
-        mc_output_line_ss<<q_mc_res[a]<<" ";
-    }
-    for(size_t a=0;a<e_mc_res.size();a++){
-        mc_output_line_ss<<e_mc_res[a]<<" ";
-    }
-    // mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
-    mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
-    observables::mc_output_lines.push_back(mc_output_line_ss.str());
 }
-template void observables::calc_mc_observables(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,size_t,size_t,size_t,bool);
+template void observables::calc_mc_observables(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,size_t,std::vector<size_t>&,size_t,bool);
 
 void observables::write_output(std::string fn,std::vector<std::string>& lines){
     std::ofstream ofs(fn);
