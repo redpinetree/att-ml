@@ -4,12 +4,15 @@
 #ignore pycache
 **__pycache__
 **.o
+**.pdf
+**.gv
+**.png
 
 #exceptions
 !.gitignore
 !/py/
 !/py_cmd/
-!/rudy/
+!/graph_gens/
 !/cpp/
 !/cpp_old/
 !/cpp_old_old/
