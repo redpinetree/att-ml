@@ -707,6 +707,7 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
     size_t r_j=current.w().ny();
     size_t r_k=current.w().nz();
     std::vector<double> weights(r_k,1);
+    double eps=1e-16;
     
     //precompute intermediate quantities for weight optimization for murenyi or cmd (if needed)
     //calculate G_i(S_i) and G_j(S_j)
@@ -920,7 +921,7 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
         else{
             err=final_cost;
         }
-        if((it>0)&&(fabs(prev_err-err)<1e-16)){
+        if((it>0)&&(fabs(prev_err-err)<eps)){
             std::cout<<"CPD converged after "<<it<<" iterations.\n";
             break;
         }

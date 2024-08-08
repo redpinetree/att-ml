@@ -831,11 +831,10 @@ void observables::calc_tree_observables(graph<cmp>& g,size_t sample,size_t cycle
 template void observables::calc_tree_observables(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,bool);
 
 template<typename cmp>
-void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_count,size_t q_orig,size_t dim_count,size_t r_max,double beta,std::string& header,size_t n_samples,std::vector<size_t>& n_sweeps_vec,size_t n_repeats,bool rand_mc){
+void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_count,size_t q_orig,size_t dim_count,size_t r_max,double beta,std::string& header,size_t n_samples,std::vector<size_t>& n_sweeps_vec,size_t n_repeats,bool rand_mc,bool ti_flag){
     if(rand_mc){
         std::cout<<"Random MC initialization chosen.\n";
     }
-    
     std::vector<std::vector<double> > e_mc_res;
     for(size_t n=0;n<n_sweeps_vec.size();n++){
         e_mc_res.push_back(std::vector<double>(4,0));
@@ -857,6 +856,11 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
     std::vector<std::vector<double> > q2_mc_ests(n_sweeps_vec.size());
     std::vector<std::vector<double> > q4_mc_ests(n_sweeps_vec.size());
     
+    std::vector<std::vector<double> > mi_mc_res;
+    for(size_t n=0;n<n_sweeps_vec.size();n++){
+        mi_mc_res.push_back(std::vector<double>(2,0));
+    }
+    std::vector<std::vector<double> > mi_mc_ests(n_sweeps_vec.size());
     //mc estimator mean and sd
     for(size_t i=0;i<n_repeats;i++){
         // double test;
@@ -868,6 +872,9 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
         std::vector<std::vector<double> > e_res(n_sweeps_vec.size());
         std::vector<std::vector<double> > m_res(n_sweeps_vec.size());
         std::vector<std::vector<double> > q_res(n_sweeps_vec.size());
+        
+        std::vector<double> mi_res(n_sweeps_vec.size());
+        
         for(size_t sweep_idx=0;sweep_idx<n_sweeps_vec.size();sweep_idx++){
             e_res[sweep_idx]=sampling::e_mc(samples[sweep_idx]);
             m_res[sweep_idx]=sampling::m_mc(samples[sweep_idx],q_orig);
@@ -889,18 +896,24 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
             q_mc_res[sweep_idx][0]+=q_res[sweep_idx][0];
             q_mc_res[sweep_idx][2]+=q_res[sweep_idx][1];
             q_mc_res[sweep_idx][4]+=q_res[sweep_idx][2];
+            
+            mi_res[sweep_idx]=sampling::mi_mc(g,samples[sweep_idx],ti_flag);
+            mi_mc_ests[sweep_idx].push_back(mi_res[sweep_idx]);
+            mi_mc_res[sweep_idx][0]+=mi_res[sweep_idx];
         }
     }
         
     for(size_t sweep_idx=0;sweep_idx<n_sweeps_vec.size();sweep_idx++){
-        e_mc_res[sweep_idx][0]/=n_repeats;
-        e_mc_res[sweep_idx][2]/=n_repeats;
-        m_mc_res[sweep_idx][0]/=n_repeats;
-        m_mc_res[sweep_idx][2]/=n_repeats;
-        m_mc_res[sweep_idx][4]/=n_repeats;
-        q_mc_res[sweep_idx][0]/=n_repeats;
-        q_mc_res[sweep_idx][2]/=n_repeats;
-        q_mc_res[sweep_idx][4]/=n_repeats;
+        e_mc_res[sweep_idx][0]/=(double) n_repeats;
+        e_mc_res[sweep_idx][2]/=(double) n_repeats;
+        m_mc_res[sweep_idx][0]/=(double) n_repeats;
+        m_mc_res[sweep_idx][2]/=(double) n_repeats;
+        m_mc_res[sweep_idx][4]/=(double) n_repeats;
+        q_mc_res[sweep_idx][0]/=(double) n_repeats;
+        q_mc_res[sweep_idx][2]/=(double) n_repeats;
+        q_mc_res[sweep_idx][4]/=(double) n_repeats;
+        
+        mi_mc_res[sweep_idx][0]/=(double) n_repeats;
         
         for(size_t i=0;i<n_repeats;i++){
             e_mc_res[sweep_idx][1]+=pow(e1_mc_ests[sweep_idx][i]-e_mc_res[sweep_idx][0],2.0);
@@ -924,6 +937,11 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
         q_mc_res[sweep_idx][1]=sqrt(q_mc_res[sweep_idx][1]/(double) (n_repeats-1));
         q_mc_res[sweep_idx][3]=sqrt(q_mc_res[sweep_idx][3]/(double) (n_repeats-1));
         q_mc_res[sweep_idx][5]=sqrt(q_mc_res[sweep_idx][5]/(double) (n_repeats-1));
+        
+        for(size_t i=0;i<n_repeats;i++){
+            mi_mc_res[sweep_idx][1]+=pow(mi_mc_ests[sweep_idx][i]-mi_mc_res[sweep_idx][0],2.0);
+        }
+        mi_mc_res[sweep_idx][1]=sqrt(mi_mc_res[sweep_idx][1]/(double) (n_repeats-1));
         
         double c_mean,c_sd;
         double sus_fm_mean,sus_fm_sd,binder_m_mean,binder_m_sd;
@@ -952,11 +970,12 @@ void observables::calc_mc_observables(graph<cmp>& g,size_t sample,size_t cycle_c
             mc_output_line_ss<<e_mc_res[sweep_idx][a]<<" ";
         }
         // mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
-        mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+        // mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<"\n";
+        mc_output_line_ss<<sus_fm_mean<<" "<<sus_fm_sd<<" "<<sus_sg_mean<<" "<<sus_sg_sd<<" "<<binder_m_mean<<" "<<binder_m_sd<<" "<<binder_q_mean<<" "<<binder_q_sd<<" "<<c_mean<<" "<<c_sd<<" "<<mi_mc_res[sweep_idx][0]<<" "<<mi_mc_res[sweep_idx][1]<<"\n";
         observables::mc_output_lines.push_back(mc_output_line_ss.str());
     }
 }
-template void observables::calc_mc_observables(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,size_t,std::vector<size_t>&,size_t,bool);
+template void observables::calc_mc_observables(graph<bmi_comparator>&,size_t,size_t,size_t,size_t,size_t,double,std::string&,size_t,std::vector<size_t>&,size_t,bool,bool);
 
 void observables::write_output(std::string fn,std::vector<std::string>& lines){
     std::ofstream ofs(fn);

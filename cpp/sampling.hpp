@@ -35,6 +35,8 @@ namespace sampling{
     template<typename cmp>
     double calc_sample_log_w(graph<cmp>&,std::vector<size_t>&);
     template<typename cmp>
+    double calc_sample_log_w(graph<cmp>&,std::vector<size_t>&,std::vector<size_t>&);
+    template<typename cmp>
     std::vector<sample_data> random_sample(size_t,graph<cmp>&,size_t);
     template<typename cmp>
     std::vector<sample_data> random_sample(graph<cmp>&,size_t);
@@ -71,6 +73,8 @@ namespace sampling{
     std::vector<double> q_mc(std::vector<sample_data>&,size_t,std::vector<double>&);
     double expected_e(std::vector<sample_data>);
     double min_e(std::vector<sample_data>);
+    template<typename cmp>
+    double mi_mc(graph<cmp>&,std::vector<sample_data>&,bool);
 }
 
 #endif

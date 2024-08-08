@@ -40,6 +40,7 @@ template<typename cmp>
 double sampling::calc_sample_log_w(graph<cmp>& g,std::vector<size_t>& s){
     //calculate weight of sample tracing out virtual sites
     std::vector<array1d<double> > contracted_vectors;
+    
     for(size_t n=0;n<g.vs().size();n++){
         if(n<g.n_phys_sites()){ //physical (input) sites
             array1d<double> vec_e(g.vs()[n].rank());
@@ -85,6 +86,71 @@ double sampling::calc_sample_log_w(graph<cmp>& g,std::vector<size_t>& s){
     return log_w;
 }
 template double sampling::calc_sample_log_w(graph<bmi_comparator>&,std::vector<size_t>&);
+
+template<typename cmp>
+double sampling::calc_sample_log_w(graph<cmp>& g,std::vector<size_t>& s,std::vector<size_t>& shift){
+    //calculate weight of sample tracing out virtual sites
+    std::vector<array1d<double> > contracted_vectors;
+                
+    //precompute jump sizes
+    std::vector<size_t> jump_size(g.dims().size(),1);
+    for(size_t idx=1;idx<g.dims().size();idx++){
+        jump_size[idx]=jump_size[idx-1]*g.dims()[idx-1];
+    }
+                
+    for(size_t n=0;n<g.vs().size();n++){
+        if(n<g.n_phys_sites()){ //physical (input) sites
+                
+            size_t offset=0;
+            for(size_t dim=0;dim<g.dims().size();dim++){
+                size_t term=(g.vs()[n].coords()[dim]+shift[dim])%g.dims()[dim]; //replace with idx at pos dim
+                term*=jump_size[dim];
+                offset+=term;
+            }
+            
+            array1d<double> vec_e(g.vs()[offset].rank());
+            if(s[offset]!=0){
+                for(size_t a=0;a<vec_e.nx();a++){
+                    //traced out spins have state 0 and the vector will be all 1s (but in log form)
+                    if((s[offset]-1)!=a){ //if a==s[offset]-1, element is log(1)=0. else log(0)=-inf
+                        vec_e.at(a)=log(1e-100);
+                    }
+                }
+            }
+            contracted_vectors.push_back(vec_e);
+        }
+        else{ //virtual sites
+            contracted_vectors.push_back(array1d<double>());
+        }
+    }
+    size_t contracted_idx_count=0;
+    while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset repeatedly until all idxs processed
+        for(auto it=g.es().begin();it!=g.es().end();++it){
+            if((contracted_vectors[(*it).v1()].nx()!=0)&&(contracted_vectors[(*it).v2()].nx()!=0)&&(contracted_vectors[(*it).order()].nx()==0)){ //process if children have been contracted and parent is not yet contracted
+                array1d<double> res_vec(g.vs()[(*it).order()].rank());
+                for(size_t k=0;k<(*it).w().nz();k++){
+                    std::vector<double> res_vec_addends;
+                    for(size_t i=0;i<contracted_vectors[(*it).v1()].nx();i++){
+                        for(size_t j=0;j<contracted_vectors[(*it).v2()].nx();j++){
+                            res_vec_addends.push_back(contracted_vectors[(*it).v1()].at(i)+contracted_vectors[(*it).v2()].at(j)+(*it).w().at(i,j,k)); //log space
+                        }
+                    }
+                    res_vec.at(k)=lse(res_vec_addends); //log space
+                }
+                contracted_vectors[(*it).order()]=res_vec;
+                contracted_idx_count++;
+                if(contracted_idx_count==(g.vs().size()-g.n_phys_sites())){break;}
+            }
+        }
+    }
+    std::vector<double> w_addends;
+    for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
+        w_addends.push_back(contracted_vectors[g.vs().size()-1].at(k));
+    }
+    double log_w=lse(w_addends);
+    return log_w;
+}
+template double sampling::calc_sample_log_w(graph<bmi_comparator>&,std::vector<size_t>&,std::vector<size_t>&);
 
 template<typename cmp>
 std::vector<sample_data> sampling::random_sample(size_t root,graph<cmp>& g,size_t n_samples){
@@ -446,7 +512,8 @@ std::vector<std::vector<sample_data> > sampling::hybrid_mh_sample(size_t root,gr
         samples=sampling::tree_sample(g,n_samples);
     }
     for(size_t idx=0;idx<n_samples;idx++){
-        for(size_t sweep=0;sweep<max_n_sweeps;sweep++){ //number of sweeps
+        size_t sweep=0;
+        do{
             for(size_t n=0;n<g.n_phys_sites();n++){
                 // std::cout<<"n: "<<n<<"\n";
                 size_t new_s;
@@ -479,12 +546,14 @@ std::vector<std::vector<sample_data> > sampling::hybrid_mh_sample(size_t root,gr
                 // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<r<<" "<<(r<p?"accept":"reject")<<"\n";
             }
             for(size_t sweep_idx=0;sweep_idx<n_sweeps_vec.size();sweep_idx++){
-                if((sweep+1)==n_sweeps_vec[sweep_idx]){ //collect intermediate configurations up to max_n_sweeps
+                if(sweep==n_sweeps_vec[sweep_idx]){ //collect intermediate configurations up to max_n_sweeps
                     res_vec[sweep_idx].push_back(samples[idx]);
                     break;
                 }
             }
+            sweep++;
         }
+        while(sweep<=max_n_sweeps);
         // std::cout<<p1<<" "<<p2<<" "<<p<<" "<<(r<p?"accept":"reject")<<"\n";
     }
     return res_vec;
@@ -732,3 +801,83 @@ double sampling::min_e(std::vector<sample_data> samples){
     }
     return min_e;
 }
+
+template<typename cmp>
+double sampling::mi_mc(graph<cmp>& g,std::vector<sample_data>& samples,bool ti_flag){
+    //currently, assume even sites in subsystem a and odd sites in subsystem b
+    std::vector<size_t> subsystem_labels(g.n_phys_sites());
+    for(size_t i=0;i<subsystem_labels.size();i++){
+        subsystem_labels[i]=i%2;
+    }
+    
+    //compute mutual information
+    double mi_mean=0;
+    double s_ab=0;
+    double s_a=0;
+    double s_b=0;
+    for(size_t i=0;i<samples.size();i++){
+        //generate lattice vectors
+        std::vector<std::vector<size_t> > lat_vecs=spin_cart_prod(g.dims());
+        for(size_t lat_idx=0;lat_idx<lat_vecs.size();lat_idx++){
+            std::reverse(lat_vecs[lat_idx].begin(),lat_vecs[lat_idx].end());
+        }
+        
+        if(ti_flag){
+            double total_dist=0;
+            for(size_t lat_idx=0;lat_idx<lat_vecs.size();lat_idx++){
+                total_dist+=sampling::calc_sample_log_w(g,samples[i].s(),lat_vecs[lat_idx]);
+            }
+            total_dist/=g.n_phys_sites();
+            s_ab-=total_dist;
+        }
+        else{
+            s_ab-=samples[i].log_w();
+        }
+        
+        sample_data masked_sample_a=samples[i];
+        for(size_t a_idx=0;a_idx<masked_sample_a.s().size();a_idx++){
+            if(subsystem_labels[a_idx]==1){ //mask b-sites
+                masked_sample_a.s()[a_idx]=0;
+            }
+        }
+        
+        if(ti_flag){
+            double total_dist=0;
+            for(size_t lat_idx=0;lat_idx<lat_vecs.size();lat_idx++){
+                total_dist+=sampling::calc_sample_log_w(g,masked_sample_a.s(),lat_vecs[lat_idx]);
+            }
+            total_dist/=g.n_phys_sites();
+            s_a-=total_dist;
+        }
+        else{
+            masked_sample_a.log_w()=sampling::calc_sample_log_w(g,masked_sample_a.s());
+            s_a-=masked_sample_a.log_w();
+        }
+        
+        sample_data masked_sample_b=samples[i];
+        for(size_t b_idx=0;b_idx<masked_sample_b.s().size();b_idx++){
+            if(subsystem_labels[b_idx]==0){ //mask a-sites
+                masked_sample_b.s()[b_idx]=0;
+            }
+        }
+        
+        if(ti_flag){
+            double total_dist=0;
+            for(size_t lat_idx=0;lat_idx<lat_vecs.size();lat_idx++){
+                total_dist+=sampling::calc_sample_log_w(g,masked_sample_b.s(),lat_vecs[lat_idx]);
+            }
+            total_dist/=g.n_phys_sites();
+            s_b-=total_dist;
+        }
+        else{
+            masked_sample_b.log_w()=sampling::calc_sample_log_w(g,masked_sample_b.s());
+            s_b-=masked_sample_b.log_w();
+        }
+        // std::cout<<samples[i].log_w()<<" "<<masked_sample_a.log_w()<<" "<<masked_sample_b.log_w()<<"\n";
+    }
+    mi_mean+=s_a+s_b-s_ab;
+    mi_mean/=samples.size();
+    // std::cout<<mi_mean<<"\n";
+    return mi_mean;
+}
+template double sampling::mi_mc(graph<bmi_comparator>&,std::vector<sample_data>&,bool);

@@ -369,7 +369,8 @@ int main(int argc,char **argv){
             header2_ss<<"idx c q d r "<<header1_ls_str<<" beta m1_1_abs m1_2_abs m2_1 m2_2 m4_1 m4_2 q2 q4 q2_std sus_fm sus_sg binder_m binder_q total_c\n";
         }
         // header2_mc_ss<<"idx c w n q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd binder_m_mean binder_m_sd c_mean c_sd\n";
-        header2_mc_ss<<"idx c w n q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd q1_abs_mean q1_abs_sd q2_mean q2_sd q4_mean q4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd sus_sg_mean sus_sg_sd binder_m_mean binder_m_sd binder_q_mean binder_q_sd c_mean c_sd\n";
+        // header2_mc_ss<<"idx c w n q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd q1_abs_mean q1_abs_sd q2_mean q2_sd q4_mean q4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd sus_sg_mean sus_sg_sd binder_m_mean binder_m_sd binder_q_mean binder_q_sd c_mean c_sd\n";
+        header2_mc_ss<<"idx c w n q d r "<<header1_ls_str<<" beta m1_abs_mean m1_abs_sd m2_mean m2_sd m4_mean m4_sd q1_abs_mean q1_abs_sd q2_mean q2_sd q4_mean q4_sd e1_mean e1_sd e2_mean e2_sd sus_fm_mean sus_fm_sd sus_sg_mean sus_sg_sd binder_m_mean binder_m_sd binder_q_mean binder_q_sd c_mean c_sd mi_mean mi_sd\n";
         observables::output_lines.push_back(header2_ss.str());
         observables::mc_output_lines.push_back(header2_mc_ss.str());
         do{
@@ -407,7 +408,7 @@ int main(int argc,char **argv){
             size_t n_samples_per_mc=1000;
             size_t n_mc_repeats=100;
             observables::calc_tree_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,(g.dims().size()!=0));
-            observables::calc_mc_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps_vec,n_mc_repeats,rand_mc);
+            observables::calc_mc_observables(g,sample,0,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps_vec,n_mc_repeats,rand_mc,0);
             sw.split();
             if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
             trial_time+=sw.elapsed();
@@ -431,7 +432,7 @@ int main(int argc,char **argv){
                 
                 sw.start();
                 observables::calc_tree_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,(g.dims().size()!=0));
-                observables::calc_mc_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps_vec,n_mc_repeats,rand_mc);
+                observables::calc_mc_observables(g,sample,c+1,q,ls.size(),r_max,((use_t)?1/beta:beta),header1_ls_vals_str,n_samples_per_mc,n_sweeps_vec,n_mc_repeats,rand_mc,0);
                 sw.split();
                 if(verbose>=3){std::cout<<"observable computation time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();
