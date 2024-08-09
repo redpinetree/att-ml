@@ -835,7 +835,7 @@ double sampling::mi_mc(graph<cmp>& g,std::vector<sample_data>& samples,bool ti_f
         }
         
         sample_data masked_sample_a=samples[i];
-        for(size_t a_idx=0;a_idx<masked_sample_a.s().size();a_idx++){
+        for(size_t a_idx=0;a_idx<subsystem_labels.size();a_idx++){
             if(subsystem_labels[a_idx]==1){ //mask b-sites
                 masked_sample_a.s()[a_idx]=0;
             }
@@ -855,7 +855,7 @@ double sampling::mi_mc(graph<cmp>& g,std::vector<sample_data>& samples,bool ti_f
         }
         
         sample_data masked_sample_b=samples[i];
-        for(size_t b_idx=0;b_idx<masked_sample_b.s().size();b_idx++){
+        for(size_t b_idx=0;b_idx<subsystem_labels.size();b_idx++){
             if(subsystem_labels[b_idx]==0){ //mask a-sites
                 masked_sample_b.s()[b_idx]=0;
             }
