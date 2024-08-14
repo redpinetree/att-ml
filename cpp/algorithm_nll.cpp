@@ -16,11 +16,42 @@
 #include "bond.hpp"
 #include "observables.hpp"
 #include "optimize_nll.hpp"
-#include "sampling.hpp"
+
+std::vector<sample_data> algorithm::load_data_from_file(std::string& fn,size_t& n_samples,size_t& train_data_total_length,size_t& train_data_idim){
+    std::vector<sample_data> train_data;
+    std::ifstream ifs(fn);
+    std::string input_line;
+    std::getline(ifs,input_line);
+    std::istringstream header(input_line);
+    header>>n_samples>>train_data_idim>>train_data_total_length;
+    while(std::getline(ifs,input_line)){
+        std::istringstream line(input_line);
+        std::vector<size_t> s;
+        size_t val=0;
+        for(size_t i=0;i<train_data_total_length;i++){
+            line>>val;
+            s.push_back(val+1); //smallest value in sample_data is 1
+        }
+        train_data.push_back(sample_data(train_data_total_length,s,0,0));
+    }
+    // for(size_t i=0;i<train_data.size();i++){
+        // for(size_t j=0;j<train_data[i].n_phys_sites();j++){
+            // std::cout<<train_data[i].s()[j]<<" ";
+        // }
+        // std::cout<<"\n";
+    // }
+    // exit(1);
+    return train_data;
+}
 
 template<typename cmp>
 void algorithm::train_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
-    double nll=optimize::opt_nll(g,n_samples,n_sweeps,iter_max);
+    // std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,0); //consider subtree rooted at n
+    // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
+    std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
+    //symmetrize samples
+    std::vector<sample_data> sym_samples=sampling::symmetrize_samples(samples);
+    double nll=optimize::opt_nll(g,sym_samples,iter_max);
     // double nll=optimize::hopt_nll(g,n_samples,n_sweeps,iter_max);
     // double nll=optimize::hopt_nll2(g,n_samples,n_sweeps,iter_max);
     for(auto it=g.es().begin();it!=g.es().end();++it){
@@ -29,6 +60,21 @@ void algorithm::train_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t 
     }
 }
 template void algorithm::train_nll(graph<bmi_comparator>&,size_t,size_t,size_t);
+
+template<typename cmp>
+void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t iter_max){
+    double nll=optimize::opt_nll(g,samples,iter_max);
+    for(auto it=g.es().begin();it!=g.es().end();++it){
+        bond current=*it;
+        algorithm::calculate_site_probs(g,current);
+    }
+    // std::cout<<(std::string) g<<"\n";
+    // for(auto it=g.es().begin();it!=g.es().end();++it){
+        // std::cout<<(*it).v1()<<","<<(*it).v2()<<","<<(*it).order()<<"\n";
+        // std::cout<<(std::string) (*it).w().exp_form()<<"\n";
+    // }
+}
+template void algorithm::train_nll(graph<bmi_comparator>&,std::vector<sample_data>&,size_t);
 
 template<typename cmp>
 void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){

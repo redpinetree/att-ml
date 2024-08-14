@@ -18,7 +18,7 @@
 #include "observables.hpp"
 
 void print_usage(){
-    std::cerr<<"usage: pbttn_approx [--options] <q> <n_samples> <d> <{l|l0,l1,...}> <min_beta> <max_beta> <step_beta>\n";
+    std::cerr<<"usage: tree_ml_approx [--options] <q> <n_samples> <d> <{l|l0,l1,...}> <min_beta> <max_beta> <step_beta>\n";
     std::cerr<<"if <n_samples>!=0, required: -d, -1, -2, forbidden: -i,\n";
     std::cerr<<"options:\n";
     std::cerr<<"\t--open-bc: generate graph connectivity with open boundary conditions.\n";
@@ -42,22 +42,37 @@ void print_usage(){
 }
 
 template<typename cmp>
-graph<cmp> gen_lattice(size_t q,size_t r_max,std::vector<size_t> ls,bool open_bc,std::string dist_type,double dist_param1,double dist_param2,double beta){ //transformations are done to counteract the transformations in gen_hypercubic
+graph<cmp> gen_lattice(size_t q,size_t r_max,std::vector<size_t> ls,bool open_bc,std::string dist_type,double dist_param1,double dist_param2,double beta,std::string init_tree_type){ //transformations are done to counteract the transformations in gen_hypercubic
     graph<cmp> g;
     if(dist_type=="gaussian"){
         //dist_param1=mean, dist_param2=std
         std::normal_distribution<double> dist((dist_param1+1)/2.0,dist_param2/2.0);
-        g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        if(init_tree_type=="pbttn"){
+            g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        }
+        else if(init_tree_type=="mps"){
+            g=graph_utils::init_mps<std::normal_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        }
     }
     else if(dist_type=="bimodal"){
         //dist_param1=p, dist_param2=N/A
         std::discrete_distribution<int> dist{1-dist_param1,dist_param1};
-        g=graph_utils::init_pbttn<std::discrete_distribution<int>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        if(init_tree_type=="pbttn"){
+            g=graph_utils::init_pbttn<std::discrete_distribution<int>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        }
+        else if(init_tree_type=="mps"){
+            g=graph_utils::init_mps<std::discrete_distribution<int>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        }
     }
     else if(dist_type=="uniform"){
         //dist_param1=min, dist_param2=max
         std::uniform_real_distribution<double> dist{(dist_param1+1)/2.0,(dist_param2+1)/2.0};
-        g=graph_utils::init_pbttn<std::uniform_real_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        if(init_tree_type=="pbttn"){
+            g=graph_utils::init_pbttn<std::uniform_real_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        }
+        else if(init_tree_type=="mps"){
+            g=graph_utils::init_mps<std::uniform_real_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+        }
     }
     return g;
 }
@@ -329,7 +344,7 @@ int main(int argc,char **argv){
             double trial_time=0; //not including init time
             if(verbose>=2){std::cout<<((use_t)?"temp=":"beta=")<<beta<<"\n";}
 
-            graph<bmi_comparator> g=gen_lattice<bmi_comparator>(q,r_max,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta));
+            graph<bmi_comparator> g=gen_lattice<bmi_comparator>(q,r_max,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta),init_tree_type);
             //MC observables
             std::vector<double> acceptance_ratios;
             double acceptance_ratio;

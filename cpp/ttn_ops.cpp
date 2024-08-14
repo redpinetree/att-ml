@@ -59,6 +59,9 @@ template double calc_z(graph<bmi_comparator>&);
 
 template<typename cmp>
 double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<array1d<double> >& r_env,std::vector<array1d<double> >& u_env){
+    l_env.clear();
+    r_env.clear();
+    u_env.clear();
     std::vector<array1d<double> > contracted_vectors;
     for(size_t n=0;n<g.vs().size();n++){
         if(n<g.n_phys_sites()){ //physical (input) sites do not correspond to tensors, so environment is empty vector
@@ -158,6 +161,9 @@ std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<arra
 
 template<typename cmp>
 std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data> samples,std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env){
+    l_env.clear();
+    r_env.clear();
+    u_env.clear();
     std::vector<std::vector<array1d<double> > > contracted_vectors; //batched vectors
     size_t n_samples=samples.size();
     for(size_t n=0;n<g.vs().size();n++){
