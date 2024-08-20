@@ -112,19 +112,19 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
 template graph<bmi_comparator> graph_utils::load_graph(std::string,size_t,double);
 
 template<typename distribution,typename cmp>
-graph<cmp> graph_utils::init_pbttn(size_t q,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
+graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     size_t d=ls.size();
     std::vector<site> vs;
-    std::multiset<bond,cmp> es{cmp(q)};
+    std::multiset<bond,cmp> es{cmp(idim)};
     std::vector<std::tuple<size_t,size_t,double> > orig_ks;
     size_t num_vs=1;
     for(size_t i=0;i<ls.size();i++){
         num_vs*=ls[i];
     }
     for(size_t v1=0;v1<num_vs;v1++){
-        vs.push_back(site(q,1));
-        vs[v1].p_k()=std::vector<double>(q,1/(double) q);
+        vs.push_back(site(idim,1));
+        vs[v1].p_k()=std::vector<double>(idim,1/(double) idim);
     }
     //generate couplings
     for(size_t v1=0;v1<num_vs;v1++){
@@ -169,6 +169,11 @@ graph<cmp> graph_utils::init_pbttn(size_t q,size_t r_max,std::vector<size_t> ls,
         size_t r_i=vs[v1].rank();
         size_t r_j=vs[v2].rank();
         size_t r_k=(r_i*r_j>r_max)?r_max:r_i*r_j;
+        if(t_idx==num_tensors-1){ //for the top tensor
+            if(tdim!=0){ //tdim==0 means it was not specified
+                r_k=tdim;
+            }
+        }
         size_t depth=((vs[v1].depth()>vs[v2].depth())?vs[v1].depth():vs[v2].depth())+1;
         vs.push_back(site(r_k,vs[v1].vol()+vs[v2].vol(),depth,v1,v2));
         vs[vs.size()-1].p_k()=std::vector<double>(r_k,1/(double) r_k);
@@ -228,24 +233,32 @@ graph<cmp> graph_utils::init_pbttn(size_t q,size_t r_max,std::vector<size_t> ls,
     g.dims()=ls;
     return g;
 }
+template graph<bmi_comparator> graph_utils::init_pbttn<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_pbttn<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
+template graph<bmi_comparator> graph_utils::init_pbttn<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
+
+template<typename distribution,typename cmp>
+graph<cmp> graph_utils::init_pbttn(size_t idim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
+    return graph_utils::init_pbttn<distribution,cmp>(idim,0,r_max,ls,pbc,dist,beta);
+}
 template graph<bmi_comparator> graph_utils::init_pbttn<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
 template graph<bmi_comparator> graph_utils::init_pbttn<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
 template graph<bmi_comparator> graph_utils::init_pbttn<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
 
 template<typename distribution,typename cmp>
-graph<cmp> graph_utils::init_mps(size_t q,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
+graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     size_t d=ls.size();
     std::vector<site> vs;
-    std::multiset<bond,cmp> es{cmp(q)};
+    std::multiset<bond,cmp> es{cmp(idim)};
     std::vector<std::tuple<size_t,size_t,double> > orig_ks;
     size_t num_vs=1;
     for(size_t i=0;i<ls.size();i++){
         num_vs*=ls[i];
     }
     for(size_t v1=0;v1<num_vs;v1++){
-        vs.push_back(site(q,1));
-        vs[v1].p_k()=std::vector<double>(q,1/(double) q);
+        vs.push_back(site(idim,1));
+        vs[v1].p_k()=std::vector<double>(idim,1/(double) idim);
         vs[v1].depth()=v1;
     }
     //generate couplings
@@ -293,6 +306,11 @@ graph<cmp> graph_utils::init_mps(size_t q,size_t r_max,std::vector<size_t> ls,bo
         size_t r_i=vs[v1].rank();
         size_t r_j=vs[v2].rank();
         size_t r_k=(r_i*r_j>r_max)?r_max:r_i*r_j;
+        if(t_idx==num_tensors-1){ //for the top tensor
+            if(tdim!=0){ //tdim==0 means it was not specified
+                r_k=tdim;
+            }
+        }
         vs.push_back(site(r_k,vs[v1].vol()+vs[v2].vol(),depth,v1,v2));
         vs[vs.size()-1].p_k()=std::vector<double>(r_k,1/(double) r_k);
         
@@ -352,6 +370,14 @@ graph<cmp> graph_utils::init_mps(size_t q,size_t r_max,std::vector<size_t> ls,bo
     // exit(1);
     g.dims()=ls;
     return g;
+}
+template graph<bmi_comparator> graph_utils::init_mps<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_mps<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
+template graph<bmi_comparator> graph_utils::init_mps<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
+
+template<typename distribution,typename cmp>
+graph<cmp> graph_utils::init_mps(size_t idim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
+    return graph_utils::init_mps<distribution,cmp>(idim,0,r_max,ls,pbc,dist,beta);
 }
 template graph<bmi_comparator> graph_utils::init_mps<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
 template graph<bmi_comparator> graph_utils::init_mps<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);

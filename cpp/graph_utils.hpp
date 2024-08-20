@@ -12,7 +12,11 @@ namespace graph_utils{
     template<typename cmp>
     graph<cmp> load_graph(std::string,size_t,double);
     template<typename distribution,typename cmp>
+    graph<cmp> init_pbttn(size_t,size_t,size_t,std::vector<size_t>,bool,distribution&,double);
+    template<typename distribution,typename cmp>
     graph<cmp> init_pbttn(size_t,size_t,std::vector<size_t>,bool,distribution&,double);
+    template<typename distribution,typename cmp>
+    graph<cmp> init_mps(size_t,size_t,size_t,std::vector<size_t>,bool,distribution&,double);
     template<typename distribution,typename cmp>
     graph<cmp> init_mps(size_t,size_t,std::vector<size_t>,bool,distribution&,double);
 }

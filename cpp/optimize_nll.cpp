@@ -113,19 +113,18 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
         v[n]=array3d<double>(current.w().nx(),current.w().ny(),current.w().nz());
     }
     
-    std::multiset<bond,bmi_comparator> new_es;
+    std::vector<array1d<double> > l_env_z;
+    std::vector<array1d<double> > r_env_z;
+    std::vector<array1d<double> > u_env_z;
+    std::vector<std::vector<array1d<double> > > l_env_sample;
+    std::vector<std::vector<array1d<double> > > r_env_sample;
+    std::vector<std::vector<array1d<double> > > u_env_sample;
+    double z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
+    std::vector<array3d<double> > dz=calc_dz(l_env_z,r_env_z,u_env_z); //index i corresponds to tensor with order i so some (for input sites) are empty
+    std::vector<double> w=calc_w(g,samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
+    std::vector<std::vector<array3d<double> > > dw=calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
+    
     for(size_t t=1;t<=iter_max;t++){
-        std::vector<array1d<double> > l_env_z;
-        std::vector<array1d<double> > r_env_z;
-        std::vector<array1d<double> > u_env_z;
-        double z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
-        std::vector<array3d<double> > dz=calc_dz(l_env_z,r_env_z,u_env_z); //index i corresponds to tensor with order i so some (for input sites) are empty
-        
-        std::vector<std::vector<array1d<double> > > l_env_sample;
-        std::vector<std::vector<array1d<double> > > r_env_sample;
-        std::vector<std::vector<array1d<double> > > u_env_sample;
-        std::vector<double> w=calc_w(g,samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
-        std::vector<std::vector<array3d<double> > > dw=calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
         
         std::multiset<bond,bmi_comparator> new_es;
         for(auto it=g.es().begin();it!=g.es().end();++it){
@@ -209,12 +208,19 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
             // std::cout<<n<<": "<<grad_norm<<"\n";
             new_es.insert(current);
         }
+        
         g.es()=new_es;
         // std::cout<<"new\n";
         // for(auto it=g.es().begin();it!=g.es().end();++it){
             // std::cout<<(std::string) (*it).w()<<"\n";
         // }
-        // calculate nll and check for convergence
+        
+        z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
+        dz=calc_dz(l_env_z,r_env_z,u_env_z); //index i corresponds to tensor with order i so some (for input sites) are empty
+        w=calc_w(g,samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
+        dw=calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
+        
+        //calculate nll and check for convergence
         nll=0;
         for(size_t s=0;s<samples.size();s++){
             nll-=w[s]; //w[s] is log(w(s))

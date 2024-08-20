@@ -24,21 +24,23 @@ void print_usage(){
     std::cerr<<"\t-v,--verbose:\n\t\t0->nothing printed to stdout (forced for MPI)\n\t\t1->sample number and aggregate timing data\n\t\t2->per-instance timing\n\t\t3->more detailed timing breakdown\n\t\t4->graph contents, debug observable data\n";
     std::cerr<<"\t-i,--input: input file containing training data.\n";
     std::cerr<<"\t-o,--output: prefix for output files. please omit the file extension.\n";
-    std::cerr<<"\t-t,--init-tree-type: initial tree type: mps or pbttn\n";
+    std::cerr<<"\t-t,--top-dim: top dimension\n";
+    std::cerr<<"\t-L,--label-file: input file containing training labels\n";
+    std::cerr<<"\t-T,--init-tree-type: initial tree type: mps or pbttn\n";
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
 }
 
 template<typename cmp>
-graph<cmp> gen_graph(size_t q,size_t r_max,std::vector<size_t> ls,bool open_bc,std::string init_tree_type){ //transformations are done to counteract the transformations in gen_hypercubic
+graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,bool open_bc,std::string init_tree_type){ //transformations are done to counteract the transformations in gen_hypercubic
     graph<cmp> g;
     if(init_tree_type=="mps"){
         std::normal_distribution<double> dist(0,0);
-        g=graph_utils::init_mps<std::normal_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,1);
+        g=graph_utils::init_mps<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,!open_bc,dist,1);
     }
     else if(init_tree_type=="pbttn"){
         std::normal_distribution<double> dist{0,0};
-        g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,1);
+        g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,!open_bc,dist,1);
     }
     return g;
 }
@@ -49,10 +51,14 @@ int main(int argc,char **argv){
     //argument handling
     int open_bc=0;
     size_t verbose=0;
+    bool input_set=false;
     bool output_set=false;
-    std::string input,output;
+    bool label_set=false;
+    bool tdim_set=false;
+    std::string input,output,label_file;
     std::string init_tree_type="mps";
     size_t r_max=0;
+    size_t tdim=0;
     size_t n_config_samples=1000;
     size_t n_nll_iter_max=10000;
     //option arguments
@@ -63,13 +69,15 @@ int main(int argc,char **argv){
             {"verbose",required_argument,0,'v'},
             {"input",required_argument,0,'i'},
             {"output",required_argument,0,'o'},
-            {"init-tree-type",required_argument,0,'t'},
+            {"top-dim",required_argument,0,'t'},
+            {"label-file",required_argument,0,'L'},
+            {"init-tree-type",required_argument,0,'T'},
             {"r-max",required_argument,0,'r'},
             {"nll-iter-max",required_argument,0,'N'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:t:r:N:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:t:L:T:r:N:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -78,9 +86,11 @@ int main(int argc,char **argv){
             //handle standard options
             case 'h': print_usage(); exit(1);
             case 'v': verbose=(size_t) atoi(optarg); break;
-            case 'i': input=std::string(optarg); output_set=true; break;
+            case 'i': input=std::string(optarg); input_set=true; break;
             case 'o': output=std::string(optarg); output_set=true; break;
-            case 't': init_tree_type=std::string(optarg); break;
+            case 't': tdim=(size_t) atoi(optarg); tdim_set=true; break;
+            case 'L': label_file=std::string(optarg); label_set=true; break;
+            case 'T': init_tree_type=std::string(optarg); break;
             case 'r': r_max=(size_t) atoi(optarg); break;
             case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
             case '?':
@@ -131,6 +141,14 @@ int main(int argc,char **argv){
         if(mpi_utils::root){print_usage();}
         exit(1);
     }
+    //check if input specified
+    if(!input_set){
+        if(mpi_utils::root){
+            std::cerr<<"Error: Must specify input file with training data.\n";
+            print_usage();
+        }
+        exit(1);
+    }
     //override verbosity if proc_num>1
     if(mpi_utils::proc_num>1){
         if(mpi_utils::root && verbose>0){
@@ -138,10 +156,18 @@ int main(int argc,char **argv){
         }
         verbose=0;
     }
-    //check input file/initial tree options
+    //check initial tree options
     if(!((init_tree_type=="mps")||(init_tree_type=="pbttn"))){
         if(mpi_utils::root){
-            std::cerr<<"Error: -t must be one of \"mps\" or \"pbttn\".\n";
+            std::cerr<<"Error: -T must be one of \"mps\" or \"pbttn\".\n";
+            print_usage();
+        }
+        exit(1);
+    }
+    //check if exactly one of top dim and label file is specified
+    if(tdim_set&&label_set){
+        if(mpi_utils::root){
+            std::cerr<<"Error: -t cannot be set together with -L.\n";
             print_usage();
         }
         exit(1);
@@ -172,7 +198,7 @@ int main(int argc,char **argv){
     
     double trial_time=0; //not including init time
 
-    graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,r_max,ls,open_bc,init_tree_type);
+    graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,open_bc,init_tree_type);
     for(auto it=g.es().begin();it!=g.es().end();++it){
         bond current=*it;
         algorithm::calculate_site_probs(g,current);

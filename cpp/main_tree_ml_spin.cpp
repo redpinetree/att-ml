@@ -31,7 +31,7 @@ void print_usage(){
     std::cerr<<"\t-d,--distribution: distribution for sampling bond configurations. one of \"gaussian\",\"bimodal\" (+1/-1),\"uniform\".\n";
     std::cerr<<"\t-1,--dist-param1: distribution hyperparameter.\n\t\tif gaussian-> mean\n\t\tif bimodal -> probability of ferromagnetic bond\n\t\tif uniform -> minimum bond strength\n";
     std::cerr<<"\t-2,--dist-param2: distribution hyperparameter.\n\t\tif gaussian-> standard deviation\n\t\tif bimodal -> ignored, overriden to 0\n\t\tif uniform -> maximum bond strength\n";
-    std::cerr<<"\t-t,--init-tree-type: initial tree type: mps or pbttn\n";
+    std::cerr<<"\t-T,--init-tree-type: initial tree type: mps or pbttn\n";
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-s,--samples: number of samples to obtain per temperature\n";
     std::cerr<<"\t-c,--cycles: number of NLL training cycles per temperature\n";
@@ -113,7 +113,7 @@ int main(int argc,char **argv){
             {"distribution",required_argument,0,'d'},
             {"dist-param1",required_argument,0,'1'},
             {"dist-param2",required_argument,0,'2'},
-            {"init-tree-type",required_argument,0,'t'},
+            {"init-tree-type",required_argument,0,'T'},
             {"r-max",required_argument,0,'r'},
             {"samples",required_argument,0,'s'},
             {"cycles",required_argument,0,'c'},
@@ -124,7 +124,7 @@ int main(int argc,char **argv){
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:o:d:1:2:t:r:s:c:N:w:W:D:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:o:d:1:2:T:r:s:c:N:w:W:D:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -137,7 +137,7 @@ int main(int argc,char **argv){
             case 'd': dist=std::string(optarg); dist_set=true; break;
             case '1': dist_param1=(double) atof(optarg); dist_param1_set=true; break;
             case '2': dist_param2=(double) atof(optarg); dist_param2_set=true; break;
-            case 't': init_tree_type=std::string(optarg); break;
+            case 'T': init_tree_type=std::string(optarg); break;
             case 'r': r_max=(size_t) atoi(optarg); break;
             case 's': n_config_samples=(size_t) atoi(optarg); break;
             case 'c': n_cycles=(size_t) atoi(optarg); break;
@@ -221,7 +221,7 @@ int main(int argc,char **argv){
     //check presence of input file/dist/tree options
     if(!((init_tree_type=="mps")||(init_tree_type=="pbttn"))){
         if(mpi_utils::root){
-            std::cerr<<"Error: -t must be one of \"mps\" or \"pbttn\".\n";
+            std::cerr<<"Error: -T must be one of \"mps\" or \"pbttn\".\n";
             print_usage();
         }
         exit(1);
