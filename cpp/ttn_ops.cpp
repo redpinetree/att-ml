@@ -160,7 +160,7 @@ std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<arra
 }
 
 template<typename cmp>
-std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data> samples,std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env){
+std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env){
     l_env.clear();
     r_env.clear();
     u_env.clear();
@@ -182,6 +182,19 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data> samples,std::v
             }
             contracted_vectors.push_back(vec);
         }
+        else if((n==g.vs().size()-1)&&(labels.size()!=0)){ //top tensor
+            std::vector<array1d<double> > vec(n_samples);
+            for(size_t s=0;s<n_samples;s++){
+                array1d<double> vec_e(g.vs()[n].rank());
+                for(size_t a=0;a<vec_e.nx();a++){
+                    if(a!=labels[s]){ //if a==labels[s], element is log(1)=0. else log(0)=-inf
+                        vec_e.at(a)=log(1e-100);
+                    }
+                }
+                vec[s]=vec_e;
+            }
+            contracted_vectors.push_back(vec);
+        }
         else{ //virtual sites correspond to tensors
             contracted_vectors.push_back(std::vector<array1d<double> >(n_samples));
         }
@@ -189,10 +202,18 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data> samples,std::v
         r_env.push_back(std::vector<array1d<double> >(n_samples));
         u_env.push_back(std::vector<array1d<double> >(n_samples));
     }
+    
+    if(labels.size()==0){ //top tensor's u_env is all ones
+        u_env[g.vs().size()-1]=std::vector<array1d<double> >(n_samples,array1d<double>(g.vs()[g.vs().size()-1].rank())); //0 because log(1)=0
+    }
+    else{
+        u_env[g.vs().size()-1]=contracted_vectors[g.vs().size()-1];
+    }
+    
     size_t contracted_idx_count=0;
     while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset repeatedly until all idxs processed
         for(auto it=g.es().begin();it!=g.es().end();++it){
-            if((contracted_vectors[(*it).v1()][0].nx()!=0)&&(contracted_vectors[(*it).v2()][0].nx()!=0)&&(contracted_vectors[(*it).order()][0].nx()==0)){ //process if children have been contracted and parent is not yet contracted
+            if((contracted_vectors[(*it).v1()][0].nx()!=0)&&(contracted_vectors[(*it).v2()][0].nx()!=0)&&((it==--g.es().end())||(contracted_vectors[(*it).order()][0].nx()==0))){ //process if children have been contracted and (parent is not yet contracted OR is top)
                 std::vector<array1d<double> > res_vec(n_samples,array1d<double>(g.vs()[(*it).order()].rank()));
                 for(size_t s=0;s<n_samples;s++){
                     for(size_t k=0;k<(*it).w().nz();k++){
@@ -217,9 +238,6 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data> samples,std::v
     while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset, in reverse, repeatedly until all idxs processed
         for(auto it=g.es().rbegin();it!=g.es().rend();++it){
             if((u_env[(*it).v1()][0].nx()==0)&&(u_env[(*it).v2()][0].nx()==0)){
-                if(contracted_idx_count==0){ //top tensor's u_env is all ones
-                    u_env[(*it).order()]=std::vector<array1d<double> >(n_samples,array1d<double>(g.vs()[(*it).order()].rank())); //0 because log(1)=0
-                }
                 std::vector<array1d<double> > res_vec_l(n_samples,array1d<double>(g.vs()[(*it).v1()].rank()));
                 for(size_t s=0;s<n_samples;s++){
                     for(size_t i=0;i<contracted_vectors[(*it).v1()][s].nx();i++){
@@ -261,4 +279,11 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data> samples,std::v
     }
     return w;
 }
-template std::vector<double> calc_w(graph<bmi_comparator>&,std::vector<sample_data>,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+template std::vector<double> calc_w(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+
+template<typename cmp>
+std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env){
+    std::vector<size_t> dummy_labels;
+    return calc_w(g,samples,dummy_labels,l_env,r_env,u_env);
+}
+template std::vector<double> calc_w(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);

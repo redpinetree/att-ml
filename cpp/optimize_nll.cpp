@@ -5,7 +5,7 @@
 #include "ttn_ops.hpp"
 
 
-//https://optimization-online.org/wp-content/uploads/2014/08/4498.pdf
+//Condat's algorithm (O(n)) https://optimization-online.org/wp-content/uploads/2014/08/4498.pdf
 array3d<double> proj_probability_simplex(array3d<double>& w){
     array3d<double> res=w;
     std::vector<double> e=w.e();
@@ -63,6 +63,7 @@ array3d<double> proj_probability_simplex(array3d<double>& w){
     return res;
 }
 
+//O(n log n) algorithm
 array3d<double> proj_probability_simplex2(array3d<double>& w){
     array3d<double> res=w;
     std::vector<double> e=w.e();
@@ -94,12 +95,12 @@ array3d<double> proj_probability_simplex2(array3d<double>& w){
 }
 
 template<typename cmp>
-double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t iter_max){
+double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max){
     if(iter_max==0){return 0;}
     double prev_nll=1e50;
     double nll=0;
     //adam variables
-    double alpha=0.01;
+    double alpha=0.001;
     double beta1=0.9;
     double beta2=0.999;
     double epsilon=1e-8;
@@ -121,9 +122,11 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
     std::vector<std::vector<array1d<double> > > u_env_sample;
     double z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
     std::vector<array3d<double> > dz=calc_dz(l_env_z,r_env_z,u_env_z); //index i corresponds to tensor with order i so some (for input sites) are empty
-    std::vector<double> w=calc_w(g,samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
+    std::vector<double> w=calc_w(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
     std::vector<std::vector<array3d<double> > > dw=calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
     
+    double best_nll=1e50;
+    std::multiset<bond,bmi_comparator> best_es;
     for(size_t t=1;t<=iter_max;t++){
         
         std::multiset<bond,bmi_comparator> new_es;
@@ -161,7 +164,14 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
                         // else{current.w().at(i,j,k)-=alpha*(corrected_m/(sqrt(corrected_v)+epsilon));}
                         
                         //perform unconstrained gd on original problem
-                        grad.at(i,j,k)=exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k));
+                        // grad.at(i,j,k)=exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k));
+                        if(grad_z_term.at(i,j,k)>grad_w_term.at(i,j,k)){ //more accurate calculation
+                            grad.at(i,j,k)=exp(grad_z_term.at(i,j,k)+log1p(-exp(-(grad_z_term.at(i,j,k)-grad_w_term.at(i,j,k)))));
+                        }
+                        else{
+                            grad.at(i,j,k)=-exp(grad_w_term.at(i,j,k)+log1p(-exp(-(grad_w_term.at(i,j,k)-grad_z_term.at(i,j,k)))));
+                        }
+                        
                         m[n].at(i,j,k)=(beta1*m[n].at(i,j,k))+((1-beta1)*grad.at(i,j,k));
                         v[n].at(i,j,k)=(beta2*v[n].at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
                         double corrected_m=m[n].at(i,j,k)/(1-pow(beta1,(double) t));
@@ -217,7 +227,7 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
         
         z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
         dz=calc_dz(l_env_z,r_env_z,u_env_z); //index i corresponds to tensor with order i so some (for input sites) are empty
-        w=calc_w(g,samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
+        w=calc_w(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
         dw=calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
         
         //calculate nll and check for convergence
@@ -227,6 +237,10 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
         }
         nll/=(double) samples.size();
         nll+=z; //z is log(z)
+        if(nll<best_nll){
+            best_nll=nll;
+            best_es=g.es();
+        }
         if(fabs(prev_nll-nll)<1e-12){
             std::cout<<"NLL optimization converged after "<<t<<" iterations.\n";
             std::cout<<"nll="<<nll<<"\n";
@@ -239,9 +253,10 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t 
         }
         prev_nll=nll;
     }
-    return nll;
+    g.es()=best_es;
+    return best_nll;
 }
-template double optimize::opt_nll(graph<bmi_comparator>&,std::vector<sample_data>&,size_t);
+template double optimize::opt_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t);
 
 template<typename cmp>
 double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
@@ -552,3 +567,68 @@ double optimize::hopt_nll2(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t
     return nll;
 }
 template double optimize::hopt_nll2(graph<bmi_comparator>&,size_t,size_t,size_t);
+
+template<typename cmp>
+std::vector<size_t> optimize::classify(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<array1d<double> >& probs){
+    std::vector<std::vector<array1d<double> > > contracted_vectors; //batched vectors
+    size_t n_samples=samples.size();
+    for(size_t n=0;n<g.vs().size();n++){
+        if(n<g.n_phys_sites()){ //physical (input) sites do not correspond to tensors, so environment is empty vector
+            std::vector<array1d<double> > vec(n_samples);
+            for(size_t s=0;s<n_samples;s++){
+                array1d<double> vec_e(g.vs()[n].rank());
+                if(samples[s].s()[n]!=0){
+                    for(size_t a=0;a<vec_e.nx();a++){
+                        if(a!=(samples[s].s()[n]-1)){ //if a==samples[s].s()[n]-1, element is log(1)=0. else log(0)=-inf
+                            vec_e.at(a)=log(1e-100);
+                        }
+                    }
+                }
+                vec[s]=vec_e;
+            }
+            contracted_vectors.push_back(vec);
+        }
+        else{ //virtual sites correspond to tensors
+            contracted_vectors.push_back(std::vector<array1d<double> >(n_samples));
+        }
+    }
+    size_t contracted_idx_count=0;
+    while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset repeatedly until all idxs processed
+        for(auto it=g.es().begin();it!=g.es().end();++it){
+            if((contracted_vectors[(*it).v1()][0].nx()!=0)&&(contracted_vectors[(*it).v2()][0].nx()!=0)&&((it==--g.es().end())||(contracted_vectors[(*it).order()][0].nx()==0))){ //process if children have been contracted and (parent is not yet contracted OR is top)
+                std::vector<array1d<double> > res_vec(n_samples,array1d<double>(g.vs()[(*it).order()].rank()));
+                for(size_t s=0;s<n_samples;s++){
+                    for(size_t k=0;k<(*it).w().nz();k++){
+                        std::vector<double> res_vec_addends;
+                        for(size_t i=0;i<contracted_vectors[(*it).v1()][s].nx();i++){
+                            for(size_t j=0;j<contracted_vectors[(*it).v2()][s].nx();j++){
+                                res_vec_addends.push_back(contracted_vectors[(*it).v1()][s].at(i)+contracted_vectors[(*it).v2()][s].at(j)+(*it).w().at(i,j,k)); //log space
+                            }
+                        }
+                        res_vec[s].at(k)=lse(res_vec_addends); //log space
+                    }
+                }
+                contracted_vectors[(*it).order()]=res_vec;
+                contracted_idx_count++;
+                if(contracted_idx_count==(g.vs().size()-g.n_phys_sites())){break;}
+            }
+        }
+    }
+    
+    bond top_bond=*(g.es().rbegin());
+    probs=contracted_vectors[top_bond.order()];
+    for(size_t s=0;s<n_samples;s++){
+        double prob_sum=lse(probs[s].e());
+        for(size_t i=0;i<probs[s].nx();i++){
+            probs[s].at(i)-=prob_sum;
+        }
+    }
+    
+    std::vector<size_t> classes(n_samples);
+    for(size_t s=0;s<n_samples;s++){
+        auto max_it=std::max_element(probs[s].e().begin(),probs[s].e().end());
+        classes[s]=std::distance(probs[s].e().begin(),max_it);
+    }
+    return classes;
+}
+template std::vector<size_t> optimize::classify(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<array1d<double> >&);

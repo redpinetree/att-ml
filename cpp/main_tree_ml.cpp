@@ -197,15 +197,19 @@ int main(int argc,char **argv){
     observables::output_lines.push_back(header1_ss.str());
     
     double trial_time=0; //not including init time
-
+    
+    size_t train_data_idim,n_samples,train_data_total_length;
+    std::vector<sample_data> train_data=algorithm::load_training_data_from_file(input,n_samples,train_data_total_length,train_data_idim);
+    std::vector<size_t> train_data_labels;
+    if(label_set){
+        train_data_labels=algorithm::load_training_data_labels_from_file(label_file,n_samples,tdim);
+    }
     graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,open_bc,init_tree_type);
     for(auto it=g.es().begin();it!=g.es().end();++it){
         bond current=*it;
         algorithm::calculate_site_probs(g,current);
     }
     
-    size_t train_data_idim,n_samples,train_data_total_length;
-    std::vector<sample_data> train_data=algorithm::load_data_from_file(input,n_samples,train_data_total_length,train_data_idim);
     if(g.n_phys_sites()!=train_data_total_length){
         std::cout<<"Mismatch in input site count between training data ("<<train_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
         exit(1);
@@ -216,7 +220,12 @@ int main(int argc,char **argv){
     }
     
     sw.start();
-    algorithm::train_nll(g,train_data,n_nll_iter_max); //nll training
+    if(label_set){
+        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max); //nll training with labels
+    }
+    else{
+        algorithm::train_nll(g,train_data,n_nll_iter_max); //nll training
+    }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
     trial_time+=sw.elapsed();
