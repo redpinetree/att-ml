@@ -26,7 +26,7 @@ void print_usage(){
     std::cerr<<"\t-o,--output: prefix for output files. please omit the file extension.\n";
     std::cerr<<"\t-t,--top-dim: top dimension\n";
     std::cerr<<"\t-L,--label-file: input file containing training labels\n";
-    std::cerr<<"\t-T,--init-tree-type: initial tree type: mps or pbttn\n";
+    std::cerr<<"\t-T,--init-tree-type: initial tree type: mps or pbttn or rand\n";
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
 }
@@ -41,6 +41,10 @@ graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls
     else if(init_tree_type=="pbttn"){
         std::normal_distribution<double> dist{0,0};
         g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,!open_bc,dist,1);
+    }
+    else if(init_tree_type=="rand"){
+        std::normal_distribution<double> dist{0,0};
+        g=graph_utils::init_rand<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,!open_bc,dist,1);
     }
     return g;
 }
@@ -157,9 +161,9 @@ int main(int argc,char **argv){
         verbose=0;
     }
     //check initial tree options
-    if(!((init_tree_type=="mps")||(init_tree_type=="pbttn"))){
+    if(!((init_tree_type=="mps")||(init_tree_type=="pbttn")||(init_tree_type=="rand"))){
         if(mpi_utils::root){
-            std::cerr<<"Error: -T must be one of \"mps\" or \"pbttn\".\n";
+            std::cerr<<"Error: -T must be one of \"mps\" or \"pbttn\" or \"rand\".\n";
             print_usage();
         }
         exit(1);

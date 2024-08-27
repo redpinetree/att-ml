@@ -19,6 +19,10 @@ namespace graph_utils{
     graph<cmp> init_mps(size_t,size_t,size_t,std::vector<size_t>,bool,distribution&,double);
     template<typename distribution,typename cmp>
     graph<cmp> init_mps(size_t,size_t,std::vector<size_t>,bool,distribution&,double);
+    template<typename distribution,typename cmp>
+    graph<cmp> init_rand(size_t,size_t,size_t,std::vector<size_t>,bool,distribution&,double);
+    template<typename distribution,typename cmp>
+    graph<cmp> init_rand(size_t,size_t,std::vector<size_t>,bool,distribution&,double);
 }
 
 #endif
