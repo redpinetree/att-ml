@@ -13,11 +13,11 @@ TARGET_TREE_ML = ./bin/tree_ml
 
 SRC_OLD_OLD = ./cpp_old_old/tree_approx_potts.cpp ./cpp_old_old/algorithm.cpp ./cpp_old_old/graph.cpp ./cpp_old_old/graph_utils.cpp ./cpp_old_old/site.cpp ./cpp_old_old/bond.cpp ./cpp_old_old/bond_utils.cpp
 SRC_OLD = ./cpp_old/tree_approx_potts.cpp ./cpp_old/observables.cpp ./cpp_old/algorithm.cpp ./cpp_old/graph_utils.cpp ./cpp_old/site.cpp ./cpp_old/bond.cpp ./cpp_old/bond_utils.cpp ./cpp_old/mpi_utils.cpp
-SRC_COMMON_APPROX = ./cpp/main.cpp ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/ttn_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
-SRC_COMMON_TREE_ML = ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/ttn_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
+SRC_COMMON_APPROX = ./cpp/main.cpp ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/ttn_ops.cpp ./cpp/mat_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
+SRC_COMMON_TREE_ML = ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/ttn_ops.cpp ./cpp/mat_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
 SRC_CMD = ./cpp/cmd/algorithm.cpp ./cpp/cmd/optimize.cpp
 SRC_RENYI = ./cpp/renyi/algorithm.cpp ./cpp/renyi/optimize.cpp
-SRC_CPD = ./cpp/cpd/algorithm.cpp ./cpp/cpd/optimize.cpp ./cpp/cpd/mat_ops.cpp
+SRC_CPD = ./cpp/cpd/algorithm.cpp ./cpp/cpd/optimize.cpp
 SRC_TREE_ML_SPIN = ./cpp/main_tree_ml_spin.cpp
 SRC_TREE_ML = ./cpp/main_tree_ml.cpp
 
@@ -53,19 +53,19 @@ $(TARGET_OLD): $(OBJ_OLD)
 	$(MPICXX) $(OBJ_OLD) -o $(TARGET_OLD) $(CXXFLAGS)
 
 $(TARGET_CMD): $(OBJ_COMMON_CMD) $(OBJ_CMD)
-	$(MPICXX) $(OBJ_COMMON_CMD) $(OBJ_CMD) -o $(TARGET_CMD) $(CXXFLAGS)
+	$(MPICXX) $(OBJ_COMMON_CMD) $(OBJ_CMD) -llapack -lopenblas -o $(TARGET_CMD) $(CXXFLAGS)
 
 $(TARGET_RENYI): $(OBJ_COMMON_RENYI) $(OBJ_RENYI)
-	$(MPICXX) $(OBJ_COMMON_RENYI) $(OBJ_RENYI) -o $(TARGET_RENYI) $(CXXFLAGS)
+	$(MPICXX) $(OBJ_COMMON_RENYI) $(OBJ_RENYI) -llapack -lopenblas -o $(TARGET_RENYI) $(CXXFLAGS)
 
 $(TARGET_CPD): $(OBJ_COMMON_CPD) $(OBJ_CPD)
 	$(MPICXX) $(OBJ_COMMON_CPD) $(OBJ_CPD) -llapack -lopenblas -o $(TARGET_CPD) $(CXXFLAGS)
 
 $(TARGET_TREE_ML_SPIN): $(OBJ_COMMON_TREE_ML_SPIN) $(OBJ_TREE_ML_SPIN)
-	$(MPICXX) $(OBJ_COMMON_TREE_ML_SPIN) $(OBJ_TREE_ML_SPIN) -o $(TARGET_TREE_ML_SPIN) $(CXXFLAGS)
+	$(MPICXX) $(OBJ_COMMON_TREE_ML_SPIN) $(OBJ_TREE_ML_SPIN) -llapack -lopenblas -o $(TARGET_TREE_ML_SPIN) $(CXXFLAGS)
 
 $(TARGET_TREE_ML): $(OBJ_COMMON_TREE_ML) $(OBJ_TREE_ML)
-	$(MPICXX) $(OBJ_COMMON_TREE_ML) $(OBJ_TREE_ML) -o $(TARGET_TREE_ML) $(CXXFLAGS)
+	$(MPICXX) $(OBJ_COMMON_TREE_ML) $(OBJ_TREE_ML) -llapack -lopenblas -o $(TARGET_TREE_ML) $(CXXFLAGS)
 
 $(OBJ_COMMON_CMD): %_cmd.o: %.cpp
 	$(MPICXX) -I ./cpp/cmd -D MODEL_CMD -c $< -o $@ $(CXXFLAGS)

@@ -438,4 +438,75 @@ private:
     std::vector<T> e_;
 };
 
+template<typename T>
+class array4d{
+public:
+    array4d(){}
+    array4d(size_t nx,size_t ny,size_t nz,size_t nw):nx_(nx),ny_(ny),nz_(nz),nw_(nw){
+        this->e_=std::vector<T>(nw*nz*ny*nx,0);
+    }
+    operator std::string() const{
+        std::stringstream str;
+        str<<"[";
+        for(size_t l=0;l<this->nw();l++){
+            str<<"[";
+            for(size_t k=0;k<this->nz();k++){
+                str<<"[";
+                for(size_t j=0;j<this->ny();j++){
+                    str<<"[";
+                    for(size_t i=0;i<this->nx();i++){
+                        str<<this->at(i,j,k,l);
+                        str<<((i==(this->nx()-1))?"]":",");
+                    }
+                    str<<((j==(this->ny()-1))?"]":",\n");
+                }
+                str<<((k==(this->nz()-1))?"]\n":",\n\n");
+            }
+            str<<((l==(this->nw()-1))?"]\n\n":",\n\n\n");
+        }
+        return str.str();
+    }
+    T sum_over_all(){ //TODO: sum after sorting
+        T res=0;
+        for(size_t i=0;i<this->nx();i++){
+            for(size_t j=0;j<this->ny();j++){
+                for(size_t k=0;k<this->nz();k++){
+                    for(size_t l=0;l<this->nw();l++){
+                        res+=this->at(i,j,k,l);
+                    }
+                }
+            }
+        }
+        return res;
+    }
+    //exp for array3d
+    array4d<T> exp_form(){
+        array4d<double> a=*this;
+        for(size_t i=0;i<a.nx();i++){
+            for(size_t j=0;j<a.ny();j++){
+                for(size_t k=0;k<a.nz();k++){
+                    for(size_t l=0;l<a.nw();l++){
+                        a.at(i,j,k,l)=exp(this->at(i,j,k,l));
+                    }
+                }
+            }
+        }
+        return a;
+    }
+    size_t nx() const{return this->nx_;}
+    size_t ny() const{return this->ny_;}
+    size_t nz() const{return this->nz_;}
+    size_t nw() const{return this->nw_;}
+    std::vector<T> e() const{return this->e_;}
+    std::vector<T>& e(){return this->e_;}
+    T at(size_t x,size_t y,size_t z,size_t w) const{return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    T& at(size_t x,size_t y,size_t z,size_t w){return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+private:
+    size_t nx_;
+    size_t ny_;
+    size_t nz_;
+    size_t nw_;
+    std::vector<T> e_;
+};
+
 #endif
