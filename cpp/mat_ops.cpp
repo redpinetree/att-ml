@@ -261,7 +261,7 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
                 for(size_t col=0;col<x.ny();col++){
                     double c_sum=0;
                     for(size_t l=0;l<x.nx();l++){
-                        c_sum+=aTa.at(l,k,0)*x.at(l,col,0);
+                        c_sum+=aTa.at(k,l,0)*x.at(l,col,0);
                     }
                     c.push_back(c_sum);
                 }
@@ -270,17 +270,105 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
                 }
                 for(size_t col=0;col<x.ny();col++){
                     x.at(k,col,0)=(aTb.at(k,col,0)-c[col])/aTa.at(k,k,0);
-                    x.at(k,col,0)=(x.at(k,col,0)>0)?x.at(k,col,0):0; //clip negative values
+                    if(x.at(k,col,0)>1e3){
+                        std::cout<<aTb.at(k,col,0)<<" "<<c[col]<<" "<<aTa.at(k,k,0)<<"\n";
+                        std::cout<<(std::string)aTb<<"\n";
+                        std::cout<<(std::string)aTa<<"\n";
+                        std::cout<<(std::string)x<<"\n";
+                        exit(1);
+                    }
+                    x.at(k,col,0)=(x.at(k,col,0)>eps)?x.at(k,col,0):eps; //clip negative values
                     zero_check+=x.at(k,col,0);
                 }
                 
                 //columns should not be zero
-                if(zero_check<eps){
-                    double x_max_val=*std::max_element(x.e().begin(),x.e().end());
-                    for(size_t col=0;col<x.ny();col++){
-                        x.at(k,col,0)=eps*x_max_val;
+                // if(zero_check<eps){
+                    // double x_max_val=*std::max_element(x.e().begin(),x.e().end());
+                    // for(size_t col=0;col<x.ny();col++){
+                        // x.at(k,col,0)=eps*x_max_val;
+                    // }
+                // }
+            }
+            
+            
+        }
+        double delta=0;
+        for(size_t i=0;i<x.nx();i++){
+            for(size_t j=0;j<x.ny();j++){
+                delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
+            }
+        }
+        delta=sqrt(delta);
+        prev_x=x;
+        if(it==0){
+            delta_first=delta;
+            continue;
+        }
+        if(delta<=(eps*delta_first)){
+            // std::cout<<"HALS stopped early after "<<it<<" iterations.\n";
+            break;
+        }
+    }
+    // if(norm_flag){
+        // double sum=0;
+        // for(size_t i=0;i<x.nx();i++){
+            // for(size_t j=0;j<x.ny();j++){
+                // sum+=x.at(i,j,0);
+            // }
+        // }
+        // for(size_t i=0;i<x.nx();i++){
+            // for(size_t j=0;j<x.ny();j++){
+                // x.at(i,j,0)=x.at(i,j,0)/sum;
+            // }
+        // }
+    // }
+    return x;
+}
+
+
+array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<double>& x,size_t max_it){
+    if((x.nx()!=baT.nx())||(x.ny()!=aaT.nx())||(aaT.ny()!=baT.ny())){
+        std::cout<<"Incompatible matrix equation in NN-HALS with dimensions ("<<x.nx()<<","<<x.ny()<<") ("<<aaT.nx()<<","<<aaT.ny()<<")=("<<baT.nx()<<","<<baT.ny()<<")\n";
+        exit(1);
+    }
+    array3d<double> prev_x=x;
+    double eps=1e-16;
+    double delta_first=0;
+    for(size_t it=0;it<max_it;it++){
+        for(size_t k=0;k<baT.ny();k++){
+            if(aaT.at(k,k,0)!=0){
+                double zero_check=0;
+                std::vector<double> c;
+                for(size_t col=0;col<x.nx();col++){
+                    double c_sum=0;
+                    for(size_t l=0;l<x.ny();l++){
+                        c_sum+=x.at(col,l,0)*aaT.at(l,k,0);
                     }
+                    c.push_back(c_sum);
                 }
+                for(size_t col=0;col<x.nx();col++){
+                    c[col]-=x.at(col,k,0)*aaT.at(k,k,0); //this term in c removes current k column information
+                }
+                for(size_t col=0;col<x.nx();col++){
+                    x.at(col,k,0)=(baT.at(col,k,0)-c[col])/aaT.at(k,k,0);
+                    if(x.at(col,k,0)>1e3){
+                        std::cout<<baT.at(col,k,0)<<" "<<c[col]<<" "<<aaT.at(k,k,0)<<"\n";
+                        std::cout<<(std::string)baT<<"\n";
+                        std::cout<<(std::string)aaT<<"\n";
+                        std::cout<<(std::string)x<<"\n";
+                        exit(1);
+                    }
+                    x.at(col,k,0)=(x.at(col,k,0)>eps)?x.at(col,k,0):eps; //clip negative values
+                    zero_check+=x.at(col,k,0);
+                }
+                
+                //columns should not be zero
+                // if(zero_check<eps){
+                    // double x_max_val=*std::max_element(x.e().begin(),x.e().end());
+                    // for(size_t col=0;col<x.nx();col++){
+                        // x.at(col,k,0)=eps*x_max_val;
+                    // }
+                // }
             }
         }
         double delta=0;
@@ -420,17 +508,17 @@ array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>
     return x;
 }
 
-array3d<double> mu_kl(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x,size_t max_it){
+array3d<double> mu_kl_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x,size_t max_it){
     if((aTa.nx()!=aTb.nx())||(aTa.ny()!=x.nx())||(x.ny()!=aTb.ny())){
-        std::cout<<"Incompatible matrix equation in MU-KL with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
+        std::cout<<"Incompatible matrix equation in MU-KL-LS with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
         exit(1);
     }
     array3d<double> prev_x=x;
     double eps=1e-16;
     double delta_first=0;
+    std::vector<double> denom=aTa.sum_over_axis(1,2);
     for(size_t it=0;it<max_it;it++){
         array3d<double> aTax=matmul_xTy(aTa,x);
-        std::vector<double> denom=aTa.sum_over_axis(1,2);
         for(size_t i=0;i<x.nx();i++){
             for(size_t j=0;j<x.ny();j++){
                 double num=0;
@@ -472,4 +560,90 @@ array3d<double> mu_kl(array3d<double>& aTa,array3d<double>& aTb,array3d<double>&
         // }
     // }
     return x;
+}
+
+array3d<double> mu_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,size_t max_it){
+    if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
+        std::cout<<"Incompatible matrix equation in MU-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";
+        exit(1);
+    }
+    array3d<double> prev_h=h;
+    double eps=1e-16;
+    double delta_first=0;
+    std::vector<double> denom=w.sum_over_axis(0,2);
+    for(size_t it=0;it<max_it;it++){
+        w=transpose(w);
+        array3d<double> wh=matmul_xTy(w,h);
+        w=transpose(w);
+        for(size_t i=0;i<h.nx();i++){
+            for(size_t j=0;j<h.ny();j++){
+                double num=0;
+                for(size_t k=0;k<m.nx();k++){
+                    num+=w.at(k,i,0)*m.at(k,j,0)/wh.at(k,j,0);
+                }
+                h.at(i,j,0)*=num/denom[i];
+                h.at(i,j,0)=(h.at(i,j,0)>eps)?h.at(i,j,0):eps;
+            }
+        }
+        double delta=0;
+        for(size_t i=0;i<h.nx();i++){
+            for(size_t j=0;j<h.ny();j++){
+                delta+=(h.at(i,j,0)-prev_h.at(i,j,0))*(h.at(i,j,0)-prev_h.at(i,j,0));
+            }
+        }
+        delta=sqrt(delta);
+        prev_h=h;
+        if(it==0){
+            delta_first=delta;
+            continue;
+        }
+        if(delta<=(eps*delta_first)){
+            // std::cout<<"MU-KL stopped early after "<<it<<" iterations.\n";
+            break;
+        }
+    }
+    return h;
+}
+
+array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,size_t max_it){
+    if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
+        std::cout<<"Incompatible matrix equation in MU-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";
+        exit(1);
+    }
+    array3d<double> prev_w=w;
+    double eps=1e-16;
+    double delta_first=0;
+    std::vector<double> denom=h.sum_over_axis(1,2);
+    for(size_t it=0;it<max_it;it++){
+        w=transpose(w);
+        array3d<double> wh=matmul_xTy(w,h);
+        w=transpose(w);
+        for(size_t i=0;i<w.nx();i++){
+            for(size_t j=0;j<w.ny();j++){
+                double num=0;
+                for(size_t k=0;k<m.ny();k++){
+                    num+=h.at(j,k,0)*m.at(i,k,0)/wh.at(i,k,0);
+                }
+                w.at(i,j,0)*=num/denom[j];
+                w.at(i,j,0)=(w.at(i,j,0)>eps)?w.at(i,j,0):eps;
+            }
+        }
+        double delta=0;
+        for(size_t i=0;i<w.nx();i++){
+            for(size_t j=0;j<w.ny();j++){
+                delta+=(w.at(i,j,0)-prev_w.at(i,j,0))*(w.at(i,j,0)-prev_w.at(i,j,0));
+            }
+        }
+        delta=sqrt(delta);
+        prev_w=w;
+        if(it==0){
+            delta_first=delta;
+            continue;
+        }
+        if(delta<=(eps*delta_first)){
+            // std::cout<<"MU-KL stopped early after "<<it<<" iterations.\n";
+            break;
+        }
+    }
+    return w;
 }

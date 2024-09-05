@@ -1,6 +1,6 @@
 #include <fstream>
 
-#include "mat_ops.hpp"
+#include "../mat_ops.hpp"
 #include "../mpi_utils.hpp"
 #include "optimize.hpp"
 #include "../observables.hpp"
@@ -147,124 +147,6 @@ double optimize::calc_tr_bTb(std::vector<array3d<double> >& bTb_legs,bond& old_c
         }
     }
     return tr_bTb;
-}
-
-array3d<double> optimize::nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x){
-    if((aTa.nx()!=aTb.nx())||(aTa.ny()!=x.nx())||(x.ny()!=aTb.ny())){
-        std::cout<<"Incompatible matrix equation in NN-HALS with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
-        exit(1);
-    }
-    array3d<double> prev_x=x;
-    double eps=1e-16;
-    double delta_first=0;
-    for(size_t it=0;it<1000;it++){
-        for(size_t k=0;k<aTb.nx();k++){
-            if(aTa.at(k,k,0)!=0){
-                double zero_check=0;
-                std::vector<double> c;
-                for(size_t col=0;col<x.ny();col++){
-                    double c_sum=0;
-                    for(size_t l=0;l<x.nx();l++){
-                        c_sum+=aTa.at(l,k,0)*x.at(l,col,0);
-                    }
-                    c.push_back(c_sum);
-                }
-                for(size_t col=0;col<x.ny();col++){
-                    c[col]-=x.at(k,col,0)*aTa.at(k,k,0); //this term in c removes current k column information
-                }
-                for(size_t col=0;col<x.ny();col++){
-                    x.at(k,col,0)=(aTb.at(k,col,0)-c[col])/aTa.at(k,k,0);
-                    x.at(k,col,0)=(x.at(k,col,0)>0)?x.at(k,col,0):0; //clip negative values
-                    zero_check+=x.at(k,col,0);
-                }
-                
-                //columns should not be zero
-                if(zero_check<eps){
-                    double x_max_val=*std::max_element(x.e().begin(),x.e().end());
-                    for(size_t col=0;col<x.ny();col++){
-                        x.at(k,col,0)=eps*x_max_val;
-                    }
-                }
-            }
-        }
-        double delta=0;
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
-                delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
-            }
-        }
-        delta=sqrt(delta);
-        prev_x=x;
-        if(it==0){
-            delta_first=delta;
-            continue;
-        }
-        if(delta<=(eps*delta_first)){
-            // std::cout<<"HALS stopped early after "<<it<<" iterations.\n";
-            break;
-        }
-    }
-    double sum=0;
-    for(size_t i=0;i<x.nx();i++){
-        for(size_t j=0;j<x.ny();j++){
-            sum+=x.at(i,j,0);
-        }
-    }
-    for(size_t i=0;i<x.nx();i++){
-        for(size_t j=0;j<x.ny();j++){
-            x.at(i,j,0)/sum;
-        }
-    }
-    return transpose(x);
-}
-
-array3d<double> optimize::mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x){
-    if((aTa.nx()!=aTb.nx())||(aTa.ny()!=x.nx())||(x.ny()!=aTb.ny())){
-        std::cout<<"Incompatible matrix equation in MU-LS with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
-        exit(1);
-    }
-    array3d<double> prev_x=x;
-    double eps=1e-16;
-    double delta_first=0;
-    for(size_t it=0;it<1000;it++){
-        array3d<double> aTax=matmul_xTy(aTa,x);
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
-                double num=aTb.at(i,j,0);
-                double denom=aTax.at(i,j,0);
-                x.at(i,j,0)*=num/denom;
-                x.at(i,j,0)=(x.at(i,j,0)>eps)?x.at(i,j,0):eps;
-            }
-        }
-        double delta=0;
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
-                delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
-            }
-        }
-        delta=sqrt(delta);
-        prev_x=x;
-        if(it==0){
-            delta_first=delta;
-            continue;
-        }
-        if(delta<=(eps*delta_first)){
-            // std::cout<<"MU-LS stopped early after "<<it<<" iterations.\n";
-            break;
-        }
-    }
-    double sum=0;
-    for(size_t i=0;i<x.nx();i++){
-        for(size_t j=0;j<x.ny();j++){
-            sum+=x.at(i,j,0);
-        }
-    }
-    for(size_t i=0;i<x.nx();i++){
-        for(size_t j=0;j<x.ny();j++){
-            x.at(i,j,0)/sum;
-        }
-    }
-    return transpose(x);
 }
 
 array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_cluster,bond& current,std::vector<bond>& cluster,size_t m,array3d<double>& x,std::vector<double>& weights,double z,double rho,double& final_cost){
@@ -538,7 +420,7 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
         
         array3d<double> xT=transpose(x);
         if(m==0){
-            current.w()=tensorize(xT,r_i,r_j);
+            current.w()=tensorize(xT,r_i,r_j,2);
         }
         else{
             cluster[m-1].w()=xT;
@@ -575,58 +457,6 @@ array3d<double> optimize::mu_renyi(bond& old_current,std::vector<bond>& old_clus
         }
     }
     final_cost=prev_cost;
-    return transpose(x);
-}
-
-array3d<double> optimize::mu_kl(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x){
-    if((aTa.nx()!=aTb.nx())||(aTa.ny()!=x.nx())||(x.ny()!=aTb.ny())){
-        std::cout<<"Incompatible matrix equation in MU-KL with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
-        exit(1);
-    }
-    array3d<double> prev_x=x;
-    double eps=1e-16;
-    double delta_first=0;
-    for(size_t it=0;it<1000;it++){
-        array3d<double> aTax=matmul_xTy(aTa,x);
-        std::vector<double> denom=aTa.sum_over_axis(1,2);
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
-                double num=0;
-                for(size_t k=0;k<aTa.nx();k++){
-                    num+=aTa.at(k,i,0)*aTb.at(k,j,0)/aTax.at(k,j,0);
-                }
-                x.at(i,j,0)*=num/denom[i];
-                x.at(i,j,0)=(x.at(i,j,0)>eps)?x.at(i,j,0):eps;
-            }
-        }
-        double delta=0;
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
-                delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
-            }
-        }
-        delta=sqrt(delta);
-        prev_x=x;
-        if(it==0){
-            delta_first=delta;
-            continue;
-        }
-        if(delta<=(eps*delta_first)){
-            // std::cout<<"MU-KL stopped early after "<<it<<" iterations.\n";
-            break;
-        }
-    }
-    double sum=0;
-    for(size_t i=0;i<x.nx();i++){
-        for(size_t j=0;j<x.ny();j++){
-            sum+=x.at(i,j,0);
-        }
-    }
-    for(size_t i=0;i<x.nx();i++){
-        for(size_t j=0;j<x.ny();j++){
-            x.at(i,j,0)/sum;
-        }
-    }
     return transpose(x);
 }
 
@@ -804,7 +634,7 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
     // }
     // std::cout<<"\n";
     
-    array3d<double> mat_current=matricize(current.w());
+    array3d<double> mat_current=matricize(current.w(),2);
     aTa_legs.push_back(matmul_xTy(mat_current,mat_current));
     aTb_legs.push_back(hadamard(current.w(),old_current.w()));
     for(size_t n=0;n<cluster.size();n++){
@@ -838,7 +668,7 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
             
             array3d<double> init(aTb.nx(),aTb.ny(),1);
             if(init_method=="prev"){ //initialize using previous iterate
-                init=(m==0)?matricize(current.w()):cluster[m-1].w();
+                init=(m==0)?matricize(current.w(),2):cluster[m-1].w();
                 init=transpose(init);
             }
             else if(init_method=="rand"){
@@ -854,18 +684,23 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
                         init.at(i,j,0)/=sum;
                     }
                 }
+                // std::cout<<(std::string)init<<"\n";
+                // array3d<double> a=tensorize(init,r_i,r_j,2);
+                // std::cout<<(std::string)a<<"\n";
+                // array3d<double> b=matricize(a,2);
+                // std::cout<<(std::string)b<<"\n";
             }
             else if(init_method=="lstsq"){
                 size_t status=0;
-                init=lstsq(aTa,aTb,status);
+                lstsq(aTa,aTb,init,status);
                 if(status==1){ //failed to converge, so fall back to "prev" method
                     std::cout<<"Falling back to \"prev\" method...\n";
-                    init=(m==0)?matricize(current.w()):cluster[m-1].w();
+                    init=(m==0)?matricize(current.w(),2):cluster[m-1].w();
                     init=transpose(init);
                 }
             }
             else if(init_method=="cmd"){
-                init=(m==0)?matricize(current.w()):cluster[m-1].w();
+                init=(m==0)?matricize(current.w(),2):cluster[m-1].w();
                 init=transpose(init);
             }
             else{
@@ -876,13 +711,16 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
             array3d<double> x;
             // std::cout<<(std::string)init<<"\n";
             if(solver=="nnhals"){ //solve aTax=aTb via NN-HALS
-                x=optimize::nn_hals(aTa,aTb,init);
+                x=nn_hals(aTa,aTb,init,1000);
+                x=transpose(x);
             }
             else if(solver=="muls"){ //solve aTax=aTb via MU
-                x=optimize::mu_ls(aTa,aTb,init);
+                x=mu_ls(aTa,aTb,init,1000);
+                x=transpose(x);
             }
             else if(solver=="mukl"){ //solve aTax=aTb via MU
-                x=optimize::mu_kl(aTa,aTb,init);
+                x=mu_kl_ls(aTa,aTb,init,1000);
+                x=transpose(x);
             }
             else if(solver=="murenyi"){ //solve aTax=aTb via MU
                 x=optimize::mu_renyi(old_current,old_cluster,current,cluster,m,init,weights,z,2,final_cost);
@@ -890,20 +728,30 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
             // std::cout<<(std::string)x<<"\n";
             
             if(m==0){
-                current.w()=tensorize(x,r_i,r_j);
+                current.w()=tensorize(x,r_i,r_j,2);
             }
             else{
                 cluster[m-1].w()=x;
             }
             
             //normalize factors based on weights for numerical stability
+            // std::cout<<(std::string)current.w()<<"\n";
+            // std::cout<<current.w().sum_over_all()<<"\n";
             if(solver!="murenyi"){ //do not normalize in renyi approach so that sites are delta tensors
                 optimize::normalize(current,cluster,weights);
             }
+            // std::cout<<(std::string)current.w()<<"\n";
+            // std::cout<<current.w().sum_over_all()<<"\n";
+            // optimize::unnormalize(current,weights);
+            // std::cout<<(std::string)current.w()<<"\n";
+            // std::cout<<current.w().sum_over_all()<<"\n";
+            // array3d<double> b=matricize(current.w(),2);
+            // std::cout<<(std::string)b<<"\n";
+            // exit(1);
             
             //update cached quantities
             if(m==0){ //w_ijk
-                array3d<double> mat_current=matricize(current.w());
+                array3d<double> mat_current=matricize(current.w(),2);
                 aTa_legs[0]=matmul_xTy(mat_current,mat_current);
                 aTb_legs[0]=hadamard(current.w(),old_current.w());
                 continue;
