@@ -234,12 +234,12 @@ std::vector<sample_data> sampling::tree_sample(size_t root,graph<cmp>& g,size_t 
         double log_w=calc_sample_log_w(g,s_vec[n].s()); //weight of sample (log)
         s_vec[n].e()=e;
         s_vec[n].log_w()=log_w;
-        // for(size_t m=0;m<s_vec[n].s().size();m++){
-            // if(m==g.n_phys_sites()){std::cout<<": ";}
-            // std::cout<<s_vec[n].s()[m]<<" ";
-        // }
-        // std::cout<<exp(log_w)<<" "<<e;
-        // std::cout<<"\n";
+        for(size_t m=0;m<s_vec[n].s().size();m++){
+            if(m==g.n_phys_sites()){std::cout<<": ";}
+            std::cout<<s_vec[n].s()[m]<<" ";
+        }
+        std::cout<<exp(log_w)<<" "<<e;
+        std::cout<<"\n";
     }
     return s_vec;
 }
@@ -815,6 +815,14 @@ double sampling::mi_mc(graph<cmp>& g,std::vector<sample_data>& samples,bool ti_f
     double s_ab=0;
     double s_a=0;
     double s_b=0;
+    
+    sample_data masked_sample_z=samples[0];
+    for(size_t z_idx=0;z_idx<samples[0].s().size();z_idx++){
+        masked_sample_z.s()[z_idx]=0; //mask all sites
+    }
+    double log_z=sampling::calc_sample_log_w(g,masked_sample_z.s());
+    // std::cout<<log_z<<" "<<exp(log_z)<<"\n";
+    
     for(size_t i=0;i<samples.size();i++){
         //generate lattice vectors
         std::vector<std::vector<size_t> > lat_vecs=spin_cart_prod(g.dims());
@@ -875,8 +883,10 @@ double sampling::mi_mc(graph<cmp>& g,std::vector<sample_data>& samples,bool ti_f
         }
         // std::cout<<samples[i].log_w()<<" "<<masked_sample_a.log_w()<<" "<<masked_sample_b.log_w()<<"\n";
     }
+    
     mi_mean+=s_a+s_b-s_ab;
-    mi_mean/=samples.size();
+    mi_mean/=(double) samples.size();
+    mi_mean+=log_z;
     // std::cout<<mi_mean<<"\n";
     return mi_mean;
 }

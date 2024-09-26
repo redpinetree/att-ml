@@ -225,10 +225,10 @@ int main(int argc,char **argv){
     
     sw.start();
     if(label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max); //nll training with labels
+        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max); //nll training with labels
     }
     else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max); //nll training
+        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}

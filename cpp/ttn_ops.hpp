@@ -1,6 +1,7 @@
 #ifndef TTN_OPS_
 #define TTN_OPS_
 
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -14,8 +15,13 @@ template<typename cmp>
 double calc_z(graph<cmp>&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
 std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 template<typename cmp>
+double update_cache_z(graph<cmp>&,size_t,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::set<size_t>&);
+std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+template<typename cmp>
 std::vector<double > calc_w(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 template<typename cmp>
 std::vector<double > calc_w(graph<cmp>&,std::vector<sample_data>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+template<typename cmp>
+std::vector<double> update_cache_w(graph<cmp>&,size_t,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&);
 
 #endif
