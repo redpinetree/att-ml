@@ -218,18 +218,5 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
         // std::cout<<p_k[k]<<" ";
     // }
     // std::cout<<"\n";
-    
-    g.vs()[current.order()].m_vec()=std::vector<std::vector<double> >();
-    for(size_t idx=0;idx<r_k;idx++){
-        std::vector<double> res(r_k-1,0);
-        double prob_factor=g.vs()[current.order()].p_k()[idx];
-        for(size_t i=0;i<r_k;i++){
-            std::vector<double> contrib=observables::m_vec(g,current.order(),i,idx,0);
-            for(size_t j=0;j<contrib.size();j++){
-                res[j]+=prob_factor*contrib[j];
-            }
-        }
-        g.vs()[current.order()].m_vec().push_back(res);
-    }
 }
 template void algorithm::calculate_site_probs(graph<bmi_comparator>&,bond&);
