@@ -141,9 +141,10 @@ void lstsq(array3d<double>& a_mat,array3d<double>& b_mat,array3d<double>& x_mat,
     //input variables
     a_mat=transpose(a_mat); //row major to column major order
     b_mat=transpose(b_mat); //row major to column major order
+    x_mat=transpose(x_mat); //row major to column major order
     int m=a_mat.nx(); //rows of a
     int n=a_mat.ny(); //cols of a
-    int nrhs=b_mat.ny(); //cols of b,x
+    int nrhs=b_mat.nx(); //cols of b,x
     int lda=m; //leading dim of a=m
     int ldb=(m>n)?m:n; //leading dim of b=max(m,n)
     double rcond=-1.0; //negative means machine precision
@@ -184,7 +185,7 @@ void lstsq(array3d<double>& a_mat,array3d<double>& b_mat,array3d<double>& x_mat,
     //construct array3d object to hold solution
     x_mat=array3d<double>(nrhs,n,1);
     std::copy(&b[0],&b[n*nrhs],x_mat.e().begin());
-    b_mat=transpose(b_mat); //col major to row major order
+    x_mat=transpose(x_mat); //col major to row major order
     
     // std::cout<<(std::string) res;
 }
@@ -270,13 +271,13 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
                 }
                 for(size_t col=0;col<x.ny();col++){
                     x.at(k,col,0)=(aTb.at(k,col,0)-c[col])/aTa.at(k,k,0);
-                    if(x.at(k,col,0)>1e3){
-                        std::cout<<aTb.at(k,col,0)<<" "<<c[col]<<" "<<aTa.at(k,k,0)<<"\n";
-                        std::cout<<(std::string)aTb<<"\n";
-                        std::cout<<(std::string)aTa<<"\n";
-                        std::cout<<(std::string)x<<"\n";
-                        exit(1);
-                    }
+                    // if(x.at(k,col,0)>1e3){
+                        // std::cout<<aTb.at(k,col,0)<<" "<<c[col]<<" "<<aTa.at(k,k,0)<<"\n";
+                        // std::cout<<(std::string)aTb<<"\n";
+                        // std::cout<<(std::string)aTa<<"\n";
+                        // std::cout<<(std::string)x<<"\n";
+                        // exit(1);
+                    // }
                     x.at(k,col,0)=(x.at(k,col,0)>eps)?x.at(k,col,0):eps; //clip negative values
                     zero_check+=x.at(k,col,0);
                 }
@@ -351,13 +352,13 @@ array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<doubl
                 }
                 for(size_t col=0;col<x.nx();col++){
                     x.at(col,k,0)=(baT.at(col,k,0)-c[col])/aaT.at(k,k,0);
-                    if(x.at(col,k,0)>1e3){
-                        std::cout<<baT.at(col,k,0)<<" "<<c[col]<<" "<<aaT.at(k,k,0)<<"\n";
-                        std::cout<<(std::string)baT<<"\n";
-                        std::cout<<(std::string)aaT<<"\n";
-                        std::cout<<(std::string)x<<"\n";
-                        exit(1);
-                    }
+                    // if(x.at(col,k,0)>1e3){
+                        // std::cout<<baT.at(col,k,0)<<" "<<c[col]<<" "<<aaT.at(k,k,0)<<"\n";
+                        // std::cout<<(std::string)baT<<"\n";
+                        // std::cout<<(std::string)aaT<<"\n";
+                        // std::cout<<(std::string)x<<"\n";
+                        // exit(1);
+                    // }
                     x.at(col,k,0)=(x.at(col,k,0)>eps)?x.at(col,k,0):eps; //clip negative values
                     zero_check+=x.at(col,k,0);
                 }
@@ -646,4 +647,225 @@ array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,
         }
     }
     return w;
+}
+
+void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t r,size_t status){
+    //compute svd
+    array3d<double> u;
+    array3d<double> vt;
+    array1d<double> s;
+    svd(target,u,s,vt,status);
+    
+    w=array3d<double>(u.nx(),r,u.nz());
+    h=array3d<double>(r,vt.ny(),vt.nz());
+    
+    //nonnegative leading singular triplet can be used right away
+    for(size_t i=0;i<w.nx();i++){
+        w.at(i,0,0)=sqrt(s.at(0))*fabs(u.at(i,0,0));
+    }
+    for(size_t j=0;j<h.ny();j++){
+        h.at(0,j,0)=sqrt(s.at(0))*fabs(vt.at(0,j,0));
+    }
+    
+    for(size_t k=1;k<r;k++){ //only consider largest r singular triplets
+        array1d<double> x_p(u.nx());
+        array1d<double> x_n(u.nx());
+        double x_p_norm=0;
+        double x_n_norm=0;
+        for(size_t i=0;i<u.nx();i++){
+            if(u.at(i,k,0)>0){
+                x_p.at(i)=u.at(i,k,0);
+                x_p_norm+=u.at(i,k,0)*u.at(i,k,0);
+           }
+            else{
+                x_n.at(i)=fabs(u.at(i,k,0));
+                x_n_norm+=u.at(i,k,0)*u.at(i,k,0);
+            }
+        }
+        array1d<double> y_p(vt.ny());
+        array1d<double> y_n(vt.ny());
+        double y_p_norm=0;
+        double y_n_norm=0;
+        for(size_t j=0;j<vt.ny();j++){
+            if(vt.at(k,j,0)>0){
+                y_p.at(j)=vt.at(k,j,0);
+                y_p_norm+=vt.at(k,j,0)*vt.at(k,j,0);
+            }
+            else{
+                y_n.at(j)=fabs(vt.at(k,j,0));
+                y_n_norm+=vt.at(k,j,0)*vt.at(k,j,0);
+            }
+        }
+        
+        array1d<double> x(u.nx());
+        array1d<double> y(vt.ny());
+        double mult;
+        if((x_p_norm*y_p_norm)>(x_n_norm*y_n_norm)){
+            mult=x_p_norm*y_p_norm;
+            for(size_t i=0;i<u.nx();i++){
+                x.at(i)=x_p.at(i)/x_p_norm;
+            }
+            for(size_t j=0;j<vt.ny();j++){
+                y.at(j)=y_p.at(j)/y_p_norm;
+            }
+        }
+        else{
+            mult=x_n_norm*y_n_norm;
+            for(size_t i=0;i<u.nx();i++){
+                x.at(i)=x_n.at(i)/x_n_norm;
+            }
+            for(size_t j=0;j<vt.ny();j++){
+                y.at(j)=y_n.at(j)/y_n_norm;
+            }
+        }
+        
+        for(size_t i=0;i<w.nx();i++){
+            w.at(i,k,0)=sqrt(s.at(k)*mult)*fabs(x.at(i));
+        }
+        for(size_t j=0;j<h.ny();j++){
+            h.at(k,j,0)=sqrt(s.at(k)*mult)*fabs(y.at(j));
+        }
+    }
+    
+    double mean=target.sum_over_all()/(double) (target.nx()*target.ny()*target.nz());
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            if(w.at(i,j,0)<1e-6){
+                w.at(i,j,0)=mean;
+            }
+        }
+    }
+    for(size_t i=0;i<h.nx();i++){
+        for(size_t j=0;j<h.ny();j++){
+            if(h.at(i,j,0)<1e-6){
+                h.at(i,j,0)=mean;
+            }
+        }
+    }
+    
+    // std::cout<<"mat: "<<target.nx()<<" "<<target.ny()<<" "<<target.nz()<<"\n";
+    // std::cout<<"mat:\n"<<(std::string) target;
+    // std::cout<<"u: "<<u.nx()<<" "<<u.ny()<<" "<<u.nz()<<"\n";
+    // std::cout<<"u:\n"<<(std::string) u;
+    // std::cout<<"s:\n"<<(std::string) s;
+    // std::cout<<"vt: "<<vt.nx()<<" "<<vt.ny()<<" "<<vt.nz()<<"\n";
+    // std::cout<<"vt:\n"<<(std::string) vt;
+    // std::cout<<"w: "<<w.nx()<<" "<<w.ny()<<" "<<w.nz()<<"\n";
+    // std::cout<<"w:\n"<<(std::string) w;
+    // std::cout<<"h: "<<h.nx()<<" "<<h.ny()<<" "<<h.nz()<<"\n";
+    // std::cout<<"h:\n"<<(std::string) h;
+    // exit(1);
+}
+
+void nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t r){
+    size_t status=0;
+    nndsvda(target,w,h,r,status);
+    // std::cout<<"w:\n"<<(std::string) w;
+    // std::cout<<"h:\n"<<(std::string) h;
+    // std::cout<<"w: "<<w.nx()<<" "<<w.ny()<<" "<<w.nz()<<"\n";
+    // std::cout<<"h: "<<h.nx()<<" "<<h.ny()<<" "<<h.nz()<<"\n";
+    
+    //use NN-HALS to alternately optimize w and h against target
+    // target=target.exp_form();
+    // w=w.exp_form();
+    // h=h.exp_form();
+    // std::cout<<(std::string) target<<"\n";
+    // std::cout<<(std::string) w<<"\n";
+    // std::cout<<(std::string) h<<"\n";
+    array3d<double> old_w=w;
+    array3d<double> old_h=h;
+    double old_recon_err=1e50;
+    double recon_err;
+    for(size_t opt_iter=0;opt_iter<10000;opt_iter++){
+        // array3d<double> aTa=matmul_xTy(w,w);
+        // array3d<double> aTb=matmul_xTy(w,target);
+        // h=nn_hals(aTa,aTb,h,1);
+        // h=mu_ls(aTa,aTb,h,1);
+        h=mu_kl(target,w,h,1);
+        
+        // h=transpose(h);
+        // target=transpose(target);
+        // array3d<double> aaT=matmul_xTy(h,h);
+        // array3d<double> baT=matmul_xTy(target,h);
+        // h=transpose(h);
+        // target=transpose(target);
+        // w=transpose(w);
+        // w=nn_hals2(aaT,baT,w,1);
+        // w=transpose(w);
+        // w=mu_ls2(aaT,baT,w,1);
+        w=mu_kl2(target,w,h,1);
+        
+        array3d<double> recon_mat(target.nx(),target.ny(),target.nz());
+        for(size_t i=0;i<recon_mat.nx();i++){
+            for(size_t j=0;j<recon_mat.ny();j++){
+                for(size_t k=0;k<w.ny();k++){
+                    recon_mat.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
+                }
+            }
+        }
+        double tr_mTm=0;
+        double tr_whTwh=0;
+        double tr_mTwh=0;
+        for(size_t i=0;i<recon_mat.nx();i++){
+            for(size_t j=0;j<recon_mat.ny();j++){
+                tr_mTm+=target.at(i,j,0)*target.at(i,j,0);
+                tr_whTwh+=recon_mat.at(i,j,0)*recon_mat.at(i,j,0);
+                tr_mTwh+=target.at(i,j,0)*recon_mat.at(i,j,0);
+            }
+        }
+        recon_err=(tr_mTm+tr_whTwh-(2*tr_mTwh))/tr_mTm;
+        if(recon_err<1e-12){
+            // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (recon err).\n";
+            // if(opt_iter==0){
+                // std::cout<<tr_mTm<<" "<<tr_whTwh<<" "<<tr_mTwh<<"\n";
+                // std::cout<<(std::string) w<<"\n";
+                // std::cout<<(std::string) h<<"\n";
+                // std::cout<<(std::string) target<<"\n";
+                // std::cout<<(std::string) recon_mat<<"\n";
+                // exit(1);
+            // }
+            // std::cout<<"Final reconstruction err: "<<recon_err<<".\n";
+            break;
+        }
+        // else if(fabs(recon_err-old_recon_err)<1e-6){
+            // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (recon err diff).\n";
+            // std::cout<<"Final reconstruction err: "<<recon_err<<".\n";
+            // break;
+        // }
+        old_recon_err=recon_err;
+        // exit(1);
+        
+        double diff=0;
+        for(size_t i=0;i<w.nx();i++){
+            for(size_t j=0;j<w.ny();j++){
+                diff+=(old_w.at(i,j,0)-w.at(i,j,0))*(old_w.at(i,j,0)-w.at(i,j,0));
+            }
+        }
+        for(size_t i=0;i<h.nx();i++){
+            for(size_t j=0;j<h.ny();j++){
+                diff+=(old_h.at(i,j,0)-h.at(i,j,0))*(old_h.at(i,j,0)-h.at(i,j,0));
+            }
+        }
+        if(diff<1e-6){
+            // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (diff).\n";
+            // std::cout<<"Final diff: "<<diff<<".\n";
+            // std::cout<<"Final reconstruction err: "<<recon_err<<".\n";
+            // break;
+        }
+        old_w=w;
+        old_h=h;
+    }
+    // std::cout<<(*std::max_element(w.e().begin(),w.e().end()))<<" "<<(*std::max_element(h.e().begin(),h.e().end()))<<"\n";
+    double sum2=h.sum_over_all();
+    for(size_t i=0;i<h.nx();i++){
+        for(size_t j=0;j<h.ny();j++){
+            h.at(i,j,0)/=sum2;
+        }
+    }
+    double sum1=w.sum_over_all();
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            w.at(i,j,0)/=sum1;
+        }
+    }
 }

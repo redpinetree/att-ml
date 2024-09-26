@@ -288,15 +288,15 @@ int main(int argc,char **argv){
         }
     }
 #ifdef MODEL_CPD
-    if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="rand")&&(init_method!="hybrid")&&(init_method!="cmd")){
-        std::cout<<"Error: <init_method> must be one of \"hybrid\", \"prev\", \"lstsq\", \"cmd\", or \"rand\".\n";
+    if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="svd")&&(init_method!="rand")&&(init_method!="hybrid")&&(init_method!="cmd")){
+        std::cout<<"Error: <init_method> must be one of \"hybrid\", \"prev\", \"lstsq\", \"svd\", \"cmd\", or \"rand\".\n";
         exit(1);
     }
     if((solver!="nnhals")&&(solver!="muls")&&(solver!="mukl")&&(solver!="murenyi")){
         std::cout<<"Error: <solver> must be one of \"nnhals\", \"muls\", \"mukl\", or \"murenyi\".\n";
         exit(1);
     }
-    if((restarts>1)&&((init_method=="prev")||(init_method=="lstsq")||(init_method=="cmd"))){
+    if((restarts>1)&&((init_method=="prev")||(init_method=="lstsq")||(init_method=="svd")||(init_method=="cmd"))){
         std::cout<<"CPD initialization is deterministic ("<<init_method<<"), so restart count set to 1.\n";
         restarts=1;
     }

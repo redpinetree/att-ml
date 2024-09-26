@@ -699,6 +699,16 @@ double optimize::tree_cpd(size_t master,size_t slave,std::vector<site>& sites,bo
                     init=transpose(init);
                 }
             }
+            else if(init_method=="svd"){
+                array3d<double> dummy_mat1;
+                size_t status=0;
+                nndsvda(aTb,dummy_mat1,init,init.nx(),status);
+                if(status==1){ //failed to converge, so fall back to "prev" method
+                    std::cout<<"Falling back to \"prev\" method...\n";
+                    init=(m==0)?matricize(current.w(),2):cluster[m-1].w();
+                    init=transpose(init);
+                }
+            }
             else if(init_method=="cmd"){
                 init=(m==0)?matricize(current.w(),2):cluster[m-1].w();
                 init=transpose(init);
@@ -787,7 +797,7 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site>& si
     std::cout<<"cluster size: "<<cluster.size()<<"\n";
     std::uniform_real_distribution<> unif_dist(1e-16,1.0);
     double best_err=1;
-    if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="rand")&&(init_method!="hybrid")&&(init_method!="cmd")){
+    if((init_method!="prev")&&(init_method!="lstsq")&&(init_method!="svd")&&(init_method!="rand")&&(init_method!="hybrid")&&(init_method!="cmd")){
         std::cout<<"Invalid initializer for HALS subroutine ("<<init_method<<" was passed), aborting...\n";
         exit(1);
     }
@@ -862,9 +872,9 @@ double optimize::opt(size_t master,size_t slave,size_t r_k,std::vector<site>& si
             else if((restarts==2)&&(r_i==r_j)&&(r_j==r_k)){ //second attempt uses cmd initialization, if possible
                 hybrid_init_method="cmd";
             }
-            // else if(restarts==3){ //third attempt uses least-squares approximation
-                // hybrid_init_method="lstsq";
-            // }
+            else if(restarts==3){ //third attempt uses least-squares approximation
+                hybrid_init_method="lstsq";
+            }
             else{ //remaining attempts use random initialization
                 hybrid_init_method="rand";
             }
