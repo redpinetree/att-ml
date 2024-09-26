@@ -208,6 +208,7 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
         
         counter+=2;
     }
+    vs[vs.size()-1].u_idx()=0;
     
     // for(size_t i=0;i<orig_ks.size();i++){
         // size_t v1=std::get<0>(orig_ks[i]);
@@ -345,6 +346,7 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
         virt_site_counter++;
         depth++;
     }
+    vs[vs.size()-1].u_idx()=0;
     
     // for(size_t i=0;i<orig_ks.size();i++){
         // size_t v1=std::get<0>(orig_ks[i]);
@@ -497,6 +499,7 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
         vs[v2].u_idx()=vs.size()-1;
         // std::cout<<(std::string) b<<"\n";g.vs()[current.v1()].p_k()
     }
+    vs[vs.size()-1].u_idx()=0;
     
     // for(size_t i=0;i<orig_ks.size();i++){
         // size_t v1=std::get<0>(orig_ks[i]);

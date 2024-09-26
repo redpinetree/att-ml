@@ -6,10 +6,10 @@ site::site(size_t q,size_t vol,size_t depth,size_t l_idx,size_t r_idx):rank_(q),
 
 site::operator std::string() const{
     if(this->virt()){
-        return "["+std::to_string(this->vol())+","+std::to_string(this->rank())+","+std::to_string(this->depth())+",("+std::to_string(this->l_idx())+","+std::to_string(this->r_idx())+")]";
+        return "["+std::to_string(this->vol())+","+std::to_string(this->rank())+","+std::to_string(this->depth())+",("+std::to_string(this->l_idx())+","+std::to_string(this->r_idx())+","+std::to_string(this->u_idx())+")]";
     }
     else{
-        return std::to_string(this->vol());
+        return "["+std::to_string(this->vol())+","+std::to_string(this->rank())+"]";
     }
 }
 
