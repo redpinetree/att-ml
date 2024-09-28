@@ -29,6 +29,7 @@ public:
     size_t l_idx() const;
     size_t r_idx() const;
     size_t u_idx() const;
+    double bmi() const;
     size_t& rank();
     size_t& vol();
     size_t& depth();
@@ -38,6 +39,7 @@ public:
     size_t& l_idx();
     size_t& r_idx();
     size_t& u_idx();
+    double& bmi();
     bond& p_bond();
     std::vector<size_t>& orig_ks_idxs();
     std::vector<double>& p_k();
@@ -57,6 +59,7 @@ private:
     size_t l_idx_;
     size_t r_idx_;
     size_t u_idx_;
+    double bmi_;
     bond p_bond_;
     std::vector<size_t> orig_ks_idxs_;
     std::vector<double> p_k_;

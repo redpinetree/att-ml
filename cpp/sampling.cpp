@@ -234,12 +234,12 @@ std::vector<sample_data> sampling::tree_sample(size_t root,graph<cmp>& g,size_t 
         double log_w=calc_sample_log_w(g,s_vec[n].s()); //weight of sample (log)
         s_vec[n].e()=e;
         s_vec[n].log_w()=log_w;
-        for(size_t m=0;m<s_vec[n].s().size();m++){
-            if(m==g.n_phys_sites()){std::cout<<": ";}
-            std::cout<<s_vec[n].s()[m]<<" ";
-        }
-        std::cout<<exp(log_w)<<" "<<e;
-        std::cout<<"\n";
+        // for(size_t m=0;m<s_vec[n].s().size();m++){
+            // if(m==g.n_phys_sites()){std::cout<<": ";}
+            // std::cout<<s_vec[n].s()[m]<<" ";
+        // }
+        // std::cout<<exp(log_w)<<" "<<e;
+        // std::cout<<"\n";
     }
     return s_vec;
 }

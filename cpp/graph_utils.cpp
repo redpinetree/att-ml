@@ -1,5 +1,6 @@
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <fstream>
 #include <chrono>
@@ -200,6 +201,7 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
         b.order()=num_vs+t_idx;
         b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
+        b.bmi()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
@@ -209,6 +211,7 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
         counter+=2;
     }
     vs[vs.size()-1].u_idx()=0;
+    vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
     
     // for(size_t i=0;i<orig_ks.size();i++){
         // size_t v1=std::get<0>(orig_ks[i]);
@@ -336,6 +339,7 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
         b.order()=num_vs+t_idx;
         b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
+        b.bmi()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
@@ -347,6 +351,7 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
         depth++;
     }
     vs[vs.size()-1].u_idx()=0;
+    vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
     
     // for(size_t i=0;i<orig_ks.size();i++){
         // size_t v1=std::get<0>(orig_ks[i]);
@@ -399,7 +404,7 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
     for(size_t v1=0;v1<num_vs;v1++){
         vs.push_back(site(idim,1));
         vs[v1].p_k()=std::vector<double>(idim,1/(double) idim);
-        vs[v1].depth()=1;
+        vs[v1].depth()=0;
     }
     //generate couplings
     for(size_t v1=0;v1<num_vs;v1++){
@@ -494,12 +499,14 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
         b.order()=num_vs+t_idx;
         b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
+        b.bmi()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
         // std::cout<<(std::string) b<<"\n";g.vs()[current.v1()].p_k()
     }
     vs[vs.size()-1].u_idx()=0;
+    vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
     
     // for(size_t i=0;i<orig_ks.size();i++){
         // size_t v1=std::get<0>(orig_ks[i]);

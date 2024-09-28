@@ -757,7 +757,7 @@ void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_
     // exit(1);
 }
 
-void nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t r){
+double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t r){
     size_t status=0;
     nndsvda(target,w,h,r,status);
     // std::cout<<"w:\n"<<(std::string) w;
@@ -868,4 +868,5 @@ void nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t r)
             w.at(i,j,0)/=sum1;
         }
     }
+    return recon_err;
 }

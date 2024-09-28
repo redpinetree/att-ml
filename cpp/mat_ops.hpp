@@ -26,6 +26,6 @@ array3d<double> mu_kl(array3d<double>&,array3d<double>&,array3d<double>&,size_t)
 array3d<double> mu_kl2(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 
 void nndsvda(array3d<double>&,array3d<double>&,array3d<double>&,size_t,size_t);
-void nmf(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
+double nmf(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 
 #endif

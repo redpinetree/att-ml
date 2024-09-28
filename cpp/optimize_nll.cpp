@@ -444,6 +444,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
     
     double best_nll=1e50;
     std::uniform_real_distribution<> unif_dist(1e-16,1.0);
+    std::vector<site> best_vs;
     std::multiset<bond,bmi_comparator> best_es;
     for(size_t t=1;t<=iter_max;t++){
         //all tensors have an upstream tensor except the top, so we can loop over all tensors except the top to go through all bonds
@@ -668,6 +669,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
         nll+=z; //z is log(z)
         if(nll<best_nll){
             best_nll=nll;
+            best_vs=g.vs();
             best_es=g.es();
         }
         if(fabs(prev_nll-nll)<1e-12){
@@ -682,7 +684,17 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
         }
         prev_nll=nll;
     }
+    g.vs()=best_vs;
     g.es()=best_es;
+    
+    z=calc_z(g,l_env_z,r_env_z,u_env_z);
+    w=calc_w(g,samples,labels,l_env_sample,r_env_sample,u_env_sample);
+    
+    for(size_t i=0;i<g.n_phys_sites();i++){
+        double input_bmi=fabs(optimize::calc_bmi_input(i,g.vs()[i].rank(),samples,g.vs()[g.vs()[i].u_idx()].p_bond(),l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample));
+        g.vs()[i].bmi()=input_bmi;
+    }
+    
     return best_nll;
 }
 template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t);
@@ -1321,6 +1333,96 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
     return bmi;
 }
 
+double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_data>& samples,bond& parent,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample){
+    size_t n_samples=samples.size();
+    array1d<double> a_subsystem_vec_z(input_rank);
+    array1d<double> b_subsystem_vec_z(input_rank);
+    std::vector<array1d<double> > a_subsystem_vec_sample;
+    std::vector<array1d<double> > b_subsystem_vec_sample;
+    for(size_t s=0;s<n_samples;s++){
+        array1d<double> vec_e(input_rank);
+        for(size_t a=0;a<vec_e.nx();a++){
+            if(a!=(samples[s].s()[idx]-1)){ //if a==samples[s].s()[n]-1, element is log(1)=0. else log(0)=-inf
+                vec_e.at(a)=log(1e-100);
+            }
+        }
+        a_subsystem_vec_sample.push_back(vec_e);
+        b_subsystem_vec_sample.push_back(array1d<double>(input_rank));
+    }
+    if((idx==parent.v1())){
+        for(size_t k=0;k<parent.w().nx();k++){
+            std::vector<double> b_subsystem_vec_z_addends;
+            for(size_t l=0;l<parent.w().ny();l++){
+                for(size_t m=0;m<parent.w().nz();m++){
+                    b_subsystem_vec_z_addends.push_back(r_env_z[parent.order()].at(l)+u_env_z[parent.order()].at(m)+parent.w().at(k,l,m));
+                }
+            }
+            b_subsystem_vec_z.at(k)=lse(b_subsystem_vec_z_addends);
+        }
+        for(size_t s=0;s<n_samples;s++){
+            for(size_t k=0;k<parent.w().nx();k++){
+                std::vector<double> b_subsystem_vec_sample_addends;
+                for(size_t l=0;l<parent.w().ny();l++){
+                    for(size_t m=0;m<parent.w().nz();m++){
+                        b_subsystem_vec_sample_addends.push_back(r_env_sample[parent.order()][s].at(l)+u_env_sample[parent.order()][s].at(m)+parent.w().at(k,l,m));
+                    }
+                }
+                b_subsystem_vec_sample[s].at(k)=lse(b_subsystem_vec_sample_addends);
+            }
+        }
+    }
+    else{
+        for(size_t k=0;k<parent.w().ny();k++){
+            std::vector<double> b_subsystem_vec_z_addends;
+            for(size_t l=0;l<parent.w().nx();l++){
+                for(size_t m=0;m<parent.w().nz();m++){
+                    b_subsystem_vec_z_addends.push_back(l_env_z[parent.order()].at(l)+u_env_z[parent.order()].at(m)+parent.w().at(k,l,m));
+                }
+            }
+            b_subsystem_vec_z.at(k)=lse(b_subsystem_vec_z_addends);
+        }
+        for(size_t s=0;s<n_samples;s++){
+            for(size_t k=0;k<parent.w().ny();k++){
+                std::vector<double> b_subsystem_vec_sample_addends;
+                for(size_t l=0;l<parent.w().nx();l++){
+                    for(size_t m=0;m<parent.w().nz();m++){
+                        b_subsystem_vec_sample_addends.push_back(l_env_sample[parent.order()][s].at(l)+u_env_sample[parent.order()][s].at(m)+parent.w().at(k,l,m));
+                    }
+                }
+                b_subsystem_vec_sample[s].at(k)=lse(b_subsystem_vec_sample_addends);
+            }
+        }
+    }
+    std::vector<double> z_addends;
+    for(size_t k=0;k<input_rank;k++){
+        z_addends.push_back(a_subsystem_vec_z.at(k)+b_subsystem_vec_z.at(k));
+    }
+    double z=lse(z_addends);
+    double s_a=0;
+    double s_b=0;
+    double s_ab=0;
+    for(size_t s=0;s<n_samples;s++){
+        std::vector<double> s_a_addends;
+        std::vector<double> s_b_addends;
+        std::vector<double> s_ab_addends;
+        for(size_t k=0;k<input_rank;k++){
+            s_a_addends.push_back(a_subsystem_vec_sample[s].at(k)+b_subsystem_vec_z.at(k));
+            s_b_addends.push_back(a_subsystem_vec_z.at(k)+b_subsystem_vec_sample[s].at(k));
+            s_ab_addends.push_back(a_subsystem_vec_sample[s].at(k)+b_subsystem_vec_sample[s].at(k));
+        }
+        s_a-=lse(s_a_addends);
+        s_b-=lse(s_b_addends);
+        s_ab-=lse(s_ab_addends);
+    }
+    double bmi=((s_a+s_b-s_ab)/(double) n_samples)+z;
+    // std::cout<<"z: "<<z<<"\n";
+    // std::cout<<"s_a: "<<s_a<<"\n";
+    // std::cout<<"s_b: "<<s_b<<"\n";
+    // std::cout<<"s_ab: "<<s_ab<<"\n";
+    // std::cout<<"("<<idx<<","<<parent.order()<<") bmi: "<<bmi<<"\n";
+    return bmi;
+}
+
 template<typename cmp>
 double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double alpha,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 1
@@ -1335,12 +1437,24 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
         }
     }
     
-    size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny(); //max rank is min(row rank, col rank)
-    r=(r<r_max)?r:r_max;
-    array3d<double> mat1(fused.nx()*fused.ny(),r,1);
-    array3d<double> mat2(r,fused.nz()*fused.nw(),1);
+    // size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny(); //max rank is min(row rank, col rank)
+    // r=(r<r_max)?r:r_max;
+    // array3d<double> mat1(fused.nx()*fused.ny(),r,1);
+    // array3d<double> mat2(r,fused.nz()*fused.nw(),1);
+    // double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
     
-    nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+    array3d<double> mat1;
+    array3d<double> mat2;
+    size_t r=1;
+    size_t upper_bound_r_max=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
+    while(r<=((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){
+        mat1=array3d<double>(fused.nx()*fused.ny(),r,1);
+        mat2=array3d<double>(r,fused.nz()*fused.nw(),1);
+        double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+        if(recon_err<1e-6){break;}
+        if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
+        r++;
+    }
     
     current.w()=array3d<double>(fused.nx(),fused.ny(),r);
     parent.w()=(parent.v1()==current.order())?array3d<double>(r,fused.nz(),fused.nw()):array3d<double>(fused.nz(),r,fused.nw());
@@ -1418,6 +1532,7 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     
     //update bmi and p_bond after every optimization sweep
     current.bmi()=bmi1;
+    g.vs()[current.order()].bmi()=bmi1;
     g.vs()[current.order()].p_bond()=current;
     
     g.es().erase(it);
@@ -1440,12 +1555,24 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
         }
     }
     
-    size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
-    r=(r<r_max)?r:r_max;
-    array3d<double> mat1(fused.nx()*fused.nz(),r,1);
-    array3d<double> mat2(r,fused.ny()*fused.nw(),1);
+    // size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
+    // r=(r<r_max)?r:r_max;
+    // array3d<double> mat1(fused.nx()*fused.nz(),r,1);
+    // array3d<double> mat2(r,fused.ny()*fused.nw(),1);
+    // double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
     
-    nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+    array3d<double> mat1;
+    array3d<double> mat2;
+    size_t r=1;
+    size_t upper_bound_r_max=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
+    while(r<=((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){
+        mat1=array3d<double>(fused.nx()*fused.nz(),r,1);
+        mat2=array3d<double>(r,fused.ny()*fused.nw(),1);
+        double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+        if(recon_err<1e-6){break;}
+        if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
+        r++;
+    }
     
     //fix neighbors
     size_t swap;
@@ -1591,6 +1718,7 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     
     //update bmi and p_bond after every optimization sweep
     current.bmi()=bmi2;
+    g.vs()[current.order()].bmi()=bmi2;
     g.vs()[current.order()].p_bond()=current;
     
     g.es().erase(it);
@@ -1613,12 +1741,24 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
         }
     }
     
-    size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
-    r=(r<r_max)?r:r_max;
-    array3d<double> mat1(fused.nz()*fused.ny(),r,1);
-    array3d<double> mat2(r,fused.nx()*fused.nw(),1);
+    // size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
+    // r=(r<r_max)?r:r_max;
+    // array3d<double> mat1(fused.nz()*fused.ny(),r,1);
+    // array3d<double> mat2(r,fused.nx()*fused.nw(),1);
+    // double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
     
-    nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+    array3d<double> mat1;
+    array3d<double> mat2;
+    size_t r=1;
+    size_t upper_bound_r_max=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
+    while(r<=((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){
+        mat1=array3d<double>(fused.nz()*fused.ny(),r,1);
+        mat2=array3d<double>(r,fused.nx()*fused.nw(),1);
+        double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+        if(recon_err<1e-6){break;}
+        if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
+        r++;
+    }
     
     //fix neighbors
     size_t swap;
@@ -1763,6 +1903,7 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     
     //update bmi and p_bond after every optimization sweep
     current.bmi()=bmi3;
+    g.vs()[current.order()].bmi()=bmi3;
     g.vs()[current.order()].p_bond()=current;
     
     g.es().erase(it);
