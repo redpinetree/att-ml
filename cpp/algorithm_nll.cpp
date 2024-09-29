@@ -70,14 +70,14 @@ std::vector<size_t> algorithm::load_training_data_labels_from_file(std::string& 
 }
 
 template<typename cmp>
-void algorithm::train_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
+void algorithm::train_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max,double lr){
     // std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,0); //consider subtree rooted at n
     // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
     std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
     //symmetrize samples
     std::vector<sample_data> sym_samples=sampling::symmetrize_samples(samples);
     std::vector<size_t> dummy_labels;
-    double nll=optimize::opt_nll(g,sym_samples,dummy_labels,iter_max);
+    double nll=optimize::opt_nll(g,sym_samples,dummy_labels,iter_max,lr);
     // double nll=optimize::hopt_nll(g,n_samples,n_sweeps,iter_max);
     // double nll=optimize::hopt_nll2(g,n_samples,n_sweeps,iter_max);
     for(auto it=g.es().begin();it!=g.es().end();++it){
@@ -85,12 +85,12 @@ void algorithm::train_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t 
         algorithm::calculate_site_probs(g,current);
     }
 }
-template void algorithm::train_nll(graph<bmi_comparator>&,size_t,size_t,size_t);
+template void algorithm::train_nll(graph<bmi_comparator>&,size_t,size_t,size_t,double);
 
 template<typename cmp>
-void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max){
+void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max,double lr){
     // double nll=optimize::opt_nll(g,samples,labels,iter_max);
-    double nll=optimize::opt_struct_nll(g,samples,labels,iter_max,r_max);
+    double nll=optimize::opt_struct_nll(g,samples,labels,iter_max,r_max,lr);
     std::vector<array1d<double> > probs;
     std::vector<size_t> classes=optimize::classify(g,samples,probs);
     double train_acc=0;
@@ -112,13 +112,13 @@ void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::v
         // std::cout<<(std::string) (*it).w().exp_form()<<"\n";
     // }
 }
-template void algorithm::train_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t);
+template void algorithm::train_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,double);
 
 template<typename cmp>
-void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t iter_max,size_t r_max){
+void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t iter_max,size_t r_max,double lr){
     std::vector<size_t> dummy_labels;
     // double nll=optimize::opt_nll(g,samples,dummy_labels,iter_max);
-    double nll=optimize::opt_struct_nll(g,samples,dummy_labels,iter_max,r_max);
+    double nll=optimize::opt_struct_nll(g,samples,dummy_labels,iter_max,r_max,lr);
     for(auto it=g.es().begin();it!=g.es().end();++it){
         bond current=*it;
         algorithm::calculate_site_probs(g,current);
@@ -129,7 +129,7 @@ void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& samples,size_t
         // std::cout<<(std::string) (*it).w().exp_form()<<"\n";
     // }
 }
-template void algorithm::train_nll(graph<bmi_comparator>&,std::vector<sample_data>&,size_t,size_t);
+template void algorithm::train_nll(graph<bmi_comparator>&,std::vector<sample_data>&,size_t,size_t,double);
 
 template<typename cmp>
 void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){

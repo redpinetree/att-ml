@@ -416,7 +416,7 @@ int main(int argc,char **argv){
             for(size_t c=0;c<n_cycles;c++){ //perform MC sampling if n_cycles>0
                 std::cout<<"cycle "<<(c+1)<<"\n";
                 sw.start();
-                algorithm::train_nll(g,n_config_samples,max_n_sweeps,n_nll_iter_max); //nll training
+                algorithm::train_nll(g,n_config_samples,max_n_sweeps,n_nll_iter_max,0.001); //nll training
                 sw.split();
                 if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();

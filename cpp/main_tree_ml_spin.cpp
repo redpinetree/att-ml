@@ -100,6 +100,7 @@ int main(int argc,char **argv){
     size_t min_n_sweeps=100;
     size_t max_n_sweeps=100;
     size_t step_n_sweeps=10;
+    double lr=0.001;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -118,13 +119,14 @@ int main(int argc,char **argv){
             {"samples",required_argument,0,'s'},
             {"cycles",required_argument,0,'c'},
             {"nll-iter-max",required_argument,0,'N'},
+            {"learning-rate",required_argument,0,'l'},
             {"min-n-sweeps",required_argument,0,'w'},
             {"max-n-sweeps",required_argument,0,'W'},
             {"step-n-sweeps",required_argument,0,'D'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:o:d:1:2:T:r:s:c:N:w:W:D:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:o:d:1:2:T:r:s:c:N:l:w:W:D:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -142,6 +144,7 @@ int main(int argc,char **argv){
             case 's': n_config_samples=(size_t) atoi(optarg); break;
             case 'c': n_cycles=(size_t) atoi(optarg); break;
             case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
+            case 'l': lr=(size_t) atof(optarg); break;
             case 'w': min_n_sweeps=(size_t) atoi(optarg); break;
             case 'W': max_n_sweeps=(size_t) atoi(optarg); break;
             case 'D': step_n_sweeps=(size_t) atoi(optarg); break;
@@ -386,7 +389,7 @@ int main(int argc,char **argv){
             for(size_t c=0;c<n_cycles;c++){ //perform MC sampling if n_cycles>0
                 std::cout<<"cycle "<<(c+1)<<"\n";
                 sw.start();
-                algorithm::train_nll(g,n_config_samples,100,n_nll_iter_max); //nll training
+                algorithm::train_nll(g,n_config_samples,100,n_nll_iter_max,lr); //nll training
                 sw.split();
                 if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
                 trial_time+=sw.elapsed();

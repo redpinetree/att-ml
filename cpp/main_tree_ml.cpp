@@ -65,6 +65,7 @@ int main(int argc,char **argv){
     size_t tdim=0;
     size_t n_config_samples=1000;
     size_t n_nll_iter_max=10000;
+    double lr=0.001;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -78,10 +79,11 @@ int main(int argc,char **argv){
             {"init-tree-type",required_argument,0,'T'},
             {"r-max",required_argument,0,'r'},
             {"nll-iter-max",required_argument,0,'N'},
+            {"learning-rate",required_argument,0,'l'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:t:L:T:r:N:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:t:L:T:r:N:l:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -97,6 +99,7 @@ int main(int argc,char **argv){
             case 'T': init_tree_type=std::string(optarg); break;
             case 'r': r_max=(size_t) atoi(optarg); break;
             case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
+            case 'l': lr=atof(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -225,24 +228,23 @@ int main(int argc,char **argv){
     
     sw.start();
     if(label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max); //nll training with labels
+        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,lr); //nll training with labels
     }
     else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max); //nll training
+        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,lr); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
     trial_time+=sw.elapsed();
     sw.reset();
     
-    std::vector<sample_data> generated_samples=sampling::tree_sample(g,100);
+    std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
     for(size_t i=0;i<generated_samples.size();i++){
         for(size_t j=0;j<generated_samples[i].n_phys_sites();j++){
             std::cout<<generated_samples[i].s()[j]<<" ";
         }
         std::cout<<"\n";
     }
-    
     //compute output quantities
     if(verbose>=4){std::cout<<std::string(g);}
     if(verbose>=2){std::cout<<"Time elapsed: "<<trial_time<<"ms\n";}
