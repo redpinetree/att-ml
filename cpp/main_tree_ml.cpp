@@ -192,16 +192,7 @@ int main(int argc,char **argv){
     output_fn+=".txt";
     samples_fn+=".txt";
     std::stringstream header1_ss,header1_vals_ss,header2_ss,header2_mc_ss;
-    std::string header1_ls_str;
     observables::output_lines.clear(); //flush output lines
-    std::string header1_ls_vals_str;
-    for(size_t i=0;i<ls.size();i++){
-        header1_ls_str+="l"+std::to_string(i)+" ";
-        header1_ls_vals_str+=std::to_string(ls[i])+" ";
-    }
-    header1_ss<<"idim r fn d \n";
-    header1_vals_ss<<idim<<" "<<r_max<<" "<<("\""+input)<<" "<<ls.size()<<" "<<header1_ls_vals_str<<"\n";
-    observables::output_lines.push_back(header1_ss.str());
     
     double trial_time=0; //not including init time
     
@@ -227,16 +218,28 @@ int main(int argc,char **argv){
     }
     
     sw.start();
+    std::vector<double> nll_history;
     if(label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,lr); //nll training with labels
+        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,lr,nll_history); //nll training with labels
     }
     else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,lr); //nll training
+        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,lr,nll_history); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
     trial_time+=sw.elapsed();
     sw.reset();
+    
+    observables::output_lines.push_back((std::string) g);
+    std::string nll_string="nlls: [";
+    for(size_t t=0;t<nll_history.size();t++){
+        nll_string+=std::to_string(nll_history[t]);
+        if(t!=nll_history.size()-1){
+            nll_string+=", ";
+        }
+    }
+    nll_string+="]\n";
+    observables::output_lines.push_back(nll_string);
     
     std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
     for(size_t i=0;i<generated_samples.size();i++){
@@ -246,7 +249,7 @@ int main(int argc,char **argv){
         std::cout<<"\n";
     }
     //compute output quantities
-    if(verbose>=4){std::cout<<std::string(g);}
+    // if(verbose>=4){std::cout<<std::string(g);}
     if(verbose>=2){std::cout<<"Time elapsed: "<<trial_time<<"ms\n";}
     times.push_back(trial_time);
     
