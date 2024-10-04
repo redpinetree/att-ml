@@ -62,7 +62,7 @@ int main(int argc,char **argv){
     std::string input,output,label_file;
     std::string init_tree_type="mps";
     size_t r_max=0;
-    size_t tdim=0;
+    size_t tdim=1;
     size_t n_config_samples=1000;
     size_t n_nll_iter_max=10000;
     double lr=0.001;

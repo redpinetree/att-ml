@@ -416,8 +416,7 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
     size_t contracted_idx_count=0;
     while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset repeatedly until all idxs processed
         for(auto it=g.es().begin();it!=g.es().end();++it){
-            // if((contracted_vectors[(*it).v1()][0].nx()!=0)&&(contracted_vectors[(*it).v2()][0].nx()!=0)&&((it==--g.es().end())||(contracted_vectors[(*it).order()][0].nx()==0))){ //process if children have been contracted and (parent is not yet contracted OR is top)
-            if((contracted_vectors[(*it).v1()][0].nx()!=0)&&(contracted_vectors[(*it).v2()][0].nx()!=0)&&(contracted_vectors[(*it).order()][0].nx()==0)){ //process if children have been contracted and (parent is not yet contracted OR is top)
+            if((contracted_vectors[(*it).v1()][0].nx()!=0)&&(contracted_vectors[(*it).v2()][0].nx()!=0)&&((it==--g.es().end())||(contracted_vectors[(*it).order()][0].nx()==0))){ //process if children have been contracted and (parent is not yet contracted OR is top)
                 std::vector<array1d<double> > res_vec(n_samples,array1d<double>(g.vs()[(*it).order()].rank()));
                 for(size_t s=0;s<n_samples;s++){
                     for(size_t k=0;k<(*it).w().nz();k++){
