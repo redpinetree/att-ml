@@ -166,43 +166,57 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
         key.todo()=0;
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
-        key.bmi()=0;
+        key.bmi()=-1e50;
         key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
         {
-            if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
-                todo.push_back((*it).v1());
-            }
-            array1d<double> res_vec((*it).w().nx());
-            for(size_t i=0;i<(*it).w().nx();i++){
-                std::vector<double> res_vec_addends;
-                for(size_t j=0;j<(*it).w().ny();j++){
-                    for(size_t k=0;k<(*it).w().nz();k++){
-                        res_vec_addends.push_back(r_env[idx].at(j)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
-                    }
+            if(done_idxs.find((*it).v1())==done_idxs.end()){ //skip if finished
+                if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
+                    todo.push_back((*it).v1());
                 }
-                res_vec.at(i)=lse(res_vec_addends); //log space
+                array1d<double> res_vec((*it).w().nx());
+                for(size_t i=0;i<(*it).w().nx();i++){
+                    std::vector<double> res_vec_addends;
+                    for(size_t j=0;j<(*it).w().ny();j++){
+                        for(size_t k=0;k<(*it).w().nz();k++){
+                            if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
+                                res_vec_addends.push_back(r_env[idx].at(j)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                            }
+                            else{
+                                res_vec_addends.push_back(u_env[idx].at(k)+(*it).w().at(i,j,k));
+                            }
+                        }
+                    }
+                    res_vec.at(i)=lse(res_vec_addends); //log space
+                }
+                u_env[(*it).v1()]=res_vec;
+                done_idxs.insert((*it).v1());
             }
-            u_env[(*it).v1()]=res_vec;
-            done_idxs.insert((*it).v1());
         }
         {
-            if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
-                todo.push_back((*it).v2());
-            }
-            array1d<double> res_vec((*it).w().ny());
-            for(size_t j=0;j<(*it).w().ny();j++){
-                std::vector<double> res_vec_addends;
-                for(size_t i=0;i<(*it).w().nx();i++){
-                    for(size_t k=0;k<(*it).w().nz();k++){
-                        res_vec_addends.push_back(l_env[idx].at(i)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
-                    }
+            if(done_idxs.find((*it).v2())==done_idxs.end()){ //skip if finished
+                if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
+                    todo.push_back((*it).v2());
                 }
-                res_vec.at(j)=lse(res_vec_addends); //log space
+                array1d<double> res_vec((*it).w().ny());
+                for(size_t j=0;j<(*it).w().ny();j++){
+                    std::vector<double> res_vec_addends;
+                    for(size_t i=0;i<(*it).w().nx();i++){
+                        for(size_t k=0;k<(*it).w().nz();k++){
+                            if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
+                                res_vec_addends.push_back(l_env[idx].at(i)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                            }
+                            else{
+                                res_vec_addends.push_back(u_env[idx].at(k)+(*it).w().at(i,j,k));
+                            }
+                        }
+                    }
+                    res_vec.at(j)=lse(res_vec_addends); //log space
+                }
+                u_env[(*it).v2()]=res_vec;
+                done_idxs.insert((*it).v2());
             }
-            u_env[(*it).v2()]=res_vec;
-            done_idxs.insert((*it).v2());
         }
     }
     //update l_env and r_env of all upstream sites and note positions of untouched branches
@@ -210,7 +224,7 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
     key.todo()=0;
     key.order()=center;
     key.depth()=g.vs()[center].depth();
-    key.bmi()=0;
+    key.bmi()=-1e50;
     key.virt_count()=2;
     auto it2=g.es().lower_bound(key);
     bond center_bond=*it2;
@@ -243,7 +257,7 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
             key.todo()=0;
             key.order()=u_idx;
             key.depth()=g.vs()[u_idx].depth();
-            key.bmi()=0;
+            key.bmi()=-1e50;
             key.virt_count()=2;
             it2=g.es().lower_bound(key);
         }
@@ -255,7 +269,7 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
         key.todo()=0;
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
-        key.bmi()=0;
+        key.bmi()=-1e50;
         key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
@@ -269,7 +283,12 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
                     std::vector<double> res_vec_addends;
                     for(size_t j=0;j<(*it).w().ny();j++){
                         for(size_t k=0;k<(*it).w().nz();k++){
-                            res_vec_addends.push_back(r_env[idx].at(j)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                            if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
+                                res_vec_addends.push_back(r_env[idx].at(j)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                            }
+                            else{
+                                res_vec_addends.push_back(u_env[idx].at(k)+(*it).w().at(i,j,k));
+                            }
                         }
                     }
                     res_vec.at(i)=lse(res_vec_addends); //log space
@@ -288,7 +307,12 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
                     std::vector<double> res_vec_addends;
                     for(size_t i=0;i<(*it).w().nx();i++){
                         for(size_t k=0;k<(*it).w().nz();k++){
-                            res_vec_addends.push_back(l_env[idx].at(i)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                            if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
+                                res_vec_addends.push_back(l_env[idx].at(i)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                            }
+                            else{
+                                res_vec_addends.push_back(u_env[idx].at(k)+(*it).w().at(i,j,k));
+                            }
                         }
                     }
                     res_vec.at(j)=lse(res_vec_addends); //log space
@@ -298,7 +322,6 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
             }
         }
     }
-    
     std::vector<double> z_addends;
     auto it4=g.es().rbegin();
     array1d<double> res_vec(g.vs()[(*it4).order()].rank());
@@ -488,47 +511,61 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
         key.todo()=0;
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
-        key.bmi()=0;
+        key.bmi()=-1e50;
         key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
         {
-            if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
-                todo.push_back((*it).v1());
-            }
-            for(size_t s=0;s<n_samples;s++){
-                array1d<double> res_vec((*it).w().nx());
-                for(size_t i=0;i<(*it).w().nx();i++){
-                    std::vector<double> res_vec_addends;
-                    for(size_t j=0;j<(*it).w().ny();j++){
-                        for(size_t k=0;k<(*it).w().nz();k++){
-                            res_vec_addends.push_back(r_env[idx][s].at(j)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
-                        }
-                    }
-                    res_vec.at(i)=lse(res_vec_addends); //log space
+            if(done_idxs.find((*it).v1())==done_idxs.end()){ //skip if finished
+                if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
+                    todo.push_back((*it).v1());
                 }
-                u_env[(*it).v1()][s]=res_vec;
+                for(size_t s=0;s<n_samples;s++){
+                    array1d<double> res_vec((*it).w().nx());
+                    for(size_t i=0;i<(*it).w().nx();i++){
+                        std::vector<double> res_vec_addends;
+                        for(size_t j=0;j<(*it).w().ny();j++){
+                            for(size_t k=0;k<(*it).w().nz();k++){
+                                if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
+                                    res_vec_addends.push_back(r_env[idx][s].at(j)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                }
+                                else{
+                                    res_vec_addends.push_back(u_env[idx][s].at(k)+(*it).w().at(i,j,k));
+                                }
+                            }
+                        }
+                        res_vec.at(i)=lse(res_vec_addends); //log space
+                    }
+                    u_env[(*it).v1()][s]=res_vec;
+                }
+                done_idxs.insert((*it).v1());
             }
-            done_idxs.insert((*it).v1());
         }
         {
-            if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
-                todo.push_back((*it).v2());
-            }
-            for(size_t s=0;s<n_samples;s++){
-                array1d<double> res_vec((*it).w().ny());
-                for(size_t j=0;j<(*it).w().ny();j++){
-                    std::vector<double> res_vec_addends;
-                    for(size_t i=0;i<(*it).w().nx();i++){
-                        for(size_t k=0;k<(*it).w().nz();k++){
-                            res_vec_addends.push_back(l_env[idx][s].at(i)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
-                        }
-                    }
-                    res_vec.at(j)=lse(res_vec_addends); //log space
+            if(done_idxs.find((*it).v2())==done_idxs.end()){ //skip if finished
+                if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
+                    todo.push_back((*it).v2());
                 }
-                u_env[(*it).v2()][s]=res_vec;
+                for(size_t s=0;s<n_samples;s++){
+                    array1d<double> res_vec((*it).w().ny());
+                    for(size_t j=0;j<(*it).w().ny();j++){
+                        std::vector<double> res_vec_addends;
+                        for(size_t i=0;i<(*it).w().nx();i++){
+                            for(size_t k=0;k<(*it).w().nz();k++){
+                                if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
+                                    res_vec_addends.push_back(l_env[idx][s].at(i)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                }
+                                else{
+                                    res_vec_addends.push_back(u_env[idx][s].at(k)+(*it).w().at(i,j,k));
+                                }
+                            }
+                        }
+                        res_vec.at(j)=lse(res_vec_addends); //log space
+                    }
+                    u_env[(*it).v2()][s]=res_vec;
+                }
+                done_idxs.insert((*it).v2());
             }
-            done_idxs.insert((*it).v2());
         }
     }
     //update l_env and r_env of all upstream sites
@@ -536,7 +573,7 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
     key.todo()=0;
     key.order()=center;
     key.depth()=g.vs()[center].depth();
-    key.bmi()=0;
+    key.bmi()=-1e50;
     key.virt_count()=2;
     auto it2=g.es().lower_bound(key);
     bond center_bond=*it2;
@@ -571,7 +608,7 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
             key.todo()=0;
             key.order()=u_idx;
             key.depth()=g.vs()[u_idx].depth();
-            key.bmi()=0;
+            key.bmi()=-1e50;
             key.virt_count()=2;
             it2=g.es().lower_bound(key);
         }
@@ -583,7 +620,7 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
         key.todo()=0;
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
-        key.bmi()=0;
+        key.bmi()=-1e50;
         key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
@@ -598,7 +635,12 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
                         std::vector<double> res_vec_addends;
                         for(size_t j=0;j<(*it).w().ny();j++){
                             for(size_t k=0;k<(*it).w().nz();k++){
-                                res_vec_addends.push_back(r_env[idx][s].at(j)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
+                                    res_vec_addends.push_back(r_env[idx][s].at(j)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                }
+                                else{
+                                    res_vec_addends.push_back(u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                }
                             }
                         }
                         res_vec.at(i)=lse(res_vec_addends); //log space
@@ -619,7 +661,12 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
                         std::vector<double> res_vec_addends;
                         for(size_t i=0;i<(*it).w().nx();i++){
                             for(size_t k=0;k<(*it).w().nz();k++){
-                                res_vec_addends.push_back(l_env[idx][s].at(i)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
+                                    res_vec_addends.push_back(l_env[idx][s].at(i)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                }
+                                else{
+                                    res_vec_addends.push_back(u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                }
                             }
                         }
                         res_vec.at(j)=lse(res_vec_addends); //log space
