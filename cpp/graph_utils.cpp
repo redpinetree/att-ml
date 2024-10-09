@@ -113,7 +113,7 @@ graph<cmp> graph_utils::load_graph(std::string fn,size_t q,double beta){
 template graph<bmi_comparator> graph_utils::load_graph(std::string,size_t,double);
 
 template<typename distribution,typename cmp>
-graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
+graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,distribution& dist,double beta){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     size_t d=ls.size();
     std::vector<site> vs;
@@ -140,7 +140,7 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
         //add offset (+1 for nearest neighbor)
         for(size_t d_idx=0;d_idx<d;d_idx++){
             //boundary condition
-            if(!pbc && (base_coords[d_idx]+1)>=ls[d_idx]){
+            if((base_coords[d_idx]+1)>=ls[d_idx]){
                 continue;
             }
             std::vector<size_t> offsets=base_coords;
@@ -237,20 +237,20 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
     g.dims()=ls;
     return g;
 }
-template graph<bmi_comparator> graph_utils::init_pbttn<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
-template graph<bmi_comparator> graph_utils::init_pbttn<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
-template graph<bmi_comparator> graph_utils::init_pbttn<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_pbttn<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::normal_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_pbttn<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::discrete_distribution<int>&,double);
+template graph<bmi_comparator> graph_utils::init_pbttn<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::uniform_real_distribution<double>&,double);
 
 template<typename distribution,typename cmp>
-graph<cmp> graph_utils::init_pbttn(size_t idim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
-    return graph_utils::init_pbttn<distribution,cmp>(idim,0,r_max,ls,pbc,dist,beta);
+graph<cmp> graph_utils::init_pbttn(size_t idim,size_t r_max,std::vector<size_t> ls,distribution& dist,double beta){
+    return graph_utils::init_pbttn<distribution,cmp>(idim,0,r_max,ls,dist,beta);
 }
-template graph<bmi_comparator> graph_utils::init_pbttn<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
-template graph<bmi_comparator> graph_utils::init_pbttn<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
-template graph<bmi_comparator> graph_utils::init_pbttn<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_pbttn<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::normal_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_pbttn<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::discrete_distribution<int>&,double);
+template graph<bmi_comparator> graph_utils::init_pbttn<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::uniform_real_distribution<double>&,double);
 
 template<typename distribution,typename cmp>
-graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
+graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,distribution& dist,double beta){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     size_t d=ls.size();
     std::vector<site> vs;
@@ -277,7 +277,7 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
         //add offset (+1 for nearest neighbor)
         for(size_t d_idx=0;d_idx<d;d_idx++){
             //boundary condition
-            if(!pbc && (base_coords[d_idx]+1)>=ls[d_idx]){
+            if((base_coords[d_idx]+1)>=ls[d_idx]){
                 continue;
             }
             std::vector<size_t> offsets=base_coords;
@@ -377,21 +377,21 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
     g.dims()=ls;
     return g;
 }
-template graph<bmi_comparator> graph_utils::init_mps<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
-template graph<bmi_comparator> graph_utils::init_mps<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
-template graph<bmi_comparator> graph_utils::init_mps<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_mps<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::normal_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_mps<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::discrete_distribution<int>&,double);
+template graph<bmi_comparator> graph_utils::init_mps<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::uniform_real_distribution<double>&,double);
 
 template<typename distribution,typename cmp>
-graph<cmp> graph_utils::init_mps(size_t idim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
-    return graph_utils::init_mps<distribution,cmp>(idim,0,r_max,ls,pbc,dist,beta);
+graph<cmp> graph_utils::init_mps(size_t idim,size_t r_max,std::vector<size_t> ls,distribution& dist,double beta){
+    return graph_utils::init_mps<distribution,cmp>(idim,0,r_max,ls,dist,beta);
 }
-template graph<bmi_comparator> graph_utils::init_mps<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
-template graph<bmi_comparator> graph_utils::init_mps<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
-template graph<bmi_comparator> graph_utils::init_mps<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_mps<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::normal_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_mps<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::discrete_distribution<int>&,double);
+template graph<bmi_comparator> graph_utils::init_mps<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::uniform_real_distribution<double>&,double);
 
 
 template<typename distribution,typename cmp>
-graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
+graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,distribution& dist,double beta){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
     size_t d=ls.size();
     std::vector<site> vs;
@@ -419,7 +419,7 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
         //add offset (+1 for nearest neighbor)
         for(size_t d_idx=0;d_idx<d;d_idx++){
             //boundary condition
-            if(!pbc && (base_coords[d_idx]+1)>=ls[d_idx]){
+            if((base_coords[d_idx]+1)>=ls[d_idx]){
                 continue;
             }
             std::vector<size_t> offsets=base_coords;
@@ -532,14 +532,14 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
     g.dims()=ls;
     return g;
 }
-template graph<bmi_comparator> graph_utils::init_rand<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
-template graph<bmi_comparator> graph_utils::init_rand<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
-template graph<bmi_comparator> graph_utils::init_rand<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_rand<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::normal_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_rand<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::discrete_distribution<int>&,double);
+template graph<bmi_comparator> graph_utils::init_rand<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,size_t,std::vector<size_t>,std::uniform_real_distribution<double>&,double);
 
 template<typename distribution,typename cmp>
-graph<cmp> graph_utils::init_rand(size_t idim,size_t r_max,std::vector<size_t> ls,bool pbc,distribution& dist,double beta){
-    return graph_utils::init_rand<distribution,cmp>(idim,0,r_max,ls,pbc,dist,beta);
+graph<cmp> graph_utils::init_rand(size_t idim,size_t r_max,std::vector<size_t> ls,distribution& dist,double beta){
+    return graph_utils::init_rand<distribution,cmp>(idim,0,r_max,ls,dist,beta);
 }
-template graph<bmi_comparator> graph_utils::init_rand<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::normal_distribution<double>&,double);
-template graph<bmi_comparator> graph_utils::init_rand<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::discrete_distribution<int>&,double);
-template graph<bmi_comparator> graph_utils::init_rand<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,bool,std::uniform_real_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_rand<std::normal_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::normal_distribution<double>&,double);
+template graph<bmi_comparator> graph_utils::init_rand<std::discrete_distribution<int>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::discrete_distribution<int>&,double);
+template graph<bmi_comparator> graph_utils::init_rand<std::uniform_real_distribution<double>,bmi_comparator>(size_t,size_t,std::vector<size_t>,std::uniform_real_distribution<double>&,double);

@@ -42,36 +42,36 @@ void print_usage(){
 }
 
 template<typename cmp>
-graph<cmp> gen_lattice(size_t q,size_t r_max,std::vector<size_t> ls,bool open_bc,std::string dist_type,double dist_param1,double dist_param2,double beta,std::string init_tree_type){ //transformations are done to counteract the transformations in gen_hypercubic
+graph<cmp> gen_lattice(size_t q,size_t r_max,std::vector<size_t> ls,std::string dist_type,double dist_param1,double dist_param2,double beta,std::string init_tree_type){ //transformations are done to counteract the transformations in gen_hypercubic
     graph<cmp> g;
     if(dist_type=="gaussian"){
         //dist_param1=mean, dist_param2=std
         std::normal_distribution<double> dist((dist_param1+1)/2.0,dist_param2/2.0);
         if(init_tree_type=="pbttn"){
-            g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+            g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(q,r_max,ls,dist,beta);
         }
         else if(init_tree_type=="mps"){
-            g=graph_utils::init_mps<std::normal_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+            g=graph_utils::init_mps<std::normal_distribution<double>,cmp>(q,r_max,ls,dist,beta);
         }
     }
     else if(dist_type=="bimodal"){
         //dist_param1=p, dist_param2=N/A
         std::discrete_distribution<int> dist{1-dist_param1,dist_param1};
         if(init_tree_type=="pbttn"){
-            g=graph_utils::init_pbttn<std::discrete_distribution<int>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+            g=graph_utils::init_pbttn<std::discrete_distribution<int>,cmp>(q,r_max,ls,dist,beta);
         }
         else if(init_tree_type=="mps"){
-            g=graph_utils::init_mps<std::discrete_distribution<int>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+            g=graph_utils::init_mps<std::discrete_distribution<int>,cmp>(q,r_max,ls,dist,beta);
         }
     }
     else if(dist_type=="uniform"){
         //dist_param1=min, dist_param2=max
         std::uniform_real_distribution<double> dist{(dist_param1+1)/2.0,(dist_param2+1)/2.0};
         if(init_tree_type=="pbttn"){
-            g=graph_utils::init_pbttn<std::uniform_real_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+            g=graph_utils::init_pbttn<std::uniform_real_distribution<double>,cmp>(q,r_max,ls,dist,beta);
         }
         else if(init_tree_type=="mps"){
-            g=graph_utils::init_mps<std::uniform_real_distribution<double>,cmp>(q,r_max,ls,!open_bc,dist,beta);
+            g=graph_utils::init_mps<std::uniform_real_distribution<double>,cmp>(q,r_max,ls,dist,beta);
         }
     }
     return g;
@@ -81,7 +81,6 @@ int main(int argc,char **argv){
     //mpi init
     mpi_utils::init();
     //argument handling
-    int open_bc=0;
     int use_t=0;
     int rand_mc=0;
     int no_ti=0;
@@ -104,7 +103,6 @@ int main(int argc,char **argv){
     //option arguments
     while(1){
         static struct option long_opts[]={
-            {"open-bc",no_argument,&open_bc,1},
             {"use-t",no_argument,&use_t,1},
             {"rand-mc",no_argument,&rand_mc,1},
             {"no-ti",no_argument,&no_ti,1},
@@ -183,9 +181,9 @@ int main(int argc,char **argv){
             std::cout<<"Dimensions must be a power of 2.\n";
             exit(1);
         }
-        if((!open_bc)&&(l<3)){
+        if(l<3){
             if(mpi_utils::root){
-                std::cerr<<"Error: dimension length must be at least 3 if periodic bcs are used to ensure that the graph has no multiedges.\n";
+                std::cerr<<"Error: dimension length must be at least 3.\n";
                 print_usage();
             }
             exit(1);
@@ -197,9 +195,9 @@ int main(int argc,char **argv){
     else if((argc-optind)==(d+3)){
         for(size_t i=0;i<d;i++){
             size_t l=(size_t) atoi(argv[optind++]);
-            if((!open_bc)&&(l<3)){
+            if(l<3){
                 if(mpi_utils::root){
-                    std::cerr<<"Error: dimension length must be at least 3 if periodic bcs are used to ensure that the graph has no multiedges.\n";
+                    std::cerr<<"Error: dimension length must be at least 3.\n";
                     print_usage();
                 }
                 exit(1);
@@ -347,7 +345,7 @@ int main(int argc,char **argv){
             double trial_time=0; //not including init time
             if(verbose>=2){std::cout<<((use_t)?"temp=":"beta=")<<beta<<"\n";}
 
-            graph<bmi_comparator> g=gen_lattice<bmi_comparator>(q,r_max,ls,open_bc,dist,dist_param1,dist_param2,((use_t)?1/beta:beta),init_tree_type);
+            graph<bmi_comparator> g=gen_lattice<bmi_comparator>(q,r_max,ls,dist,dist_param1,dist_param2,((use_t)?1/beta:beta),init_tree_type);
             //MC observables
             std::vector<double> acceptance_ratios;
             double acceptance_ratio;

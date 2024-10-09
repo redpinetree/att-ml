@@ -32,19 +32,19 @@ void print_usage(){
 }
 
 template<typename cmp>
-graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,bool open_bc,std::string init_tree_type){ //transformations are done to counteract the transformations in gen_hypercubic
+graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,std::string init_tree_type){ //transformations are done to counteract the transformations in gen_hypercubic
     graph<cmp> g;
     if(init_tree_type=="mps"){
         std::normal_distribution<double> dist(0,0);
-        g=graph_utils::init_mps<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,!open_bc,dist,1);
+        g=graph_utils::init_mps<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,dist,1);
     }
     else if(init_tree_type=="pbttn"){
         std::normal_distribution<double> dist{0,0};
-        g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,!open_bc,dist,1);
+        g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,dist,1);
     }
     else if(init_tree_type=="rand"){
         std::normal_distribution<double> dist{0,0};
-        g=graph_utils::init_rand<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,!open_bc,dist,1);
+        g=graph_utils::init_rand<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,dist,1);
     }
     return g;
 }
@@ -53,7 +53,7 @@ int main(int argc,char **argv){
     //mpi init
     mpi_utils::init();
     //argument handling
-    int open_bc=0;
+    int compress_r=0;
     size_t verbose=0;
     bool input_set=false;
     bool output_set=false;
@@ -69,7 +69,7 @@ int main(int argc,char **argv){
     //option arguments
     while(1){
         static struct option long_opts[]={
-            {"open-bc",no_argument,&open_bc,1},
+            {"compress-r",no_argument,&compress_r,1},
             {"help",no_argument,0,'h'},
             {"verbose",required_argument,0,'v'},
             {"input",required_argument,0,'i'},
@@ -202,7 +202,7 @@ int main(int argc,char **argv){
     if(label_set){
         train_data_labels=algorithm::load_training_data_labels_from_file(label_file,n_samples,tdim);
     }
-    graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,open_bc,init_tree_type);
+    graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,init_tree_type);
     for(auto it=g.es().begin();it!=g.es().end();++it){
         bond current=*it;
         algorithm::calculate_site_probs(g,current);
@@ -217,13 +217,22 @@ int main(int argc,char **argv){
         exit(1);
     }
     
+    std::cout<<"Training details:\n\tinput: "<<input<<"\n";
+    if(label_set){
+        std::cout<<"\tlabels: "<<label_file<<"\n";
+    }
+    std::cout<<"\tinit tree type: "<<init_tree_type<<"\n";
+    std::cout<<"\ttop dim: "<<tdim<<"\n";
+    std::cout<<"\tr max: "<<r_max<<"\n";
+    std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
+    std::cout<<"\tlearning rate: "<<lr<<"\n";
     sw.start();
     std::vector<double> nll_history;
     if(label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,lr,nll_history); //nll training with labels
+        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,nll_history); //nll training with labels
     }
     else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,lr,nll_history); //nll training
+        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,nll_history); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}

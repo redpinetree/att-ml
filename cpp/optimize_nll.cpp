@@ -1,3 +1,4 @@
+#include <limits>
 #include <list>
 #include <random>
 
@@ -412,7 +413,7 @@ template double optimize::opt_nll(graph<bmi_comparator>&,std::vector<sample_data
 
 
 template<typename cmp>
-double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max,double lr,std::vector<double>& nll_history){
+double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max,bool compress_r,double lr,std::vector<double>& nll_history){
     if(iter_max==0){return 0;}
     size_t single_site_update_count=10;
     double prev_nll=1e50;
@@ -503,7 +504,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             std::vector<std::vector<array1d<double> > > orig_r_env_sample=r_env_sample;
             std::vector<std::vector<array1d<double> > > orig_u_env_sample=u_env_sample;
             
-            double bmi1=way1(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+            double bmi1=way1(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
             
             graph<cmp> way1_g=g;
             bond way1_current=current;
@@ -531,7 +532,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             it=g.es().find(current);
             it_parent=g.es().find(parent);
             
-            double bmi2=way2(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+            double bmi2=way2(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
             
             graph<bmi_comparator> way2_g=g;
             bond way2_current=current;
@@ -559,7 +560,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             it=g.es().find(current);
             it_parent=g.es().find(parent);
             
-            double bmi3=way3(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+            double bmi3=way3(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
             
             graph<bmi_comparator> way3_g=g;
             bond way3_current=current;
@@ -703,7 +704,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
     
     return best_nll;
 }
-template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,double,std::vector<double>&);
+template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::vector<double>&);
 
 template<typename cmp>
 double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
@@ -1446,6 +1447,30 @@ double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_
     return bmi;
 }
 
+size_t inner_nmf(array3d<double>& fused_mat,array3d<double>& mat1,array3d<double>& mat2,size_t r_max,bool compress_r){
+    size_t r;
+    if(compress_r){
+        r=1;
+        size_t upper_bound_r_max=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
+        while(r<=((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){
+            mat1=array3d<double>(fused_mat.nx(),r,1);
+            mat2=array3d<double>(r,fused_mat.ny(),1);
+            double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+            if(recon_err<1e-12){break;}
+            if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
+            r++;
+        }
+    }
+    else{
+        r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny(); //max rank is min(row rank, col rank)
+        r=(r<r_max)?r:r_max;
+        mat1=array3d<double>(fused_mat.nx(),r,1);
+        mat2=array3d<double>(r,fused_mat.ny(),1);
+        double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+    }
+    return r;
+}
+
 template<typename cmp>
 void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
@@ -1503,12 +1528,13 @@ double inner_bmi(bond& current,bond& parent,std::vector<array1d<double> >& l_env
     // double bmi1=fabs(optimize::calc_bmi(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample)); //take abs
     double bmi=optimize::calc_bmi(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample); //take abs
     // if(bmi<-log(current.w().nz())){bmi=2*log(current.w().nz());}
-    if(bmi<-1e-8){bmi=2*log(current.w().nz());}
+    // if(bmi<-1e-8){bmi=2*log(current.w().nz());}
+    if(bmi<-1e-4){bmi=std::numeric_limits<double>::quiet_NaN();}
     return bmi;
 }
 
 template<typename cmp>
-double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 1
     array3d<double> fused_mat(fused.nx()*fused.ny(),fused.nz()*fused.nw(),1);
     for(size_t i=0;i<fused.nx();i++){
@@ -1521,24 +1547,9 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
         }
     }
     
-    // size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny(); //max rank is min(row rank, col rank)
-    // r=(r<r_max)?r:r_max;
-    // array3d<double> mat1(fused.nx()*fused.ny(),r,1);
-    // array3d<double> mat2(r,fused.nz()*fused.nw(),1);
-    // double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
-    
     array3d<double> mat1;
     array3d<double> mat2;
-    size_t r=1;
-    size_t upper_bound_r_max=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
-    while(r<=((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){
-        mat1=array3d<double>(fused.nx()*fused.ny(),r,1);
-        mat2=array3d<double>(r,fused.nz()*fused.nw(),1);
-        double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
-        if(recon_err<1e-6){break;}
-        if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
-        r++;
-    }
+    size_t r=inner_nmf(fused_mat,mat1,mat2,r_max,compress_r);
     
     current.w()=array3d<double>(fused.nx(),fused.ny(),r);
     parent.w()=(parent.v1()==current.order())?array3d<double>(r,fused.nz(),fused.nw()):array3d<double>(fused.nz(),r,fused.nw());
@@ -1584,10 +1595,10 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     it=g.es().insert(current);
     return bmi;
 }
-template double way1(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
+template double way1(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
 
 template<typename cmp>
-double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 2
     array3d<double> fused_mat(fused.nx()*fused.nz(),fused.ny()*fused.nw(),1);
     for(size_t i=0;i<fused.nx();i++){
@@ -1600,24 +1611,9 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
         }
     }
     
-    // size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
-    // r=(r<r_max)?r:r_max;
-    // array3d<double> mat1(fused.nx()*fused.nz(),r,1);
-    // array3d<double> mat2(r,fused.ny()*fused.nw(),1);
-    // double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
-    
     array3d<double> mat1;
     array3d<double> mat2;
-    size_t r=1;
-    size_t upper_bound_r_max=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
-    while(r<=((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){
-        mat1=array3d<double>(fused.nx()*fused.nz(),r,1);
-        mat2=array3d<double>(r,fused.ny()*fused.nw(),1);
-        double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
-        if(recon_err<1e-6){break;}
-        if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
-        r++;
-    }
+    size_t r=inner_nmf(fused_mat,mat1,mat2,r_max,compress_r);
     
     //fix neighbors
     size_t swap;
@@ -1731,10 +1727,10 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     it=g.es().insert(current);
     return bmi;
 }
-template double way2(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
+template double way2(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
 
 template<typename cmp>
-double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 2
     array3d<double> fused_mat(fused.nz()*fused.ny(),fused.nx()*fused.nw(),1);
     for(size_t i=0;i<fused.nz();i++){
@@ -1747,24 +1743,9 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
         }
     }
     
-    // size_t r=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
-    // r=(r<r_max)?r:r_max;
-    // array3d<double> mat1(fused.nz()*fused.ny(),r,1);
-    // array3d<double> mat2(r,fused.nx()*fused.nw(),1);
-    // double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
-    
     array3d<double> mat1;
     array3d<double> mat2;
-    size_t r=1;
-    size_t upper_bound_r_max=(fused_mat.nx()<fused_mat.ny())?fused_mat.nx():fused_mat.ny();
-    while(r<=((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){
-        mat1=array3d<double>(fused.nz()*fused.ny(),r,1);
-        mat2=array3d<double>(r,fused.nx()*fused.nw(),1);
-        double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
-        if(recon_err<1e-6){break;}
-        if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
-        r++;
-    }
+    size_t r=inner_nmf(fused_mat,mat1,mat2,r_max,compress_r);
     
     //fix neighbors
     size_t swap;
@@ -1877,4 +1858,4 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     it=g.es().insert(current);
     return bmi;
 }
-template double way3(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
+template double way3(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
