@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -29,6 +30,8 @@ void print_usage(){
     std::cerr<<"\t-T,--init-tree-type: initial tree type: mps or pbttn or rand\n";
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
+    std::cerr<<"\t--compress-r: enable rank compression\n";
+    std::cerr<<"\t--struct-opt: enable structural optimization\n";
 }
 
 template<typename cmp>
@@ -54,6 +57,7 @@ int main(int argc,char **argv){
     mpi_utils::init();
     //argument handling
     int compress_r=0;
+    int struct_opt=0;
     size_t verbose=0;
     bool input_set=false;
     bool output_set=false;
@@ -70,6 +74,7 @@ int main(int argc,char **argv){
     while(1){
         static struct option long_opts[]={
             {"compress-r",no_argument,&compress_r,1},
+            {"struct-opt",no_argument,&struct_opt,1},
             {"help",no_argument,0,'h'},
             {"verbose",required_argument,0,'v'},
             {"input",required_argument,0,'i'},
@@ -227,12 +232,12 @@ int main(int argc,char **argv){
     std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
     std::cout<<"\tlearning rate: "<<lr<<"\n";
     sw.start();
-    std::vector<double> nll_history;
+    std::map<size_t,double> nll_history;
     if(label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,nll_history); //nll training with labels
+        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,nll_history,struct_opt); //nll training with labels
     }
     else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,nll_history); //nll training
+        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,nll_history,struct_opt); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
@@ -241,9 +246,9 @@ int main(int argc,char **argv){
     
     observables::output_lines.push_back((std::string) g);
     std::string nll_string="nlls: [";
-    for(size_t t=0;t<nll_history.size();t++){
-        nll_string+=std::to_string(nll_history[t]);
-        if(t!=nll_history.size()-1){
+    for(auto it=nll_history.begin();it!=nll_history.end();++it){
+        nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+        if(it!=--nll_history.end()){
             nll_string+=", ";
         }
     }

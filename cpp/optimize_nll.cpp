@@ -413,7 +413,7 @@ template double optimize::opt_nll(graph<bmi_comparator>&,std::vector<sample_data
 
 
 template<typename cmp>
-double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max,bool compress_r,double lr,std::vector<double>& nll_history){
+double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max,bool compress_r,double lr,std::map<size_t,double>& nll_history,bool struct_opt){
     if(iter_max==0){return 0;}
     size_t single_site_update_count=10;
     double prev_nll=1e50;
@@ -447,9 +447,12 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
     std::uniform_real_distribution<> unif_dist(1e-16,1.0);
     std::vector<site> best_vs;
     std::multiset<bond,bmi_comparator> best_es;
-    for(size_t t=1;t<=iter_max;t++){
+    // for(size_t t=1;t<=iter_max;t++){
+    size_t t=1;
+    size_t iter=1;
+    while(iter<iter_max){
         //all tensors have an upstream tensor except the top, so we can loop over all tensors except the top to go through all bonds
-        std::cout<<"iter "<<t<<" ";
+        // std::cout<<"iter "<<t<<" ";
         std::set<size_t> done_idxs; //set to store processed bond idxs
         // std::cout<<(std::string)g<<"\n";
         //TODO: traversal scheme, not by looping over set, but by moving to adjacent bonds in upward an d downward sweep. always traverse downwards (like DFS) when possible and exit loop when all done_idxs.size()==g.es().size()-1
@@ -506,120 +509,122 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             
             double bmi1=way1(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
             
-            graph<cmp> way1_g=g;
-            bond way1_current=current;
-            bond way1_parent=parent;
-            double way1_z=z;
-            std::vector<array1d<double> > way1_l_env_z=l_env_z;
-            std::vector<array1d<double> > way1_r_env_z=r_env_z;
-            std::vector<array1d<double> > way1_u_env_z=u_env_z;
-            std::vector<double> way1_w=w;
-            std::vector<std::vector<array1d<double> > > way1_l_env_sample=l_env_sample;
-            std::vector<std::vector<array1d<double> > > way1_r_env_sample=r_env_sample;
-            std::vector<std::vector<array1d<double> > > way1_u_env_sample=u_env_sample;
-            
-            g=orig_g;
-            current=orig_current;
-            parent=orig_parent;
-            z=orig_z;
-            l_env_z=orig_l_env_z;
-            r_env_z=orig_r_env_z;
-            u_env_z=orig_u_env_z;
-            w=orig_w;
-            l_env_sample=orig_l_env_sample;
-            r_env_sample=orig_r_env_sample;
-            u_env_sample=orig_u_env_sample;
-            it=g.es().find(current);
-            it_parent=g.es().find(parent);
-            
-            double bmi2=way2(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
-            
-            graph<bmi_comparator> way2_g=g;
-            bond way2_current=current;
-            bond way2_parent=parent;
-            double way2_z=z;
-            std::vector<array1d<double> > way2_l_env_z=l_env_z;
-            std::vector<array1d<double> > way2_r_env_z=r_env_z;
-            std::vector<array1d<double> > way2_u_env_z=u_env_z;
-            std::vector<double> way2_w=w;
-            std::vector<std::vector<array1d<double> > > way2_l_env_sample=l_env_sample;
-            std::vector<std::vector<array1d<double> > > way2_r_env_sample=r_env_sample;
-            std::vector<std::vector<array1d<double> > > way2_u_env_sample=u_env_sample;
-            
-            g=orig_g;
-            current=orig_current;
-            parent=orig_parent;
-            z=orig_z;
-            l_env_z=orig_l_env_z;
-            r_env_z=orig_r_env_z;
-            u_env_z=orig_u_env_z;
-            w=orig_w;
-            l_env_sample=orig_l_env_sample;
-            r_env_sample=orig_r_env_sample;
-            u_env_sample=orig_u_env_sample;
-            it=g.es().find(current);
-            it_parent=g.es().find(parent);
-            
-            double bmi3=way3(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
-            
-            graph<bmi_comparator> way3_g=g;
-            bond way3_current=current;
-            bond way3_parent=parent;
-            double way3_z=z;
-            std::vector<array1d<double> > way3_l_env_z=l_env_z;
-            std::vector<array1d<double> > way3_r_env_z=r_env_z;
-            std::vector<array1d<double> > way3_u_env_z=u_env_z;
-            std::vector<double> way3_w=w;
-            std::vector<std::vector<array1d<double> > > way3_l_env_sample=l_env_sample;
-            std::vector<std::vector<array1d<double> > > way3_r_env_sample=r_env_sample;
-            std::vector<std::vector<array1d<double> > > way3_u_env_sample=u_env_sample;
-            
-            // std::cout<<"bmis: "<<bmi1<<" "<<bmi2<<" "<<bmi3<<"\n";
-            
-            if((bmi1<=bmi2)&&(bmi1<=bmi3)){
-                g=way1_g;
-                current=way1_current;
-                parent=way1_parent;
-                z=way1_z;
-                l_env_z=way1_l_env_z;
-                r_env_z=way1_r_env_z;
-                u_env_z=way1_u_env_z;
-                w=way1_w;
-                l_env_sample=way1_l_env_sample;
-                r_env_sample=way1_r_env_sample;
-                u_env_sample=way1_u_env_sample;
+            if(struct_opt){
+                graph<cmp> way1_g=g;
+                bond way1_current=current;
+                bond way1_parent=parent;
+                double way1_z=z;
+                std::vector<array1d<double> > way1_l_env_z=l_env_z;
+                std::vector<array1d<double> > way1_r_env_z=r_env_z;
+                std::vector<array1d<double> > way1_u_env_z=u_env_z;
+                std::vector<double> way1_w=w;
+                std::vector<std::vector<array1d<double> > > way1_l_env_sample=l_env_sample;
+                std::vector<std::vector<array1d<double> > > way1_r_env_sample=r_env_sample;
+                std::vector<std::vector<array1d<double> > > way1_u_env_sample=u_env_sample;
+                
+                g=orig_g;
+                current=orig_current;
+                parent=orig_parent;
+                z=orig_z;
+                l_env_z=orig_l_env_z;
+                r_env_z=orig_r_env_z;
+                u_env_z=orig_u_env_z;
+                w=orig_w;
+                l_env_sample=orig_l_env_sample;
+                r_env_sample=orig_r_env_sample;
+                u_env_sample=orig_u_env_sample;
                 it=g.es().find(current);
-                // std::cout<<"selected bmi1\n";
-            }
-            else if((bmi2<bmi1)&&(bmi2<=bmi3)){
-                g=way2_g;
-                current=way2_current;
-                parent=way2_parent;
-                z=way2_z;
-                l_env_z=way2_l_env_z;
-                r_env_z=way2_r_env_z;
-                u_env_z=way2_u_env_z;
-                w=way2_w;
-                l_env_sample=way2_l_env_sample;
-                r_env_sample=way2_r_env_sample;
-                u_env_sample=way2_u_env_sample;
+                it_parent=g.es().find(parent);
+                
+                double bmi2=way2(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+                
+                graph<bmi_comparator> way2_g=g;
+                bond way2_current=current;
+                bond way2_parent=parent;
+                double way2_z=z;
+                std::vector<array1d<double> > way2_l_env_z=l_env_z;
+                std::vector<array1d<double> > way2_r_env_z=r_env_z;
+                std::vector<array1d<double> > way2_u_env_z=u_env_z;
+                std::vector<double> way2_w=w;
+                std::vector<std::vector<array1d<double> > > way2_l_env_sample=l_env_sample;
+                std::vector<std::vector<array1d<double> > > way2_r_env_sample=r_env_sample;
+                std::vector<std::vector<array1d<double> > > way2_u_env_sample=u_env_sample;
+                
+                g=orig_g;
+                current=orig_current;
+                parent=orig_parent;
+                z=orig_z;
+                l_env_z=orig_l_env_z;
+                r_env_z=orig_r_env_z;
+                u_env_z=orig_u_env_z;
+                w=orig_w;
+                l_env_sample=orig_l_env_sample;
+                r_env_sample=orig_r_env_sample;
+                u_env_sample=orig_u_env_sample;
                 it=g.es().find(current);
-                // std::cout<<"selected bmi2\n";
-            }
-            else if((bmi3<bmi1)&&(bmi3<bmi2)){
-                g=way3_g;
-                current=way3_current;
-                parent=way3_parent;
-                z=way3_z;
-                l_env_z=way3_l_env_z;
-                r_env_z=way3_r_env_z;
-                u_env_z=way3_u_env_z;
-                w=way3_w;
-                l_env_sample=way3_l_env_sample;
-                r_env_sample=way3_r_env_sample;
-                u_env_sample=way3_u_env_sample;
-                it=g.es().find(current);
-                // std::cout<<"selected bmi3\n";
+                it_parent=g.es().find(parent);
+                
+                double bmi3=way3(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+                
+                graph<bmi_comparator> way3_g=g;
+                bond way3_current=current;
+                bond way3_parent=parent;
+                double way3_z=z;
+                std::vector<array1d<double> > way3_l_env_z=l_env_z;
+                std::vector<array1d<double> > way3_r_env_z=r_env_z;
+                std::vector<array1d<double> > way3_u_env_z=u_env_z;
+                std::vector<double> way3_w=w;
+                std::vector<std::vector<array1d<double> > > way3_l_env_sample=l_env_sample;
+                std::vector<std::vector<array1d<double> > > way3_r_env_sample=r_env_sample;
+                std::vector<std::vector<array1d<double> > > way3_u_env_sample=u_env_sample;
+                
+                // std::cout<<"bmis: "<<bmi1<<" "<<bmi2<<" "<<bmi3<<"\n";
+                
+                if((bmi1<=bmi2)&&(bmi1<=bmi3)){
+                    g=way1_g;
+                    current=way1_current;
+                    parent=way1_parent;
+                    z=way1_z;
+                    l_env_z=way1_l_env_z;
+                    r_env_z=way1_r_env_z;
+                    u_env_z=way1_u_env_z;
+                    w=way1_w;
+                    l_env_sample=way1_l_env_sample;
+                    r_env_sample=way1_r_env_sample;
+                    u_env_sample=way1_u_env_sample;
+                    it=g.es().find(current);
+                    // std::cout<<"selected bmi1\n";
+                }
+                else if((bmi2<bmi1)&&(bmi2<=bmi3)){
+                    g=way2_g;
+                    current=way2_current;
+                    parent=way2_parent;
+                    z=way2_z;
+                    l_env_z=way2_l_env_z;
+                    r_env_z=way2_r_env_z;
+                    u_env_z=way2_u_env_z;
+                    w=way2_w;
+                    l_env_sample=way2_l_env_sample;
+                    r_env_sample=way2_r_env_sample;
+                    u_env_sample=way2_u_env_sample;
+                    it=g.es().find(current);
+                    // std::cout<<"selected bmi2\n";
+                }
+                else if((bmi3<bmi1)&&(bmi3<bmi2)){
+                    g=way3_g;
+                    current=way3_current;
+                    parent=way3_parent;
+                    z=way3_z;
+                    l_env_z=way3_l_env_z;
+                    r_env_z=way3_r_env_z;
+                    u_env_z=way3_u_env_z;
+                    w=way3_w;
+                    l_env_sample=way3_l_env_sample;
+                    r_env_sample=way3_r_env_sample;
+                    u_env_sample=way3_u_env_sample;
+                    it=g.es().find(current);
+                    // std::cout<<"selected bmi3\n";
+                }
             }
             
             bond b=*it;
@@ -654,6 +659,8 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             // nll/=(double) samples.size();
             // nll+=z; //z is log(z)
             // std::cout<<"inner loop nll="<<nll<<"\n";
+            if(iter==iter_max){break;}
+            iter++;
         }
         // std::cout<<(std::string) g<<"\n";
         // std::cout<<"new\n";
@@ -673,19 +680,44 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             best_vs=g.vs();
             best_es=g.es();
         }
-        if(fabs(prev_nll-nll)<1e-12){
-            std::cout<<"NLL optimization converged after "<<t<<" iterations.\n";
-            std::cout<<"nll="<<nll<<"\n";
+        if(iter==iter_max){
+            std::cout<<"Maximum iterations reached ("<<iter<<").\n";
+            std::cout<<"iter "<<iter<<" nll="<<nll<<"\n";
+            nll_history.insert(std::pair<size_t,double>(iter,nll));
+            break;
+        }
+        if(fabs((prev_nll-nll)/nll)<1e-6){
+            std::cout<<"NLL optimization converged after "<<iter<<" iterations.\n";
+            std::cout<<"loop "<<t<<" iter "<<iter<<" nll="<<nll<<"\n";
+            nll_history.insert(std::pair<size_t,double>(iter,nll));
             break;
         }
         else{
-            if(((t-1)%1)==0){
-                std::cout<<"nll="<<nll<<"\n";
+            if((done_idxs.size()==g.es().size())&&((t-1)%1)==0){
+                std::cout<<"loop "<<t<<" iter "<<iter<<" nll="<<nll<<"\n";
             }
         }
-        nll_history.push_back(nll);
+        nll_history.insert(std::pair<size_t,double>(iter,nll));
         prev_nll=nll;
+        t++;
     }
+    //calculate final nll
+    nll=0;
+    for(size_t s=0;s<samples.size();s++){
+        nll-=w[s]; //w[s] is log(w(s))
+    }
+    nll/=(double) samples.size();
+    nll+=z; //z is log(z)
+    std::cout<<"final nll="<<nll<<"\n";
+    nll_history.insert(std::pair<size_t,double>(iter,nll));
+    if(nll<best_nll){
+        best_nll=nll;
+        best_vs=g.vs();
+        best_es=g.es();
+    }
+    std::cout<<"best nll="<<nll<<"\n";
+    prev_nll=nll;
+    t++;
     g.vs()=best_vs;
     g.es()=best_es;
     
@@ -704,7 +736,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
     
     return best_nll;
 }
-template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::vector<double>&);
+template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,bool);
 
 template<typename cmp>
 double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
@@ -1456,6 +1488,7 @@ size_t inner_nmf(array3d<double>& fused_mat,array3d<double>& mat1,array3d<double
             mat1=array3d<double>(fused_mat.nx(),r,1);
             mat2=array3d<double>(r,fused_mat.ny(),1);
             double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+            // std::cout<<r<<" "<<recon_err<<"\n";
             if(recon_err<1e-12){break;}
             if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
             r++;
