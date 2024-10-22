@@ -231,13 +231,16 @@ int main(int argc,char **argv){
     std::cout<<"\tr max: "<<r_max<<"\n";
     std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
     std::cout<<"\tlearning rate: "<<lr<<"\n";
+    std::cout<<"\tstruct opt: "<<(struct_opt?"true":"false")<<"\n";
+    std::cout<<"\tcompress r: "<<(compress_r?"true":"false")<<"\n";
     sw.start();
     std::map<size_t,double> nll_history;
+    std::map<size_t,size_t> sweep_history;
     if(label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,nll_history,struct_opt); //nll training with labels
+        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,nll_history,sweep_history,struct_opt); //nll training with labels
     }
     else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,nll_history,struct_opt); //nll training
+        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,nll_history,sweep_history,struct_opt); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
@@ -254,6 +257,15 @@ int main(int argc,char **argv){
     }
     nll_string+="]\n";
     observables::output_lines.push_back(nll_string);
+    std::string sweep_string="sweeps: [";
+    for(auto it=sweep_history.begin();it!=sweep_history.end();++it){
+        sweep_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+        if(it!=--sweep_history.end()){
+            sweep_string+=", ";
+        }
+    }
+    sweep_string+="]\n";
+    observables::output_lines.push_back(sweep_string);
     
     std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
     for(size_t i=0;i<generated_samples.size();i++){

@@ -10,9 +10,9 @@ namespace algorithm{
     template<typename cmp>
     void train_nll(graph<cmp>&,size_t,size_t,size_t,double);
     template<typename cmp>
-    void train_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,bool);
+    void train_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
-    void train_nll(graph<cmp>&,std::vector<sample_data>&,size_t,size_t,bool,double,std::map<size_t,double>&,bool);
+    void train_nll(graph<cmp>&,std::vector<sample_data>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
     void calculate_site_probs(graph<cmp>&,bond&);
 };

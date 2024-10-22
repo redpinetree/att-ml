@@ -413,7 +413,7 @@ template double optimize::opt_nll(graph<bmi_comparator>&,std::vector<sample_data
 
 
 template<typename cmp>
-double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max,bool compress_r,double lr,std::map<size_t,double>& nll_history,bool struct_opt){
+double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max,bool compress_r,double lr,std::map<size_t,double>& nll_history,std::map<size_t,size_t>& sweep_history,bool struct_opt){
     if(iter_max==0){return 0;}
     size_t single_site_update_count=10;
     double prev_nll=1e50;
@@ -659,6 +659,16 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             // nll/=(double) samples.size();
             // nll+=z; //z is log(z)
             // std::cout<<"inner loop nll="<<nll<<"\n";
+            
+            //calculate nll
+            nll=0;
+            for(size_t s=0;s<samples.size();s++){
+                nll-=w[s]; //w[s] is log(w(s))
+            }
+            nll/=(double) samples.size();
+            nll+=z; //z is log(z)
+            nll_history.insert(std::pair<size_t,double>(iter,nll));
+            
             if(iter==iter_max){break;}
             iter++;
         }
@@ -668,13 +678,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             // std::cout<<(std::string) (*it).w().exp_form()<<"\n";
         // }
         
-        //calculate nll and check for convergence
-        nll=0;
-        for(size_t s=0;s<samples.size();s++){
-            nll-=w[s]; //w[s] is log(w(s))
-        }
-        nll/=(double) samples.size();
-        nll+=z; //z is log(z)
+        //check for convergence
         if(nll<best_nll){
             best_nll=nll;
             best_vs=g.vs();
@@ -697,8 +701,8 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
                 std::cout<<"loop "<<t<<" iter "<<iter<<" nll="<<nll<<"\n";
             }
         }
-        nll_history.insert(std::pair<size_t,double>(iter,nll));
         prev_nll=nll;
+        sweep_history.insert(std::pair<size_t,double>(t,iter));
         t++;
     }
     //calculate final nll
@@ -736,7 +740,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
     
     return best_nll;
 }
-template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,bool);
+template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
 
 template<typename cmp>
 double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
