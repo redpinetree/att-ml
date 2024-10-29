@@ -9,6 +9,7 @@
 #include <chrono>
 #include <getopt.h>
 
+#include "omp.h"
 #include "mpi.h"
 #include "sampling.hpp"
 #include "stopwatch.hpp"

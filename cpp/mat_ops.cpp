@@ -846,7 +846,7 @@ double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t 
                 diff+=(old_h.at(i,j,0)-h.at(i,j,0))*(old_h.at(i,j,0)-h.at(i,j,0));
             }
         }
-        if(diff<1e-6){
+        if(diff<1e-12){
             // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (diff).\n";
             // std::cout<<"Final diff: "<<diff<<".\n";
             // std::cout<<"Final reconstruction err: "<<recon_err<<".\n";

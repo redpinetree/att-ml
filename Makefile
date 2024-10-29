@@ -1,6 +1,6 @@
 MPICXX = mpicxx
 CXX = g++
-CXXFLAGS = -O3 -ffloat-store -ffp-contract=off -march=native -pipe -std=c++17
+CXXFLAGS = -O3 -ffloat-store -ffp-contract=off -march=native -pipe -std=c++17 -fopenmp
 # CXXFLAGS = -O0
 
 TARGET_OLD_OLD = ./bin/tree_approx_potts_old_old
