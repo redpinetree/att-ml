@@ -28,6 +28,8 @@ void print_usage(){
     std::cerr<<"\t-o,--output: prefix for output files. please omit the file extension.\n";
     std::cerr<<"\t-t,--top-dim: top dimension\n";
     std::cerr<<"\t-L,--label-file: input file containing training labels\n";
+    std::cerr<<"\t-V,--test-file: input file containing test data\n";
+    std::cerr<<"\t-B,--test-label-file: input file containing test labels\n";
     std::cerr<<"\t-T,--init-tree-type: initial tree type: mps or pbttn or rand\n";
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
@@ -63,8 +65,10 @@ int main(int argc,char **argv){
     bool input_set=false;
     bool output_set=false;
     bool label_set=false;
+    bool test_set=false;
+    bool test_label_set=false;
     bool tdim_set=false;
-    std::string input,output,label_file;
+    std::string input,output,label_file,test_file,test_label_file;
     std::string init_tree_type="mps";
     size_t r_max=0;
     size_t tdim=1;
@@ -82,6 +86,8 @@ int main(int argc,char **argv){
             {"output",required_argument,0,'o'},
             {"top-dim",required_argument,0,'t'},
             {"label-file",required_argument,0,'L'},
+            {"test-file",required_argument,0,'V'},
+            {"test-label-file",required_argument,0,'B'},
             {"init-tree-type",required_argument,0,'T'},
             {"r-max",required_argument,0,'r'},
             {"nll-iter-max",required_argument,0,'N'},
@@ -89,7 +95,7 @@ int main(int argc,char **argv){
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:t:L:T:r:N:l:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:t:L:V:B:T:r:N:l:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -102,6 +108,8 @@ int main(int argc,char **argv){
             case 'o': output=std::string(optarg); output_set=true; break;
             case 't': tdim=(size_t) atoi(optarg); tdim_set=true; break;
             case 'L': label_file=std::string(optarg); label_set=true; break;
+            case 'V': test_file=std::string(optarg); test_set=true; break;
+            case 'B': test_label_file=std::string(optarg); test_label_set=true; break;
             case 'T': init_tree_type=std::string(optarg); break;
             case 'r': r_max=(size_t) atoi(optarg); break;
             case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
@@ -162,6 +170,21 @@ int main(int argc,char **argv){
         }
         exit(1);
     }
+    //check if test data specified properly, if needed
+    if((!test_set)&&test_label_set){
+        if(mpi_utils::root){
+            std::cerr<<"Error: Must specify input file with test data when specifying test label data.\n";
+            print_usage();
+        }
+        exit(1);
+    }
+    if(label_set&&test_set&&(!test_label_set)){
+        if(mpi_utils::root){
+            std::cerr<<"Error: Must specify input file with test label data when specifying training label data and test data.\n";
+            print_usage();
+        }
+        exit(1);
+    }
     //override verbosity if proc_num>1
     if(mpi_utils::proc_num>1){
         if(mpi_utils::root && verbose>0){
@@ -202,11 +225,20 @@ int main(int argc,char **argv){
     
     double trial_time=0; //not including init time
     
-    size_t train_data_idim,n_samples,train_data_total_length;
-    std::vector<sample_data> train_data=algorithm::load_training_data_from_file(input,n_samples,train_data_total_length,train_data_idim);
+    size_t train_data_idim,train_n_samples,train_data_total_length;
+    std::vector<sample_data> train_data=algorithm::load_data_from_file(input,train_n_samples,train_data_total_length,train_data_idim);
+    size_t test_data_idim,test_n_samples,test_data_total_length;
+    std::vector<sample_data> test_data;
+    if(test_set){
+        test_data=algorithm::load_data_from_file(test_file,test_n_samples,test_data_total_length,test_data_idim);
+    }
     std::vector<size_t> train_data_labels;
     if(label_set){
-        train_data_labels=algorithm::load_training_data_labels_from_file(label_file,n_samples,tdim);
+        train_data_labels=algorithm::load_data_labels_from_file(label_file,train_n_samples,tdim);
+    }
+    std::vector<size_t> test_data_labels;
+    if(test_label_set){
+        train_data_labels=algorithm::load_data_labels_from_file(test_label_file,test_n_samples,tdim);
     }
     graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,init_tree_type);
     for(auto it=g.es().begin();it!=g.es().end();++it){
@@ -222,10 +254,26 @@ int main(int argc,char **argv){
         std::cout<<"Mismatch in input dimension between training data ("<<train_data_idim<<") and model ("<<idim<<").\n";
         exit(1);
     }
+    if(test_set){
+        if(g.n_phys_sites()!=test_data_total_length){
+            std::cout<<"Mismatch in input site count between test data ("<<test_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
+            exit(1);
+        }
+        if(idim!=test_data_idim){
+            std::cout<<"Mismatch in input dimension between test data ("<<test_data_idim<<") and model ("<<idim<<").\n";
+            exit(1);
+        }
+    }
     
-    std::cout<<"Training details:\n\tinput: "<<input<<"\n";
+    std::cout<<"Training details:\n\ttrain data: "<<input<<"\n";
     if(label_set){
-        std::cout<<"\tlabels: "<<label_file<<"\n";
+        std::cout<<"\ttrain labels: "<<label_file<<"\n";
+    }
+    if(test_set){
+        std::cout<<"\ttest data: "<<label_file<<"\n";
+    }
+    if(test_label_set){
+        std::cout<<"\ttest labels: "<<test_label_file<<"\n";
     }
     std::cout<<"\tinit tree type: "<<init_tree_type<<"\n";
     std::cout<<"\ttop dim: "<<tdim<<"\n";
@@ -235,13 +283,19 @@ int main(int argc,char **argv){
     std::cout<<"\tstruct opt: "<<(struct_opt?"true":"false")<<"\n";
     std::cout<<"\tcompress r: "<<(compress_r?"true":"false")<<"\n";
     sw.start();
-    std::map<size_t,double> nll_history;
+    std::map<size_t,double> train_nll_history,test_nll_history;
     std::map<size_t,size_t> sweep_history;
-    if(label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,nll_history,sweep_history,struct_opt); //nll training with labels
+    if(label_set&&test_set&&test_label_set){
+        algorithm::train_nll(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
+    }
+    else if(label_set&&(!test_set)){
+        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,sweep_history,struct_opt); //nll training with labels
+    }
+    else if((!label_set)&&test_set){
+        algorithm::train_nll(g,train_data,test_data,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with test data
     }
     else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,nll_history,sweep_history,struct_opt); //nll training
+        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,sweep_history,struct_opt); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
@@ -249,15 +303,26 @@ int main(int argc,char **argv){
     sw.reset();
     
     observables::output_lines.push_back((std::string) g);
-    std::string nll_string="nlls: [";
-    for(auto it=nll_history.begin();it!=nll_history.end();++it){
-        nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
-        if(it!=--nll_history.end()){
-            nll_string+=", ";
+    std::string train_nll_string="train nlls: [";
+    for(auto it=train_nll_history.begin();it!=train_nll_history.end();++it){
+        train_nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+        if(it!=--train_nll_history.end()){
+            train_nll_string+=", ";
         }
     }
-    nll_string+="]\n";
-    observables::output_lines.push_back(nll_string);
+    train_nll_string+="]\n";
+    observables::output_lines.push_back(train_nll_string);
+    if(test_set){
+        std::string test_nll_string="test nlls: [";
+        for(auto it=test_nll_history.begin();it!=test_nll_history.end();++it){
+            test_nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+            if(it!=--test_nll_history.end()){
+                test_nll_string+=", ";
+            }
+        }
+        test_nll_string+="]\n";
+        observables::output_lines.push_back(test_nll_string);
+    }
     std::string sweep_string="sweeps: [";
     for(auto it=sweep_history.begin();it!=sweep_history.end();++it){
         sweep_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";

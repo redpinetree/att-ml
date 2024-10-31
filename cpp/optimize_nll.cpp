@@ -417,11 +417,12 @@ template double optimize::opt_nll(graph<bmi_comparator>&,std::vector<sample_data
 
 
 template<typename cmp>
-double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t iter_max,size_t r_max,bool compress_r,double lr,std::map<size_t,double>& nll_history,std::map<size_t,size_t>& sweep_history,bool struct_opt){
+double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_samples,std::vector<size_t>& train_labels,std::vector<sample_data>& test_samples,std::vector<size_t>& test_labels,size_t iter_max,size_t r_max,bool compress_r,double lr,std::map<size_t,double>& train_nll_history,std::map<size_t,double>& test_nll_history,std::map<size_t,size_t>& sweep_history,bool struct_opt){
     if(iter_max==0){return 0;}
     size_t single_site_update_count=10;
     double prev_nll=1e50;
     double nll=0;
+    double test_nll=0;
     //adam variables
     // double lr=0.001;
     double beta1=0.9;
@@ -445,9 +446,10 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
     std::vector<std::vector<array1d<double> > > r_env_sample;
     std::vector<std::vector<array1d<double> > > u_env_sample;
     double z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
-    std::vector<double> w=calc_w(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
+    std::vector<double> w=calc_w(g,train_samples,train_labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
     
     double best_nll=1e50;
+    double best_test_nll=1e50;
     std::uniform_real_distribution<> unif_dist(1e-16,1.0);
     std::vector<site> best_vs;
     std::multiset<bond,bmi_comparator> best_es;
@@ -511,7 +513,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             std::vector<std::vector<array1d<double> > > orig_r_env_sample=r_env_sample;
             std::vector<std::vector<array1d<double> > > orig_u_env_sample=u_env_sample;
             
-            double bmi1=way1(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+            double bmi1=way1(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
             
             if(struct_opt){
                 graph<cmp> way1_g=g;
@@ -540,7 +542,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
                 it=g.es().find(current);
                 it_parent=g.es().find(parent);
                 
-                double bmi2=way2(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+                double bmi2=way2(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
                 
                 graph<bmi_comparator> way2_g=g;
                 bond way2_current=current;
@@ -568,7 +570,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
                 it=g.es().find(current);
                 it_parent=g.es().find(parent);
                 
-                double bmi3=way3(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+                double bmi3=way3(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
                 
                 graph<bmi_comparator> way3_g=g;
                 bond way3_current=current;
@@ -657,22 +659,22 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
             it=g.es().lower_bound(key);
             
             // nll=0;
-            // for(size_t s=0;s<samples.size();s++){
+            // for(size_t s=0;s<train_samples.size();s++){
                 // nll-=w[s]; //w[s] is log(w(s))
             // }
-            // nll/=(double) samples.size();
+            // nll/=(double) train_samples.size();
             // nll+=z; //z is log(z)
             // std::cout<<"inner loop nll="<<nll<<"\n";
             
-            //calculate nll
+            //calculate train nll
             nll=0;
             #pragma omp parallel for reduction(-:nll)
-            for(size_t s=0;s<samples.size();s++){
+            for(size_t s=0;s<train_samples.size();s++){
                 nll-=w[s]; //w[s] is log(w(s))
             }
-            nll/=(double) samples.size();
+            nll/=(double) train_samples.size();
             nll+=z; //z is log(z)
-            nll_history.insert(std::pair<size_t,double>(iter,nll));
+            train_nll_history.insert(std::pair<size_t,double>(iter,nll));
             
             if(iter==iter_max){break;}
             iter++;
@@ -682,62 +684,87 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
         // for(auto it=g.es().begin();it!=g.es().end();++it){
             // std::cout<<(std::string) (*it).w().exp_form()<<"\n";
         // }
+            
+        //calculate test nll per sweep
+        if(test_samples.size()!=0){
+            std::vector<std::vector<array1d<double> > > test_l_env_sample;
+            std::vector<std::vector<array1d<double> > > test_r_env_sample;
+            std::vector<std::vector<array1d<double> > > test_u_env_sample;
+            std::vector<double> test_w=calc_w(g,test_samples,test_labels,test_l_env_sample,test_r_env_sample,test_u_env_sample);
+            test_nll=0;
+            #pragma omp parallel for reduction(-:test_nll)
+            for(size_t s=0;s<test_samples.size();s++){
+                test_nll-=test_w[s]; //w[s] is log(w(s))
+            }
+            test_nll/=(double) test_samples.size();
+            test_nll+=z; //z is log(z)
+            test_nll_history.insert(std::pair<size_t,double>(iter,test_nll));
+        }
         
         //check for convergence
-        if(nll<best_nll){
+        if((test_samples.size()!=0)?(test_nll<best_test_nll):(nll<best_nll)){
             best_nll=nll;
+            best_test_nll=test_nll;
             best_vs=g.vs();
             best_es=g.es();
         }
         if(iter==iter_max){
             std::cout<<"Maximum iterations reached ("<<iter<<").\n";
             std::cout<<"iter "<<iter<<" nll="<<nll<<"\n";
-            nll_history.insert(std::pair<size_t,double>(iter,nll));
+            train_nll_history.insert(std::pair<size_t,double>(iter,nll));
             break;
         }
         if(fabs((prev_nll-nll)/nll)<1e-6){
             std::cout<<"NLL optimization converged after "<<iter<<" iterations.\n";
-            std::cout<<"loop "<<t<<" iter "<<iter<<" nll="<<nll<<"\n";
-            nll_history.insert(std::pair<size_t,double>(iter,nll));
+            std::cout<<"sweep "<<t<<" iter "<<iter<<" nll="<<nll<<"\n";
+            train_nll_history.insert(std::pair<size_t,double>(iter,nll));
             break;
         }
         else{
             if((done_idxs.size()==g.es().size())&&((t-1)%1)==0){
-                std::cout<<"loop "<<t<<" iter "<<iter<<" nll="<<nll<<"\n";
+                if(test_samples.size()!=0){
+                    std::cout<<"sweep "<<t<<" iter "<<iter<<" train nll="<<nll<<" test nll="<<test_nll<<"\n";
+                }
+                else{
+                    std::cout<<"sweep "<<t<<" iter "<<iter<<" train nll="<<nll<<"\n";
+                }
             }
         }
         prev_nll=nll;
         sweep_history.insert(std::pair<size_t,double>(t,iter));
         t++;
     }
-    //calculate final nll
-    nll=0;
-    #pragma omp parallel for reduction(-:nll)
-    for(size_t s=0;s<samples.size();s++){
-        nll-=w[s]; //w[s] is log(w(s))
-    }
-    nll/=(double) samples.size();
-    nll+=z; //z is log(z)
-    std::cout<<"final nll="<<nll<<"\n";
-    nll_history.insert(std::pair<size_t,double>(iter,nll));
-    if(nll<best_nll){
-        best_nll=nll;
-        best_vs=g.vs();
-        best_es=g.es();
-    }
+    //calculate final train nll
+    // nll=0;
+    // #pragma omp parallel for reduction(-:nll)
+    // for(size_t s=0;s<train_samples.size();s++){
+        // nll-=w[s]; //w[s] is log(w(s))
+    // }
+    // nll/=(double) train_samples.size();
+    // nll+=z; //z is log(z)
+    // std::cout<<"final nll="<<nll<<"\n";
+    // train_nll_history.insert(std::pair<size_t,double>(iter,nll));
+    // if(nll<best_nll){
+        // best_nll=nll;
+        // best_test_nll=test_nll;
+        // best_vs=g.vs();
+        // best_es=g.es();
+    // }
     std::cout<<"best nll="<<best_nll<<"\n";
-    prev_nll=nll;
+    std::cout<<"best test nll="<<best_test_nll<<"\n";
     t++;
+    nll=best_nll;
+    test_nll=best_test_nll;
     g.vs()=best_vs;
     g.es()=best_es;
     
     z=calc_z(g,l_env_z,r_env_z,u_env_z);
-    w=calc_w(g,samples,labels,l_env_sample,r_env_sample,u_env_sample);
+    w=calc_w(g,train_samples,train_labels,l_env_sample,r_env_sample,u_env_sample);
     
     // std::cout<<(std::string)g<<"\n";
     for(size_t i=0;i<g.n_phys_sites();i++){
-        // double input_bmi=fabs(optimize::calc_bmi_input(i,g.vs()[i].rank(),samples,g.vs()[g.vs()[i].u_idx()].p_bond(),l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample)) //take abs
-        double input_bmi=optimize::calc_bmi_input(i,g.vs()[i].rank(),samples,g.vs()[g.vs()[i].u_idx()].p_bond(),l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
+        // double input_bmi=fabs(optimize::calc_bmi_input(i,g.vs()[i].rank(),train_samples,g.vs()[g.vs()[i].u_idx()].p_bond(),l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample)) //take abs
+        double input_bmi=optimize::calc_bmi_input(i,g.vs()[i].rank(),train_samples,g.vs()[g.vs()[i].u_idx()].p_bond(),l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
         // std::cout<<input_bmi<<"\n";
         if(input_bmi<-log(g.vs()[i].rank())){input_bmi=2*log(g.vs()[i].rank());}
         g.vs()[i].bmi()=input_bmi;
@@ -746,7 +773,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& samples,
     
     return best_nll;
 }
-template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
 
 template<typename cmp>
 double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){

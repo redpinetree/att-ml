@@ -12,7 +12,7 @@ namespace optimize{
     template<typename cmp>
     double opt_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,double);
     template<typename cmp>
-    double opt_struct_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    double opt_struct_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
     double hopt_nll(graph<cmp>&,size_t,size_t,size_t);
     template<typename cmp>
