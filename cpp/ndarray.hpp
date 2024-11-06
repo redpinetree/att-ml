@@ -8,6 +8,21 @@
 #include <string>
 #include <algorithm>
 
+//kahan sum
+template<typename T>
+inline double ksum(std::vector<T> v){
+    if(v.size()==0){return 0;}
+    T c=0; //compensation term
+    T sum=v[0];
+    for(size_t i=0;i<v.size()-1;i++){
+        T y=v[i+1]-c; //corrected addend
+        T t=sum+y; //corrected addend added to current sum
+        c=(t-sum)-y; //next compensation
+        sum=t;
+    }
+    return sum;
+}
+
 template<typename T>
 class array1d{
 public:
@@ -29,45 +44,16 @@ public:
         return str.str();
     }
     std::vector<T> sum(){
-        std::vector<T> res;
-        //TODO: shewchuk summation
-        for(size_t i=0;i<this->nx();i++){
-            T e=0;
-            // for(size_t j=0;j<this->ny();j++){
-                // e+=this->at(i,j);
-            // }
-            std::vector<T> v;
-            for(size_t j=0;j<this->ny();j++){
-                v.push_back(this->at(i,j));
-            }
-            std::sort(v.begin(),v.end());
-            for(size_t n=0;n<v.size();n++){
-                e+=v[n];
-            }
-            res.push_back(e);
-        }
-        return res;
+        ksum(this->e());
     }
     std::vector<T> lse(){
-        std::vector<T> res;
-        //TODO: shewchuk summation
-        for(size_t i=0;i<this->nx();i++){
-            T e=0;
-            // for(size_t j=0;j<this->ny();j++){
-                // e+=this->at(i,j);
-            // }
-            std::vector<T> v;
-            for(size_t j=0;j<this->ny();j++){
-                v.push_back(this->at(i,j));
-            }
-            std::sort(v.begin(),v.end());
-            double max=*(std::max_element(v.begin(),v.end()));
-            for(size_t n=0;n<v.size();n++){
-                e+=exp(v[n]-max);
-            }
-            e=max+log(e);
-            res.push_back(e);
+        T res=0;
+        std::vector<T> v=this->e();
+        double max=*(std::max_element(v.begin(),v.end()));
+        for(size_t n=0;n<v.size();n++){
+            res+=exp(v[n]-max);
         }
+        res=max+log(e);
         return res;
     }
     //exp for array1d
@@ -116,39 +102,22 @@ public:
             exit(1);
         }
         std::vector<T> res;
-        //TODO: shewchuk summation
         if(ax==0){
             for(size_t j=0;j<this->ny();j++){
-                T e=0;
-                // for(size_t i=0;i<this->nx();i++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t i=0;i<this->nx();i++){
                     v.push_back(this->at(i,j));
                 }
-                std::sort(v.begin(),v.end());
-                for(size_t n=0;n<v.size();n++){
-                    e+=v[n];
-                }
-                res.push_back(e);
+                res.push_back(ksum(v));
             }
         }
         else if(ax==1){
             for(size_t i=0;i<this->nx();i++){
-                T e=0;
-                // for(size_t j=0;j<this->ny();j++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t j=0;j<this->ny();j++){
                     v.push_back(this->at(i,j));
                 }
-                std::sort(v.begin(),v.end());
-                for(size_t n=0;n<v.size();n++){
-                    e+=v[n];
-                }
-                res.push_back(e);
+                res.push_back(ksum(v));
             }
         }
         return res;
@@ -159,13 +128,9 @@ public:
             exit(1);
         }
         std::vector<T> res;
-        //TODO: shewchuk summation
         if(ax==0){
             for(size_t j=0;j<this->ny();j++){
                 T e=0;
-                // for(size_t i=0;i<this->nx();i++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t i=0;i<this->nx();i++){
                     v.push_back(this->at(i,j));
@@ -182,9 +147,6 @@ public:
         else if(ax==1){
             for(size_t i=0;i<this->nx();i++){
                 T e=0;
-                // for(size_t j=0;j<this->ny();j++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t j=0;j<this->ny();j++){
                     v.push_back(this->at(i,j));
@@ -200,14 +162,8 @@ public:
         }
         return res;
     }
-    T sum_over_all(){ //TODO: sum after sorting
-        T res=0;
-        for(size_t i=0;i<this->nx();i++){
-            for(size_t j=0;j<this->ny();j++){
-                res+=this->at(i,j);
-            }
-        }
-        return res;
+    T sum_over_all(){
+        return ksum(this->e());
     }
     //exp for array2d
     array2d<T> exp_form(){
@@ -265,62 +221,37 @@ public:
             exit(1);
         }
         std::vector<T> res;
-        //TODO: shewchuk summation
         if(((ax0==0)&&(ax1==2))||((ax0==2)&&(ax1==0))){
             for(size_t j=0;j<this->ny();j++){
-                T e=0;
-                // for(size_t i=0;i<this->nx();i++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t i=0;i<this->nx();i++){
                     for(size_t k=0;k<this->nz();k++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
-                std::sort(v.begin(),v.end());
-                for(size_t n=0;n<v.size();n++){
-                    e+=v[n];
-                }
-                res.push_back(e);
+                res.push_back(ksum(v));
             }
         }
         else if(((ax0==1)&&(ax1==2))||((ax0==2)&&(ax1==1))){
             for(size_t i=0;i<this->nx();i++){
-                T e=0;
-                // for(size_t j=0;j<this->ny();j++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t j=0;j<this->ny();j++){
                     for(size_t k=0;k<this->nz();k++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
-                std::sort(v.begin(),v.end());
-                for(size_t n=0;n<v.size();n++){
-                    e+=v[n];
-                }
-                res.push_back(e);
+                res.push_back(ksum(v));
             }
         }
         else if(((ax0==0)&&(ax1==1))||((ax0==1)&&(ax1==0))){
             for(size_t k=0;k<this->nz();k++){
-                T e=0;
-                // for(size_t j=0;j<this->ny();j++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t i=0;i<this->nx();i++){
                     for(size_t j=0;j<this->ny();j++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
-                std::sort(v.begin(),v.end());
-                for(size_t n=0;n<v.size();n++){
-                    e+=v[n];
-                }
-                res.push_back(e);
+                res.push_back(ksum(v));
             }
         }
         return res;
@@ -335,13 +266,9 @@ public:
             exit(1);
         }
         std::vector<T> res;
-        //TODO: shewchuk summation
         if(((ax0==0)&&(ax1==2))||((ax0==2)&&(ax1==0))){
             for(size_t j=0;j<this->ny();j++){
                 T e=0;
-                // for(size_t i=0;i<this->nx();i++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t i=0;i<this->nx();i++){
                     for(size_t k=0;k<this->nz();k++){
@@ -360,9 +287,6 @@ public:
         else if(((ax0==1)&&(ax1==2))||((ax0==2)&&(ax1==1))){
             for(size_t i=0;i<this->nx();i++){
                 T e=0;
-                // for(size_t j=0;j<this->ny();j++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t j=0;j<this->ny();j++){
                     for(size_t k=0;k<this->nz();k++){
@@ -381,9 +305,6 @@ public:
         else if(((ax0==0)&&(ax1==1))||((ax0==1)&&(ax1==0))){
             for(size_t k=0;k<this->nz();k++){
                 T e=0;
-                // for(size_t j=0;j<this->ny();j++){
-                    // e+=this->at(i,j);
-                // }
                 std::vector<T> v;
                 for(size_t i=0;i<this->nx();i++){
                     for(size_t j=0;j<this->ny();j++){
@@ -401,16 +322,8 @@ public:
         }
         return res;
     }
-    T sum_over_all(){ //TODO: sum after sorting
-        T res=0;
-        for(size_t i=0;i<this->nx();i++){
-            for(size_t j=0;j<this->ny();j++){
-                for(size_t k=0;k<this->nz();k++){
-                    res+=this->at(i,j,k);
-                }
-            }
-        }
-        return res;
+    T sum_over_all(){
+        return ksum(this->e());
     }
     //exp for array3d
     array3d<T> exp_form(){
@@ -466,18 +379,8 @@ public:
         }
         return str.str();
     }
-    T sum_over_all(){ //TODO: sum after sorting
-        T res=0;
-        for(size_t i=0;i<this->nx();i++){
-            for(size_t j=0;j<this->ny();j++){
-                for(size_t k=0;k<this->nz();k++){
-                    for(size_t l=0;l<this->nw();l++){
-                        res+=this->at(i,j,k,l);
-                    }
-                }
-            }
-        }
-        return res;
+    T sum_over_all(){
+        return ksum(this->e());
     }
     //exp for array3d
     array4d<T> exp_form(){

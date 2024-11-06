@@ -165,10 +165,10 @@ void aux_update_lr_cache(bond& current,bond& parent,std::vector<array1d<double> 
         std::vector<double> res_vec_z_addends;
         for(size_t i=0;i<current.w().nx();i++){
             for(size_t j=0;j<current.w().ny();j++){
-                res_vec_z_addends.push_back(l_env_z[current.order()].at(i)+r_env_z[current.order()].at(j)+current.w().at(i,j,k)); //log space
+                res_vec_z_addends.push_back(l_env_z[current.order()].at(i)*r_env_z[current.order()].at(j)*current.w().at(i,j,k));
             }
         }
-        res_vec_z.at(k)=lse(res_vec_z_addends); //log space
+        res_vec_z.at(k)=vec_add_float(res_vec_z_addends);
     }
     if(parent.v1()==current.order()){
         l_env_z[parent.order()]=res_vec_z;
@@ -183,10 +183,10 @@ void aux_update_lr_cache(bond& current,bond& parent,std::vector<array1d<double> 
             std::vector<double> res_vec_sample_addends;
             for(size_t i=0;i<current.w().nx();i++){
                 for(size_t j=0;j<current.w().ny();j++){
-                    res_vec_sample_addends.push_back(l_env_sample[current.order()][s].at(i)+r_env_sample[current.order()][s].at(j)+current.w().at(i,j,k)); //log space
+                    res_vec_sample_addends.push_back(l_env_sample[current.order()][s].at(i)*r_env_sample[current.order()][s].at(j)*current.w().at(i,j,k));
                 }
             }
-            res_vec_sample.at(k)=lse(res_vec_sample_addends); //log space
+            res_vec_sample.at(k)=vec_add_float(res_vec_sample_addends);
         }
         if(parent.v1()==current.order()){
             l_env_sample[parent.order()][s]=res_vec_sample;
@@ -204,10 +204,10 @@ void aux_update_u_cache(bond& current,bond& parent,std::vector<array1d<double> >
             std::vector<double> res_vec2_z_addends;
             for(size_t j=0;j<parent.w().ny();j++){
                 for(size_t k=0;k<parent.w().nz();k++){
-                    res_vec2_z_addends.push_back(r_env_z[parent.order()].at(j)+u_env_z[parent.order()].at(k)+parent.w().at(i,j,k)); //log space
+                    res_vec2_z_addends.push_back(r_env_z[parent.order()].at(j)*u_env_z[parent.order()].at(k)*parent.w().at(i,j,k));
                 }
             }
-            res_vec2_z.at(i)=lse(res_vec2_z_addends); //log space
+            res_vec2_z.at(i)=vec_add_float(res_vec2_z_addends);
         }
     }
     else{
@@ -215,10 +215,10 @@ void aux_update_u_cache(bond& current,bond& parent,std::vector<array1d<double> >
             std::vector<double> res_vec2_z_addends;
             for(size_t i=0;i<parent.w().nx();i++){
                 for(size_t k=0;k<parent.w().nz();k++){
-                    res_vec2_z_addends.push_back(l_env_z[parent.order()].at(i)+u_env_z[parent.order()].at(k)+parent.w().at(i,j,k)); //log space
+                    res_vec2_z_addends.push_back(l_env_z[parent.order()].at(i)*u_env_z[parent.order()].at(k)*parent.w().at(i,j,k));
                 }
             }
-            res_vec2_z.at(j)=lse(res_vec2_z_addends); //log space
+            res_vec2_z.at(j)=vec_add_float(res_vec2_z_addends);
         }
     }
     u_env_z[current.order()]=res_vec2_z;
@@ -230,10 +230,10 @@ void aux_update_u_cache(bond& current,bond& parent,std::vector<array1d<double> >
                 std::vector<double> res_vec2_sample_addends;
                 for(size_t j=0;j<parent.w().ny();j++){
                     for(size_t k=0;k<parent.w().nz();k++){
-                        res_vec2_sample_addends.push_back(r_env_sample[parent.order()][s].at(j)+u_env_sample[parent.order()][s].at(k)+parent.w().at(i,j,k)); //log space
+                        res_vec2_sample_addends.push_back(r_env_sample[parent.order()][s].at(j)*u_env_sample[parent.order()][s].at(k)*parent.w().at(i,j,k));
                     }
                 }
-                res_vec2_sample.at(i)=lse(res_vec2_sample_addends); //log space
+                res_vec2_sample.at(i)=vec_add_float(res_vec2_sample_addends);
             }
         }
         else{
@@ -241,10 +241,10 @@ void aux_update_u_cache(bond& current,bond& parent,std::vector<array1d<double> >
                 std::vector<double> res_vec2_sample_addends;
                 for(size_t i=0;i<parent.w().nx();i++){
                     for(size_t k=0;k<parent.w().nz();k++){
-                        res_vec2_sample_addends.push_back(l_env_sample[parent.order()][s].at(i)+u_env_sample[parent.order()][s].at(k)+parent.w().at(i,j,k)); //log space
+                        res_vec2_sample_addends.push_back(l_env_sample[parent.order()][s].at(i)*u_env_sample[parent.order()][s].at(k)*parent.w().at(i,j,k));
                     }
                 }
-                res_vec2_sample.at(j)=lse(res_vec2_sample_addends); //log space
+                res_vec2_sample.at(j)=vec_add_float(res_vec2_sample_addends);
             }
         }
         u_env_sample[current.order()][s]=res_vec2_sample;
@@ -299,10 +299,10 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::ve
             for(size_t i=0;i<grad_z_term.nx();i++){
                 for(size_t j=0;j<grad_z_term.ny();j++){
                     for(size_t k=0;k<grad_z_term.nz();k++){
-                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)-z; //log space
+                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)/z;
                         std::vector<double> grad_w_term_addends;
                         for(size_t s=0;s<samples.size();s++){
-                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)-w[s]); //log space
+                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)/w[s]);
                         }
                         // std::cout<<lse(grad_w_term_addends)<<" "<<log(samples.size())<<"\n";
                         grad_w_term.at(i,j,k)=lse(grad_w_term_addends)-log(samples.size());
@@ -716,7 +716,12 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
         }
         if(fabs((prev_nll-nll)/nll)<1e-6){
             std::cout<<"NLL optimization converged after "<<iter<<" iterations.\n";
-            std::cout<<"sweep "<<t<<" iter "<<iter<<" nll="<<nll<<"\n";
+            if(test_samples.size()!=0){
+                std::cout<<"sweep "<<t<<" iter "<<iter<<" train nll="<<nll<<" test nll="<<test_nll<<"\n";
+            }
+            else{
+                std::cout<<"sweep "<<t<<" iter "<<iter<<" train nll="<<nll<<"\n";
+            }
             train_nll_history.insert(std::pair<size_t,double>(iter,nll));
             break;
         }
@@ -751,7 +756,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
         // best_es=g.es();
     // }
     std::cout<<"best nll="<<best_nll<<"\n";
-    std::cout<<"best test nll="<<best_test_nll<<"\n";
+    if(test_samples.size()!=0){std::cout<<"best test nll="<<best_test_nll<<"\n";}
     t++;
     nll=best_nll;
     test_nll=best_test_nll;
@@ -842,10 +847,10 @@ double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t 
             for(size_t i=0;i<grad_z_term.nx();i++){
                 for(size_t j=0;j<grad_z_term.ny();j++){
                     for(size_t k=0;k<grad_z_term.nz();k++){
-                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)-z; //log space
+                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)/z;
                         std::vector<double> grad_w_term_addends;
                         for(size_t s=0;s<sym_samples.size();s++){
-                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)-w[s]); //log space
+                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)/w[s]);
                         }
                         // std::cout<<lse(grad_w_term_addends)<<" "<<log(sym_samples.size())<<"\n";
                         grad_w_term.at(i,j,k)=lse(grad_w_term_addends)-log(sym_samples.size());
@@ -987,10 +992,10 @@ double optimize::hopt_nll2(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t
             for(size_t i=0;i<grad_z_term.nx();i++){
                 for(size_t j=0;j<grad_z_term.ny();j++){
                     for(size_t k=0;k<grad_z_term.nz();k++){
-                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)-z; //log space
+                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)/z;
                         std::vector<double> grad_w_term_addends;
                         for(size_t s=0;s<sym_samples.size();s++){
-                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)-w[s]); //log space
+                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)/w[s]);
                         }
                         // std::cout<<lse(grad_w_term_addends)<<" "<<log(sym_samples.size())<<"\n";
                         grad_w_term.at(i,j,k)=lse(grad_w_term_addends)-log(sym_samples.size());
@@ -1097,8 +1102,8 @@ std::vector<size_t> optimize::classify(graph<cmp>& g,std::vector<sample_data>& s
                 array1d<double> vec_e(g.vs()[n].rank());
                 if(samples[s].s()[n]!=0){
                     for(size_t a=0;a<vec_e.nx();a++){
-                        if(a!=(samples[s].s()[n]-1)){ //if a==samples[s].s()[n]-1, element is log(1)=0. else log(0)=-inf
-                            vec_e.at(a)=log(1e-100);
+                        if(a==(samples[s].s()[n]-1)){ //if a==samples[s].s()[n]-1, element is 1. else 0
+                            vec_e.at(a)=1;
                         }
                     }
                 }
@@ -1121,10 +1126,10 @@ std::vector<size_t> optimize::classify(graph<cmp>& g,std::vector<sample_data>& s
                         std::vector<double> res_vec_addends;
                         for(size_t i=0;i<contracted_vectors[(*it).v1()][s].nx();i++){
                             for(size_t j=0;j<contracted_vectors[(*it).v2()][s].nx();j++){
-                                res_vec_addends.push_back(contracted_vectors[(*it).v1()][s].at(i)+contracted_vectors[(*it).v2()][s].at(j)+(*it).w().at(i,j,k)); //log space
+                                res_vec_addends.push_back(contracted_vectors[(*it).v1()][s].at(i)*contracted_vectors[(*it).v2()][s].at(j)*(*it).w().at(i,j,k));
                             }
                         }
-                        res_vec[s].at(k)=lse(res_vec_addends); //log space
+                        res_vec[s].at(k)=vec_add_float(res_vec_addends);
                     }
                 }
                 contracted_vectors[(*it).order()]=res_vec;
@@ -1138,7 +1143,7 @@ std::vector<size_t> optimize::classify(graph<cmp>& g,std::vector<sample_data>& s
     probs=contracted_vectors[top_bond.order()];
     #pragma omp parallel for
     for(size_t s=0;s<n_samples;s++){
-        double prob_sum=lse(probs[s].e());
+        double prob_sum=vec_add_float(probs[s].e());
         for(size_t i=0;i<probs[s].nx();i++){
             probs[s].at(i)-=prob_sum;
         }
@@ -1160,7 +1165,7 @@ void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<a
     for(size_t i=0;i<dz.nx();i++){
         for(size_t j=0;j<dz.ny();j++){
             for(size_t k=0;k<dz.nz();k++){
-                dz.at(i,j,k)=l_env_z[b.order()].at(i)+r_env_z[b.order()].at(j)+u_env_z[b.order()].at(k); //log space
+                dz.at(i,j,k)=l_env_z[b.order()].at(i)*r_env_z[b.order()].at(j)*u_env_z[b.order()].at(k);
             }
         }
     }
@@ -1170,7 +1175,7 @@ void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<a
         for(size_t i=0;i<dw_e.nx();i++){
             for(size_t j=0;j<dw_e.ny();j++){
                 for(size_t k=0;k<dw_e.nz();k++){
-                    dw_e.at(i,j,k)=l_env_sample[b.order()][s].at(i)+r_env_sample[b.order()][s].at(j)+u_env_sample[b.order()][s].at(k); //log space
+                    dw_e.at(i,j,k)=l_env_sample[b.order()][s].at(i)*r_env_sample[b.order()][s].at(j)*u_env_sample[b.order()][s].at(k);
                 }
             }
         }
@@ -1183,40 +1188,29 @@ void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<a
     for(size_t i=0;i<grad_z_term.nx();i++){
         for(size_t j=0;j<grad_z_term.ny();j++){
             for(size_t k=0;k<grad_z_term.nz();k++){
-                grad_z_term.at(i,j,k)=dz.at(i,j,k)-z; //log space
+                grad_z_term.at(i,j,k)=dz.at(i,j,k)/exp(z);
                 std::vector<double> grad_w_term_addends(w.size());
                 #pragma omp parallel for
                 for(size_t s=0;s<w.size();s++){
-                    grad_w_term_addends[s]=dw[s].at(i,j,k)-w[s]; //log space
+                    grad_w_term_addends[s]=dw[s].at(i,j,k)/exp(w[s]);
                 }
-                grad_w_term.at(i,j,k)=lse(grad_w_term_addends)-log(w.size());
+                grad_w_term.at(i,j,k)=vec_add_float(grad_w_term_addends)/(double) w.size();
                 
                 //perform unconstrained gd on original problem
-                // grad.at(i,j,k)=exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k));
-                if(grad_z_term.at(i,j,k)>grad_w_term.at(i,j,k)){ //more accurate calculation
-                    grad.at(i,j,k)=exp(grad_z_term.at(i,j,k)+log1p(-exp(-(grad_z_term.at(i,j,k)-grad_w_term.at(i,j,k)))));
-                }
-                else{
-                    grad.at(i,j,k)=-exp(grad_w_term.at(i,j,k)+log1p(-exp(-(grad_w_term.at(i,j,k)-grad_z_term.at(i,j,k)))));
-                }
-                
+                grad.at(i,j,k)=grad_z_term.at(i,j,k)-grad_w_term.at(i,j,k);
+                // if(grad_z_term.at(i,j,k)>grad_w_term.at(i,j,k)){ //more accurate calculation
+                    // grad.at(i,j,k)=exp(log(grad_z_term.at(i,j,k))+log1p(-grad_w_term.at(i,j,k)/grad_z_term.at(i,j,k)));
+                // }
+                // else{
+                    // grad.at(i,j,k)=-exp(log(grad_w_term.at(i,j,k))+log1p(-grad_z_term.at(i,j,k)/grad_w_term.at(i,j,k)));
+                // }
                 m_cache.at(i,j,k)=(beta1*m_cache.at(i,j,k))+((1-beta1)*grad.at(i,j,k));
                 v_cache.at(i,j,k)=(beta2*v_cache.at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
                 double corrected_m=m_cache.at(i,j,k)/(1-pow(beta1,(double) t));
                 double corrected_v=v_cache.at(i,j,k)/(1-pow(beta2,(double) t));
-                b.w().at(i,j,k)=exp(b.w().at(i,j,k))-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
-                // b.w().at(i,j,k)=exp(b.w().at(i,j,k))-(lr*grad.at(i,j,k));
-                if(b.w().at(i,j,k)<0){b.w().at(i,j,k)=1e-300;}
-            }
-        }
-    }
-    //project solution onto probability simplex
-    // std::cout<<(std::string) b.w()<<"\n";
-    // b.w()=proj_probability_simplex(b.w());
-    for(size_t i=0;i<b.w().nx();i++){
-        for(size_t j=0;j<b.w().ny();j++){
-            for(size_t k=0;k<b.w().nz();k++){
-                b.w().at(i,j,k)=log(b.w().at(i,j,k));
+                b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
+                // b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*grad.at(i,j,k));
+                if(b.w().at(i,j,k)<=0){b.w().at(i,j,k)=1e-300;}
             }
         }
     }
@@ -1231,9 +1225,9 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
                 for(size_t l=0;l<fused.nw();l++){
                     std::vector<double> sum_addends;
                     for(size_t m=0;m<b1.w().nz();m++){
-                        sum_addends.push_back(b1.w().at(i,j,m)+((b2.v1()==b1.order())?b2.w().at(m,k,l):b2.w().at(k,m,l))); //log space
+                        sum_addends.push_back(b1.w().at(i,j,m)*((b2.v1()==b1.order())?b2.w().at(m,k,l):b2.w().at(k,m,l)));
                     }
-                    fused.at(i,j,k,l)=lse(sum_addends);
+                    fused.at(i,j,k,l)=vec_add_float(sum_addends);
                 }
             }
         }
@@ -1245,7 +1239,7 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
         for(size_t j=0;j<dz.ny();j++){
             for(size_t k=0;k<dz.nz();k++){
                 for(size_t l=0;l<dz.nw();l++){
-                    dz.at(i,j,k,l)=l_env_z[b1.order()].at(i)+r_env_z[b1.order()].at(j)+((b2.v1()==b1.order())?r_env_z[b2.order()].at(k):l_env_z[b2.order()].at(k))+u_env_z[b2.order()].at(l); //log space
+                    dz.at(i,j,k,l)=l_env_z[b1.order()].at(i)*r_env_z[b1.order()].at(j)*((b2.v1()==b1.order())?r_env_z[b2.order()].at(k):l_env_z[b2.order()].at(k))*u_env_z[b2.order()].at(l);
                 }
             }
         }
@@ -1257,7 +1251,7 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
             for(size_t j=0;j<dw_e.ny();j++){
                 for(size_t k=0;k<dw_e.nz();k++){
                     for(size_t l=0;l<dw_e.nw();l++){
-                        dw_e.at(i,j,k,l)=l_env_sample[b1.order()][s].at(i)+r_env_sample[b1.order()][s].at(j)+((b2.v1()==b1.order())?r_env_sample[b2.order()][s].at(k):l_env_sample[b2.order()][s].at(k))+u_env_sample[b2.order()][s].at(l); //log space
+                        dw_e.at(i,j,k,l)=l_env_sample[b1.order()][s].at(i)*r_env_sample[b1.order()][s].at(j)*((b2.v1()==b1.order())?r_env_sample[b2.order()][s].at(k):l_env_sample[b2.order()][s].at(k))*u_env_sample[b2.order()][s].at(l);
                     }
                 }
             }
@@ -1276,35 +1270,36 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
     array4d<double> grad_2site(fused.nx(),fused.ny(),fused.nz(),fused.nw());
     array4d<double> grad_z_term_2site(grad_2site.nx(),grad_2site.ny(),grad_2site.nz(),grad_2site.nw());
     array4d<double> grad_w_term_2site(grad_2site.nx(),grad_2site.ny(),grad_2site.nz(),grad_2site.nw());
+                    
     // std::cout<<"n="<<n<<"\n";
     // std::cout<<(std::string) b1.w()<<"\n";
     for(size_t i=0;i<grad_2site.nx();i++){
         for(size_t j=0;j<grad_2site.ny();j++){
             for(size_t k=0;k<grad_2site.nz();k++){
                 for(size_t l=0;l<grad_2site.nw();l++){
-                    grad_z_term_2site.at(i,j,k,l)=dz.at(i,j,k,l)-z; //log space
+                    grad_z_term_2site.at(i,j,k,l)=dz.at(i,j,k,l)/exp(z);
                     std::vector<double> grad_w_term_2site_addends(w.size());
                     #pragma omp parallel for
                     for(size_t s=0;s<w.size();s++){
-                        grad_w_term_2site_addends[s]=dw[s].at(i,j,k,l)-w[s]; //log space
+                        grad_w_term_2site_addends[s]=dw[s].at(i,j,k,l)/exp(w[s]);
                     }
-                    grad_w_term_2site.at(i,j,k,l)=lse(grad_w_term_2site_addends)-log(w.size());
+                    grad_w_term_2site.at(i,j,k,l)=vec_add_float(grad_w_term_2site_addends)/(double) w.size();
                     
                     //perform projected nonnegative gd on original problem
-                    // grad_2site.at(i,j,k)=exp(grad_z_term_2site.at(i,j,k))-exp(grad_w_term_2site.at(i,j,k));
-                    if(grad_z_term_2site.at(i,j,k,l)>grad_w_term_2site.at(i,j,k,l)){ //more accurate calculation
-                        grad_2site.at(i,j,k,l)=exp(grad_z_term_2site.at(i,j,k,l)+log1p(-exp(-(grad_z_term_2site.at(i,j,k,l)-grad_w_term_2site.at(i,j,k,l)))));
-                    }
-                    else{
-                        grad_2site.at(i,j,k,l)=-exp(grad_w_term_2site.at(i,j,k,l)+log1p(-exp(-(grad_w_term_2site.at(i,j,k,l)-grad_z_term_2site.at(i,j,k,l)))));
-                    }
+                    grad_2site.at(i,j,k,l)=grad_z_term_2site.at(i,j,k,l)-grad_w_term_2site.at(i,j,k,l);
+                    // if(grad_z_term_2site.at(i,j,k,l)>grad_w_term_2site.at(i,j,k,l)){ //more accurate calculation
+                        // grad_2site.at(i,j,k,l)=exp(log(grad_z_term_2site.at(i,j,k,l))+log1p(-grad_w_term_2site.at(i,j,k,l)/grad_z_term_2site.at(i,j,k,l)));
+                    // }
+                    // else{
+                        // grad_2site.at(i,j,k,l)=-exp(log(grad_w_term_2site.at(i,j,k,l))+log1p(-grad_z_term_2site.at(i,j,k,l)/grad_w_term_2site.at(i,j,k,l)));
+                    // }
                     m_cache[key].at(i,j,k,l)=(beta1*m_cache[key].at(i,j,k,l))+((1-beta1)*grad_2site.at(i,j,k,l));
                     v_cache[key].at(i,j,k,l)=(beta2*v_cache[key].at(i,j,k,l))+((1-beta2)*grad_2site.at(i,j,k,l)*grad_2site.at(i,j,k,l));
                     double corrected_m=m_cache[key].at(i,j,k,l)/(1-pow(beta1,(double) t));
                     double corrected_v=v_cache[key].at(i,j,k,l)/(1-pow(beta2,(double) t));
-                    fused.at(i,j,k,l)=exp(fused.at(i,j,k,l))-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
-                    // fused.at(i,j,k,l)=exp(fused.at(i,j,k,l))-(lr*grad_2site.at(i,j,k,l));
-                    if(fused.at(i,j,k,l)<0){fused.at(i,j,k,l)=1e-300;}
+                    fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
+                    // fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*grad_2site.at(i,j,k,l));
+                    if(fused.at(i,j,k,l)<=0){fused.at(i,j,k,l)=1e-300;}
                 }
             }
         }
@@ -1323,10 +1318,10 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
         std::vector<double> a_subsystem_vec_z_addends;
         for(size_t i=0;i<current.w().nx();i++){
             for(size_t j=0;j<current.w().ny();j++){
-                a_subsystem_vec_z_addends.push_back(l_env_z[current.order()].at(i)+r_env_z[current.order()].at(j)+current.w().at(i,j,k));
+                a_subsystem_vec_z_addends.push_back(l_env_z[current.order()].at(i)*r_env_z[current.order()].at(j)*current.w().at(i,j,k));
             }
         }
-        a_subsystem_vec_z.at(k)=lse(a_subsystem_vec_z_addends);
+        a_subsystem_vec_z.at(k)=vec_add_float(a_subsystem_vec_z_addends);
     }
     #pragma omp parallel for
     for(size_t s=0;s<n_samples;s++){
@@ -1335,10 +1330,10 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
             std::vector<double> a_subsystem_vec_sample_addends;
             for(size_t i=0;i<current.w().nx();i++){
                 for(size_t j=0;j<current.w().ny();j++){
-                    a_subsystem_vec_sample_addends.push_back(l_env_sample[current.order()][s].at(i)+r_env_sample[current.order()][s].at(j)+current.w().at(i,j,k));
+                    a_subsystem_vec_sample_addends.push_back(l_env_sample[current.order()][s].at(i)*r_env_sample[current.order()][s].at(j)*current.w().at(i,j,k));
                 }
             }
-            a_subsystem_vec_sample[s].at(k)=lse(a_subsystem_vec_sample_addends);
+            a_subsystem_vec_sample[s].at(k)=vec_add_float(a_subsystem_vec_sample_addends);
         }
     }
     if((current.order()==parent.v1())){
@@ -1346,10 +1341,10 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
             std::vector<double> b_subsystem_vec_z_addends;
             for(size_t l=0;l<parent.w().ny();l++){
                 for(size_t m=0;m<parent.w().nz();m++){
-                    b_subsystem_vec_z_addends.push_back(r_env_z[parent.order()].at(l)+u_env_z[parent.order()].at(m)+parent.w().at(k,l,m));
+                    b_subsystem_vec_z_addends.push_back(r_env_z[parent.order()].at(l)*u_env_z[parent.order()].at(m)*parent.w().at(k,l,m));
                 }
             }
-            b_subsystem_vec_z.at(k)=lse(b_subsystem_vec_z_addends);
+            b_subsystem_vec_z.at(k)=vec_add_float(b_subsystem_vec_z_addends);
         }
         #pragma omp parallel for
         for(size_t s=0;s<n_samples;s++){
@@ -1358,10 +1353,10 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
                 std::vector<double> b_subsystem_vec_sample_addends;
                 for(size_t l=0;l<parent.w().ny();l++){
                     for(size_t m=0;m<parent.w().nz();m++){
-                        b_subsystem_vec_sample_addends.push_back(r_env_sample[parent.order()][s].at(l)+u_env_sample[parent.order()][s].at(m)+parent.w().at(k,l,m));
+                        b_subsystem_vec_sample_addends.push_back(r_env_sample[parent.order()][s].at(l)*u_env_sample[parent.order()][s].at(m)*parent.w().at(k,l,m));
                     }
                 }
-                b_subsystem_vec_sample[s].at(k)=lse(b_subsystem_vec_sample_addends);
+                b_subsystem_vec_sample[s].at(k)=vec_add_float(b_subsystem_vec_sample_addends);
             }
         }
     }
@@ -1370,10 +1365,10 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
             std::vector<double> b_subsystem_vec_z_addends;
             for(size_t k=0;k<parent.w().nx();k++){
                 for(size_t m=0;m<parent.w().nz();m++){
-                    b_subsystem_vec_z_addends.push_back(l_env_z[parent.order()].at(k)+u_env_z[parent.order()].at(m)+parent.w().at(k,l,m));
+                    b_subsystem_vec_z_addends.push_back(l_env_z[parent.order()].at(k)*u_env_z[parent.order()].at(m)*parent.w().at(k,l,m));
                 }
             }
-            b_subsystem_vec_z.at(l)=lse(b_subsystem_vec_z_addends);
+            b_subsystem_vec_z.at(l)=vec_add_float(b_subsystem_vec_z_addends);
         }
         #pragma omp parallel for
         for(size_t s=0;s<n_samples;s++){
@@ -1382,18 +1377,18 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
                 std::vector<double> b_subsystem_vec_sample_addends;
                 for(size_t k=0;k<parent.w().nx();k++){
                     for(size_t m=0;m<parent.w().nz();m++){
-                        b_subsystem_vec_sample_addends.push_back(l_env_sample[parent.order()][s].at(k)+u_env_sample[parent.order()][s].at(m)+parent.w().at(k,l,m));
+                        b_subsystem_vec_sample_addends.push_back(l_env_sample[parent.order()][s].at(k)*u_env_sample[parent.order()][s].at(m)*parent.w().at(k,l,m));
                     }
                 }
-                b_subsystem_vec_sample[s].at(l)=lse(b_subsystem_vec_sample_addends);
+                b_subsystem_vec_sample[s].at(l)=vec_add_float(b_subsystem_vec_sample_addends);
             }
         }
     }
     std::vector<double> z_addends;
     for(size_t k=0;k<current.w().nz();k++){
-        z_addends.push_back(a_subsystem_vec_z.at(k)+b_subsystem_vec_z.at(k));
+        z_addends.push_back(a_subsystem_vec_z.at(k)*b_subsystem_vec_z.at(k));
     }
-    double z=lse(z_addends);
+    double z=log(vec_add_float(z_addends));
     double s_a=0;
     double s_b=0;
     double s_ab=0;
@@ -1403,13 +1398,13 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
         std::vector<double> s_b_addends;
         std::vector<double> s_ab_addends;
         for(size_t k=0;k<current.w().nz();k++){
-            s_a_addends.push_back(a_subsystem_vec_sample[s].at(k)+b_subsystem_vec_z.at(k));
-            s_b_addends.push_back(a_subsystem_vec_z.at(k)+b_subsystem_vec_sample[s].at(k));
-            s_ab_addends.push_back(a_subsystem_vec_sample[s].at(k)+b_subsystem_vec_sample[s].at(k));
+            s_a_addends.push_back(a_subsystem_vec_sample[s].at(k)*b_subsystem_vec_z.at(k));
+            s_b_addends.push_back(a_subsystem_vec_z.at(k)*b_subsystem_vec_sample[s].at(k));
+            s_ab_addends.push_back(a_subsystem_vec_sample[s].at(k)*b_subsystem_vec_sample[s].at(k));
         }
-        s_a-=lse(s_a_addends);
-        s_b-=lse(s_b_addends);
-        s_ab-=lse(s_ab_addends);
+        s_a-=log(vec_add_float(s_a_addends));
+        s_b-=log(vec_add_float(s_b_addends));
+        s_ab-=log(vec_add_float(s_ab_addends));
     }
     double bmi=((s_a+s_b-s_ab)/(double) n_samples)+z;
     // std::cout<<"current:\n"<<(std::string)current.w()<<"\n";
@@ -1433,13 +1428,22 @@ double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_
     #pragma omp parallel for
     for(size_t s=0;s<n_samples;s++){
         array1d<double> vec_e(input_rank);
-        for(size_t a=0;a<vec_e.nx();a++){
-            if(a!=(samples[s].s()[idx]-1)){ //if a==samples[s].s()[n]-1, element is log(1)=0. else log(0)=-inf
-                vec_e.at(a)=log(1e-100);
+        for(size_t as=0;as<vec_e.nx();as++){
+            if(as==(samples[s].s()[idx]-1)){ //if a==samples[s].s()[n]-1, element is 1. else 0
+                vec_e.at(as)=1;
             }
         }
         a_subsystem_vec_sample[s]=vec_e;
-        b_subsystem_vec_sample[s]=array1d<double>(input_rank);
+        array1d<double> vec_e2(input_rank);
+        for(size_t bs=0;bs<vec_e2.nx();bs++){
+            vec_e2.at(bs)=1;
+        }
+        b_subsystem_vec_sample[s]=vec_e2;
+        array1d<double> vec_e3(input_rank);
+        for(size_t az=0;az<vec_e3.nx();az++){
+            vec_e3.at(az)=1;
+        }
+        a_subsystem_vec_z=vec_e3;
     }
     if((idx==parent.v1())){
         for(size_t k=0;k<parent.w().nx();k++){
@@ -1449,10 +1453,10 @@ double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_
                 for(size_t m=0;m<parent.w().nz();m++){
             // for(size_t l=0;l<r_env_z[parent.order()].nx();l++){
                 // for(size_t m=0;m<u_env_z[parent.order()].nx();m++){
-                    b_subsystem_vec_z_addends.push_back(r_env_z[parent.order()].at(l)+u_env_z[parent.order()].at(m)+parent.w().at(k,l,m));
+                    b_subsystem_vec_z_addends.push_back(r_env_z[parent.order()].at(l)*u_env_z[parent.order()].at(m)*parent.w().at(k,l,m));
                 }
             }
-            b_subsystem_vec_z.at(k)=lse(b_subsystem_vec_z_addends);
+            b_subsystem_vec_z.at(k)=vec_add_float(b_subsystem_vec_z_addends);
         }
         #pragma omp parallel for
         for(size_t s=0;s<n_samples;s++){
@@ -1463,10 +1467,10 @@ double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_
                     for(size_t m=0;m<parent.w().nz();m++){
                 // for(size_t l=0;l<r_env_z[parent.order()].nx();l++){
                     // for(size_t m=0;m<u_env_z[parent.order()].nx();m++){
-                        b_subsystem_vec_sample_addends.push_back(r_env_sample[parent.order()][s].at(l)+u_env_sample[parent.order()][s].at(m)+parent.w().at(k,l,m));
+                        b_subsystem_vec_sample_addends.push_back(r_env_sample[parent.order()][s].at(l)*u_env_sample[parent.order()][s].at(m)*parent.w().at(k,l,m));
                     }
                 }
-                b_subsystem_vec_sample[s].at(k)=lse(b_subsystem_vec_sample_addends);
+                b_subsystem_vec_sample[s].at(k)=vec_add_float(b_subsystem_vec_sample_addends);
             }
         }
     }
@@ -1478,10 +1482,10 @@ double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_
                 for(size_t m=0;m<parent.w().nz();m++){
             // for(size_t k=0;k<l_env_z[parent.order()].nx();k++){
                 // for(size_t m=0;m<u_env_z[parent.order()].nx();m++){
-                    b_subsystem_vec_z_addends.push_back(l_env_z[parent.order()].at(k)+u_env_z[parent.order()].at(m)+parent.w().at(k,l,m));
+                    b_subsystem_vec_z_addends.push_back(l_env_z[parent.order()].at(k)*u_env_z[parent.order()].at(m)*parent.w().at(k,l,m));
                 }
             }
-            b_subsystem_vec_z.at(l)=lse(b_subsystem_vec_z_addends);
+            b_subsystem_vec_z.at(l)=vec_add_float(b_subsystem_vec_z_addends);
         }
         #pragma omp parallel for
         for(size_t s=0;s<n_samples;s++){
@@ -1492,18 +1496,18 @@ double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_
                     for(size_t m=0;m<parent.w().nz();m++){
                 // for(size_t k=0;k<l_env_z[parent.order()].nx();k++){
                     // for(size_t m=0;m<u_env_z[parent.order()].nx();m++){
-                        b_subsystem_vec_sample_addends.push_back(l_env_sample[parent.order()][s].at(k)+u_env_sample[parent.order()][s].at(m)+parent.w().at(k,l,m));
+                        b_subsystem_vec_sample_addends.push_back(l_env_sample[parent.order()][s].at(k)*u_env_sample[parent.order()][s].at(m)*parent.w().at(k,l,m));
                     }
                 }
-                b_subsystem_vec_sample[s].at(l)=lse(b_subsystem_vec_sample_addends);
+                b_subsystem_vec_sample[s].at(l)=vec_add_float(b_subsystem_vec_sample_addends);
             }
         }
     }
     std::vector<double> z_addends;
     for(size_t k=0;k<input_rank;k++){
-        z_addends.push_back(a_subsystem_vec_z.at(k)+b_subsystem_vec_z.at(k));
+        z_addends.push_back(a_subsystem_vec_z.at(k)*b_subsystem_vec_z.at(k));
     }
-    double z=lse(z_addends);
+    double z=log(vec_add_float(z_addends));
     double s_a=0;
     double s_b=0;
     double s_ab=0;
@@ -1513,13 +1517,13 @@ double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_
         std::vector<double> s_b_addends;
         std::vector<double> s_ab_addends;
         for(size_t k=0;k<input_rank;k++){
-            s_a_addends.push_back(a_subsystem_vec_sample[s].at(k)+b_subsystem_vec_z.at(k));
-            s_b_addends.push_back(a_subsystem_vec_z.at(k)+b_subsystem_vec_sample[s].at(k));
-            s_ab_addends.push_back(a_subsystem_vec_sample[s].at(k)+b_subsystem_vec_sample[s].at(k));
+            s_a_addends.push_back(a_subsystem_vec_sample[s].at(k)*b_subsystem_vec_z.at(k));
+            s_b_addends.push_back(a_subsystem_vec_z.at(k)*b_subsystem_vec_sample[s].at(k));
+            s_ab_addends.push_back(a_subsystem_vec_sample[s].at(k)*b_subsystem_vec_sample[s].at(k));
         }
-        s_a-=lse(s_a_addends);
-        s_b-=lse(s_b_addends);
-        s_ab-=lse(s_ab_addends);
+        s_a-=log(vec_add_float(s_a_addends));
+        s_b-=log(vec_add_float(s_b_addends));
+        s_ab-=log(vec_add_float(s_ab_addends));
     }
     double bmi=((s_a+s_b-s_ab)/(double) n_samples)+z;
     // std::cout<<"z: "<<z<<"\n";
@@ -1640,7 +1644,7 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     for(size_t i=0;i<mat1.nx();i++){
         for(size_t j=0;j<mat1.ny();j++){
             double val=mat1.at(i,j,0);
-            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=log((val>epsilon)?val:epsilon);
+            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=(val>epsilon)?val:epsilon;
         }
     }
     for(size_t i=0;i<mat2.nx();i++){
@@ -1648,11 +1652,11 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
             double val;
             if(parent.v1()==current.order()){
                 val=mat2.at(i,j,0);
-                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=log((val>epsilon)?val:epsilon);
+                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=(val>epsilon)?val:epsilon;
             }
             else{
                 val=mat2.at(i,j,0);
-                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=log((val>epsilon)?val:epsilon);
+                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=(val>epsilon)?val:epsilon;
             }
         }
     }
@@ -1737,7 +1741,7 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     for(size_t i=0;i<mat1.nx();i++){
         for(size_t j=0;j<mat1.ny();j++){
             double val=mat1.at(i,j,0);
-            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=log((val>epsilon)?val:epsilon);
+            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=(val>epsilon)?val:epsilon;
         }
     }
     for(size_t i=0;i<mat2.nx();i++){
@@ -1745,10 +1749,10 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
             double val;
             val=mat2.at(i,j,0);
             if(parent.v1()==current.order()){
-                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=log((val>epsilon)?val:epsilon);
+                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=(val>epsilon)?val:epsilon;
             }
             else{
-                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=log((val>epsilon)?val:epsilon);
+                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=(val>epsilon)?val:epsilon;
             }
         }
     }
@@ -1869,7 +1873,7 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     for(size_t i=0;i<mat1.nx();i++){
         for(size_t j=0;j<mat1.ny();j++){
             double val=mat1.at(i,j,0);
-            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=log((val>epsilon)?val:epsilon);
+            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=(val>epsilon)?val:epsilon;
         }
     }
     for(size_t i=0;i<mat2.nx();i++){
@@ -1877,10 +1881,10 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
             double val;
             val=mat2.at(i,j,0);
             if(parent.v1()==current.order()){
-                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=log((val>epsilon)?val:epsilon);
+                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=(val>epsilon)?val:epsilon;
             }
             else{
-                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=log((val>epsilon)?val:epsilon);
+                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=(val>epsilon)?val:epsilon;
             }
         }
     }

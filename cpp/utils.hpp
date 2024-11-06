@@ -46,11 +46,25 @@ inline double lse(std::vector<double> v){
 }
 
 //sorted float add
+// inline double vec_add_float(std::vector<double> v){
+    // std::sort(v.begin(),v.end());
+    // double sum=0;
+    // for(size_t i=0;i<v.size();i++){
+        // sum+=v[i];
+    // }
+    // return sum;
+// }
+
+//kahan sum
 inline double vec_add_float(std::vector<double> v){
-    std::sort(v.begin(),v.end());
-    double sum=0;
-    for(size_t i=0;i<v.size();i++){
-        sum+=v[i];
+    if(v.size()==0){return 0;}
+    double c=0; //compensation term
+    double sum=v[0];
+    for(size_t i=0;i<v.size()-1;i++){
+        double y=v[i+1]-c; //corrected addend
+        double t=sum+y; //corrected addend added to current sum
+        c=(t-sum)-y; //next compensation
+        sum=t;
     }
     return sum;
 }
@@ -149,5 +163,4 @@ inline std::vector<std::vector<double> > potts_ref_vecs(size_t q){
     // std::cout<<"\n";
     return v;
 }
-
 #endif

@@ -11,7 +11,7 @@ std::vector<array3d<double> > calc_dz(std::vector<array1d<double> >& l_env,std::
         for(size_t i=0;i<l_env[n].nx();i++){
             for(size_t j=0;j<r_env[n].nx();j++){
                 for(size_t k=0;k<u_env[n].nx();k++){
-                    res_element.at(i,j,k)=l_env[n].at(i)+r_env[n].at(j)+u_env[n].at(k); //log space
+                    res_element.at(i,j,k)=l_env[n].at(i)*r_env[n].at(j)*u_env[n].at(k);
                 }
             }
         }
@@ -26,7 +26,11 @@ double calc_z(graph<cmp>& g){
     std::vector<array1d<double> > contracted_vectors;
     for(size_t n=0;n<g.vs().size();n++){
         if(n<g.n_phys_sites()){ //physical (input) sites do not correspond to tensors, so environment is empty vector
-            contracted_vectors.push_back(array1d<double>(g.vs()[n].rank())); //0 because log(1)=0
+            array1d<double> v(g.vs()[n].rank());
+            for(size_t i=0;i<v.nx();i++){
+                v.at(i)=1;
+            }
+            contracted_vectors.push_back(v);
             contracted_idx_count++;
         }
         else{ //virtual sites correspond to tensors
@@ -41,10 +45,10 @@ double calc_z(graph<cmp>& g){
                     std::vector<double> res_vec_addends;
                     for(size_t i=0;i<contracted_vectors[(*it).v1()].nx();i++){
                         for(size_t j=0;j<contracted_vectors[(*it).v2()].nx();j++){
-                            res_vec_addends.push_back(contracted_vectors[(*it).v1()].at(i)+contracted_vectors[(*it).v2()].at(j)+(*it).w().at(i,j,k)); //log space
+                            res_vec_addends.push_back(contracted_vectors[(*it).v1()].at(i)*contracted_vectors[(*it).v2()].at(j)*(*it).w().at(i,j,k));
                         }
                     }
-                    res_vec.at(k)=lse(res_vec_addends); //log space
+                    res_vec.at(k)=vec_add_float(res_vec_addends);
                 }
                 contracted_vectors[(*it).order()]=res_vec;
                 contracted_idx_count++;
@@ -56,7 +60,7 @@ double calc_z(graph<cmp>& g){
     for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
         z_addends.push_back(contracted_vectors[g.vs().size()-1].at(k));
     }
-    double z=lse(z_addends);
+    double z=log(vec_add_float(z_addends));
     return z;
 }
 template double calc_z(graph<bmi_comparator>&);
@@ -69,7 +73,11 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
     std::vector<array1d<double> > contracted_vectors;
     for(size_t n=0;n<g.vs().size();n++){
         if(n<g.n_phys_sites()){ //physical (input) sites do not correspond to tensors, so environment is empty vector
-            contracted_vectors.push_back(array1d<double>(g.vs()[n].rank())); //0 because log(1)=0
+            array1d<double> v(g.vs()[n].rank());
+            for(size_t i=0;i<v.nx();i++){
+                v.at(i)=1;
+            }
+            contracted_vectors.push_back(v);
         }
         else{ //virtual sites correspond to tensors
             contracted_vectors.push_back(array1d<double>());
@@ -87,10 +95,10 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
                     std::vector<double> res_vec_addends;
                     for(size_t i=0;i<contracted_vectors[(*it).v1()].nx();i++){
                         for(size_t j=0;j<contracted_vectors[(*it).v2()].nx();j++){
-                            res_vec_addends.push_back(contracted_vectors[(*it).v1()].at(i)+contracted_vectors[(*it).v2()].at(j)+(*it).w().at(i,j,k)); //log space
+                            res_vec_addends.push_back(contracted_vectors[(*it).v1()].at(i)*contracted_vectors[(*it).v2()].at(j)*(*it).w().at(i,j,k));
                         }
                     }
-                    res_vec.at(k)=lse(res_vec_addends); //log space
+                    res_vec.at(k)=vec_add_float(res_vec_addends);
                 }
                 contracted_vectors[(*it).order()]=res_vec;
                 l_env[(*it).order()]=contracted_vectors[(*it).v1()];
@@ -100,34 +108,26 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
             }
         }
     }
-    // std::cout<<"l_env:\n:";
-    // for(size_t a=0;a<l_env.size();a++){
-        // std::cout<<(std::string)l_env[a]<<"\n";
-    // }
-    // std::cout<<"r_env:\n:";
-    // for(size_t a=0;a<r_env.size();a++){
-        // std::cout<<(std::string)r_env[a]<<"\n";
-    // }
-    // std::cout<<"u_env:\n:";
-    // for(size_t a=0;a<u_env.size();a++){
-        // std::cout<<(std::string)u_env[a]<<"\n";
-    // }
     contracted_idx_count=0; //reset counter
     while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset, in reverse, repeatedly until all idxs processed
         for(auto it=g.es().rbegin();it!=g.es().rend();++it){
             if((u_env[(*it).v1()].nx()==0)&&(u_env[(*it).v2()].nx()==0)){
                 if((*it).order()==g.vs().size()-1){ //top tensor's u_env is all ones
-                    u_env[(*it).order()]=array1d<double>(g.vs()[(*it).order()].rank()); //0 because log(1)=0
+                    array1d<double> v(g.vs()[(*it).order()].rank());
+                    for(size_t i=0;i<v.nx();i++){
+                        v.at(i)=1;
+                    }
+                    u_env[(*it).order()]=v;
                 }
                 array1d<double> res_vec_l(g.vs()[(*it).v1()].rank());
                 for(size_t i=0;i<contracted_vectors[(*it).v1()].nx();i++){
                     std::vector<double> res_vec_l_addends;
                     for(size_t j=0;j<contracted_vectors[(*it).v2()].nx();j++){
                         for(size_t k=0;k<(*it).w().nz();k++){
-                            res_vec_l_addends.push_back(r_env[(*it).order()].at(j)+u_env[(*it).order()].at(k)+(*it).w().at(i,j,k)); //log space
+                            res_vec_l_addends.push_back(r_env[(*it).order()].at(j)*u_env[(*it).order()].at(k)*(*it).w().at(i,j,k));
                         }
                     }
-                    res_vec_l.at(i)=lse(res_vec_l_addends); //log space
+                    res_vec_l.at(i)=vec_add_float(res_vec_l_addends);
                 }
                 u_env[(*it).v1()]=res_vec_l;
                 array1d<double> res_vec_r(g.vs()[(*it).v2()].rank());
@@ -135,10 +135,10 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
                     std::vector<double> res_vec_r_addends;
                     for(size_t i=0;i<contracted_vectors[(*it).v1()].nx();i++){
                         for(size_t k=0;k<(*it).w().nz();k++){
-                            res_vec_r_addends.push_back(l_env[(*it).order()].at(i)+u_env[(*it).order()].at(k)+(*it).w().at(i,j,k)); //log space
+                            res_vec_r_addends.push_back(l_env[(*it).order()].at(i)*u_env[(*it).order()].at(k)*(*it).w().at(i,j,k));
                         }
                     }
-                    res_vec_r.at(j)=lse(res_vec_r_addends); //log space
+                    res_vec_r.at(j)=vec_add_float(res_vec_r_addends);
                 }
                 u_env[(*it).v2()]=res_vec_r;
                 contracted_idx_count++;
@@ -150,7 +150,7 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
     for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
         z_addends.push_back(contracted_vectors[g.vs().size()-1].at(k));
     }
-    double z=lse(z_addends);
+    double z=log(vec_add_float(z_addends));
     return z;
 }
 template double calc_z(graph<bmi_comparator>&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
@@ -183,14 +183,14 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
                     for(size_t j=0;j<(*it).w().ny();j++){
                         for(size_t k=0;k<(*it).w().nz();k++){
                             if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
-                                res_vec_addends.push_back(r_env[idx].at(j)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                                res_vec_addends.push_back(r_env[idx].at(j)*u_env[idx].at(k)*(*it).w().at(i,j,k));
                             }
                             else{
-                                res_vec_addends.push_back(u_env[idx].at(k)+(*it).w().at(i,j,k));
+                                res_vec_addends.push_back(u_env[idx].at(k)*(*it).w().at(i,j,k));
                             }
                         }
                     }
-                    res_vec.at(i)=lse(res_vec_addends); //log space
+                    res_vec.at(i)=vec_add_float(res_vec_addends);
                 }
                 u_env[(*it).v1()]=res_vec;
                 done_idxs.insert((*it).v1());
@@ -207,14 +207,14 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
                     for(size_t i=0;i<(*it).w().nx();i++){
                         for(size_t k=0;k<(*it).w().nz();k++){
                             if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
-                                res_vec_addends.push_back(l_env[idx].at(i)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                                res_vec_addends.push_back(l_env[idx].at(i)*u_env[idx].at(k)*(*it).w().at(i,j,k));
                             }
                             else{
-                                res_vec_addends.push_back(u_env[idx].at(k)+(*it).w().at(i,j,k));
+                                res_vec_addends.push_back(u_env[idx].at(k)*(*it).w().at(i,j,k));
                             }
                         }
                     }
-                    res_vec.at(j)=lse(res_vec_addends); //log space
+                    res_vec.at(j)=vec_add_float(res_vec_addends);
                 }
                 u_env[(*it).v2()]=res_vec;
                 done_idxs.insert((*it).v2());
@@ -239,10 +239,10 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
                 std::vector<double> res_vec_addends;
                 for(size_t i=0;i<(*it2).w().nx();i++){
                     for(size_t j=0;j<(*it2).w().ny();j++){
-                        res_vec_addends.push_back(l_env[(*it2).order()].at(i)+r_env[(*it2).order()].at(j)+(*it2).w().at(i,j,k)); //log space
+                        res_vec_addends.push_back(l_env[(*it2).order()].at(i)*r_env[(*it2).order()].at(j)*(*it2).w().at(i,j,k));
                     }
                 }
-                res_vec.at(k)=lse(res_vec_addends); //log space
+                res_vec.at(k)=vec_add_float(res_vec_addends);
             }
             if(g.vs()[u_idx].l_idx()==(*it2).order()){
                 l_env[u_idx]=res_vec;
@@ -286,14 +286,14 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
                     for(size_t j=0;j<(*it).w().ny();j++){
                         for(size_t k=0;k<(*it).w().nz();k++){
                             if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
-                                res_vec_addends.push_back(r_env[idx].at(j)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                                res_vec_addends.push_back(r_env[idx].at(j)*u_env[idx].at(k)*(*it).w().at(i,j,k));
                             }
                             else{
                                 res_vec_addends.push_back(u_env[idx].at(k)+(*it).w().at(i,j,k));
                             }
                         }
                     }
-                    res_vec.at(i)=lse(res_vec_addends); //log space
+                    res_vec.at(i)=vec_add_float(res_vec_addends);
                 }
                 u_env[(*it).v1()]=res_vec;
                 done_idxs.insert((*it).v1());
@@ -310,14 +310,14 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
                     for(size_t i=0;i<(*it).w().nx();i++){
                         for(size_t k=0;k<(*it).w().nz();k++){
                             if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
-                                res_vec_addends.push_back(l_env[idx].at(i)+u_env[idx].at(k)+(*it).w().at(i,j,k)); //log space
+                                res_vec_addends.push_back(l_env[idx].at(i)*u_env[idx].at(k)*(*it).w().at(i,j,k));
                             }
                             else{
                                 res_vec_addends.push_back(u_env[idx].at(k)+(*it).w().at(i,j,k));
                             }
                         }
                     }
-                    res_vec.at(j)=lse(res_vec_addends); //log space
+                    res_vec.at(j)=vec_add_float(res_vec_addends);
                 }
                 u_env[(*it).v2()]=res_vec;
                 done_idxs.insert((*it).v2());
@@ -331,15 +331,15 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
         std::vector<double> res_vec_addends;
         for(size_t i=0;i<(*it4).w().nx();i++){
             for(size_t j=0;j<(*it4).w().ny();j++){
-                res_vec_addends.push_back(l_env[(*it4).order()].at(i)+r_env[(*it4).order()].at(j)+(*it4).w().at(i,j,k)); //log space
+                res_vec_addends.push_back(l_env[(*it4).order()].at(i)*r_env[(*it4).order()].at(j)*(*it4).w().at(i,j,k));
             }
         }
-        res_vec.at(k)=lse(res_vec_addends); //log space
+        res_vec.at(k)=vec_add_float(res_vec_addends);
     }
     for(size_t k=0;k<g.vs()[top_idx].rank();k++){
         z_addends.push_back(res_vec.at(k));
     }
-    double z=lse(z_addends);
+    double z=log(vec_add_float(z_addends));
     return z;
 }
 template double update_cache_z(graph<bmi_comparator>&,size_t,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::set<size_t>&);
@@ -353,7 +353,7 @@ std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<arra
             for(size_t i=0;i<l_env[n][s].nx();i++){
                 for(size_t j=0;j<r_env[n][s].nx();j++){
                     for(size_t k=0;k<u_env[n][s].nx();k++){
-                        res_element.at(i,j,k)=l_env[n][s].at(i)+r_env[n][s].at(j)+u_env[n][s].at(k); //log space
+                        res_element.at(i,j,k)=l_env[n][s].at(i)*r_env[n][s].at(j)*u_env[n][s].at(k);
                     }
                 }
             }
@@ -379,8 +379,8 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
                 array1d<double> vec_e(g.vs()[n].rank());
                 if(samples[s].s()[n]!=0){
                     for(size_t a=0;a<vec_e.nx();a++){
-                        if(a!=(samples[s].s()[n]-1)){ //if a==samples[s].s()[n]-1, element is log(1)=0. else log(0)=-inf
-                            vec_e.at(a)=log(1e-100);
+                        if(a==(samples[s].s()[n]-1)){ //if a==samples[s].s()[n]-1, element is 1. else 0
+                            vec_e.at(a)=1;
                         }
                     }
                 }
@@ -394,8 +394,8 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
             for(size_t s=0;s<n_samples;s++){
                 array1d<double> vec_e(g.vs()[n].rank());
                 for(size_t a=0;a<vec_e.nx();a++){
-                    if(a!=labels[s]){ //if a==labels[s], element is log(1)=0. else log(0)=-inf
-                        vec_e.at(a)=log(1e-100);
+                    if(a==labels[s]){ //if a==labels[s], element is 1. else 0
+                        vec_e.at(a)=1;
                     }
                 }
                 vec[s]=vec_e;
@@ -411,7 +411,16 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
     }
     
     if(labels.size()==0){ //top tensor's u_env is all ones
-        u_env[g.vs().size()-1]=std::vector<array1d<double> >(n_samples,array1d<double>(g.vs()[g.vs().size()-1].rank())); //0 because log(1)=0
+        u_env[g.vs().size()-1]=std::vector<array1d<double> >(n_samples);
+        for(size_t n=0;n<u_env.size();n++){
+            for(size_t s=0;s<n_samples;s++){
+                array1d<double> v(g.vs()[g.vs().size()-1].rank());
+                for(size_t i=0;i<v.nx();i++){
+                    v.at(i)=1;
+                }
+                u_env[g.vs().size()-1][s]=v;
+            }
+        }
     }
     else{
         u_env[g.vs().size()-1]=contracted_vectors[g.vs().size()-1];
@@ -428,10 +437,10 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
                         std::vector<double> res_vec_addends;
                         for(size_t i=0;i<contracted_vectors[(*it).v1()][s].nx();i++){
                             for(size_t j=0;j<contracted_vectors[(*it).v2()][s].nx();j++){
-                                res_vec_addends.push_back(contracted_vectors[(*it).v1()][s].at(i)+contracted_vectors[(*it).v2()][s].at(j)+(*it).w().at(i,j,k)); //log space
+                                res_vec_addends.push_back(contracted_vectors[(*it).v1()][s].at(i)*contracted_vectors[(*it).v2()][s].at(j)*(*it).w().at(i,j,k));
                             }
                         }
-                        res_vec[s].at(k)=lse(res_vec_addends); //log space
+                        res_vec[s].at(k)=vec_add_float(res_vec_addends);
                     }
                 }
                 contracted_vectors[(*it).order()]=res_vec;
@@ -453,10 +462,10 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
                         std::vector<double> res_vec_l_addends;
                         for(size_t j=0;j<contracted_vectors[(*it).v2()][s].nx();j++){
                             for(size_t k=0;k<(*it).w().nz();k++){
-                                res_vec_l_addends.push_back(r_env[(*it).order()][s].at(j)+u_env[(*it).order()][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                res_vec_l_addends.push_back(r_env[(*it).order()][s].at(j)*u_env[(*it).order()][s].at(k)*(*it).w().at(i,j,k));
                             }
                         }
-                        res_vec_l[s].at(i)=lse(res_vec_l_addends); //log space
+                        res_vec_l[s].at(i)=vec_add_float(res_vec_l_addends);
                     }
                 }
                 u_env[(*it).v1()]=res_vec_l;
@@ -467,10 +476,10 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
                         std::vector<double> res_vec_r_addends;
                         for(size_t i=0;i<contracted_vectors[(*it).v1()][s].nx();i++){
                             for(size_t k=0;k<(*it).w().nz();k++){
-                                res_vec_r_addends.push_back(l_env[(*it).order()][s].at(i)+u_env[(*it).order()][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                res_vec_r_addends.push_back(l_env[(*it).order()][s].at(i)*u_env[(*it).order()][s].at(k)*(*it).w().at(i,j,k));
                             }
                         }
-                        res_vec_r[s].at(j)=lse(res_vec_r_addends); //log space
+                        res_vec_r[s].at(j)=vec_add_float(res_vec_r_addends);
                     }
                 }
                 u_env[(*it).v2()]=res_vec_r;
@@ -483,14 +492,14 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
     #pragma omp parallel for
     for(size_t s=0;s<n_samples;s++){
         if(labels.size()!=0){
-            w[s]=contracted_vectors[g.vs().size()-1][s].at(labels[s]);
+            w[s]=log(contracted_vectors[g.vs().size()-1][s].at(labels[s]));
         }
         else{
             std::vector<double> w_addends;
             for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
                 w_addends.push_back(contracted_vectors[g.vs().size()-1][s].at(k));
             }
-            w[s]=lse(w_addends);
+            w[s]=log(vec_add_float(w_addends));
         }
     }
     return w;
@@ -535,14 +544,14 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
                         for(size_t j=0;j<(*it).w().ny();j++){
                             for(size_t k=0;k<(*it).w().nz();k++){
                                 if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
-                                    res_vec_addends.push_back(r_env[idx][s].at(j)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                    res_vec_addends.push_back(r_env[idx][s].at(j)*u_env[idx][s].at(k)*(*it).w().at(i,j,k));
                                 }
                                 else{
-                                    res_vec_addends.push_back(u_env[idx][s].at(k)+(*it).w().at(i,j,k));
+                                    res_vec_addends.push_back(u_env[idx][s].at(k)*(*it).w().at(i,j,k));
                                 }
                             }
                         }
-                        res_vec.at(i)=lse(res_vec_addends); //log space
+                        res_vec.at(i)=vec_add_float(res_vec_addends);
                     }
                     u_env[(*it).v1()][s]=res_vec;
                 }
@@ -562,14 +571,14 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
                         for(size_t i=0;i<(*it).w().nx();i++){
                             for(size_t k=0;k<(*it).w().nz();k++){
                                 if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
-                                    res_vec_addends.push_back(l_env[idx][s].at(i)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                    res_vec_addends.push_back(l_env[idx][s].at(i)*u_env[idx][s].at(k)*(*it).w().at(i,j,k));
                                 }
                                 else{
-                                    res_vec_addends.push_back(u_env[idx][s].at(k)+(*it).w().at(i,j,k));
+                                    res_vec_addends.push_back(u_env[idx][s].at(k)*(*it).w().at(i,j,k));
                                 }
                             }
                         }
-                        res_vec.at(j)=lse(res_vec_addends); //log space
+                        res_vec.at(j)=vec_add_float(res_vec_addends);
                     }
                     u_env[(*it).v2()][s]=res_vec;
                 }
@@ -597,10 +606,10 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
                     std::vector<double> res_vec_addends;
                     for(size_t i=0;i<(*it2).w().nx();i++){
                         for(size_t j=0;j<(*it2).w().ny();j++){
-                            res_vec_addends.push_back(l_env[(*it2).order()][s].at(i)+r_env[(*it2).order()][s].at(j)+(*it2).w().at(i,j,k)); //log space
+                            res_vec_addends.push_back(l_env[(*it2).order()][s].at(i)*r_env[(*it2).order()][s].at(j)*(*it2).w().at(i,j,k));
                         }
                     }
-                    res_vec.at(k)=lse(res_vec_addends); //log space
+                    res_vec.at(k)=vec_add_float(res_vec_addends);
                 }
                 if(g.vs()[u_idx].l_idx()==(*it2).order()){
                     l_env[u_idx][s]=res_vec;
@@ -647,14 +656,14 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
                         for(size_t j=0;j<(*it).w().ny();j++){
                             for(size_t k=0;k<(*it).w().nz();k++){
                                 if(g.vs()[(*it).v1()].depth()!=0){ //not input tensor
-                                    res_vec_addends.push_back(r_env[idx][s].at(j)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                    res_vec_addends.push_back(r_env[idx][s].at(j)*u_env[idx][s].at(k)*(*it).w().at(i,j,k));
                                 }
                                 else{
-                                    res_vec_addends.push_back(u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                    res_vec_addends.push_back(u_env[idx][s].at(k)*(*it).w().at(i,j,k));
                                 }
                             }
                         }
-                        res_vec.at(i)=lse(res_vec_addends); //log space
+                        res_vec.at(i)=vec_add_float(res_vec_addends);
                     }
                     u_env[(*it).v1()][s]=res_vec;
                 }
@@ -674,14 +683,14 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
                         for(size_t i=0;i<(*it).w().nx();i++){
                             for(size_t k=0;k<(*it).w().nz();k++){
                                 if(g.vs()[(*it).v2()].depth()!=0){ //not input tensor
-                                    res_vec_addends.push_back(l_env[idx][s].at(i)+u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                    res_vec_addends.push_back(l_env[idx][s].at(i)*u_env[idx][s].at(k)*(*it).w().at(i,j,k));
                                 }
                                 else{
-                                    res_vec_addends.push_back(u_env[idx][s].at(k)+(*it).w().at(i,j,k)); //log space
+                                    res_vec_addends.push_back(u_env[idx][s].at(k)*(*it).w().at(i,j,k));
                                 }
                             }
                         }
-                        res_vec.at(j)=lse(res_vec_addends); //log space
+                        res_vec.at(j)=vec_add_float(res_vec_addends);
                     }
                     u_env[(*it).v2()][s]=res_vec;
                 }
@@ -699,16 +708,16 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
             std::vector<double> res_vec_addends;
             for(size_t i=0;i<(*it4).w().nx();i++){
                 for(size_t j=0;j<(*it4).w().ny();j++){
-                    res_vec_addends.push_back(l_env[(*it4).order()][s].at(i)+r_env[(*it4).order()][s].at(j)+(*it4).w().at(i,j,k)); //log space
+                    res_vec_addends.push_back(l_env[(*it4).order()][s].at(i)*r_env[(*it4).order()][s].at(j)*(*it4).w().at(i,j,k));
                 }
             }
-            res_vec.at(k)=lse(res_vec_addends); //log space
+            res_vec.at(k)=vec_add_float(res_vec_addends);
         }
         std::vector<double> w_addends;
         for(size_t k=0;k<g.vs()[top_idx].rank();k++){
             w_addends.push_back(res_vec.at(k));
         }
-        w[s]=lse(w_addends);
+        w[s]=log(vec_add_float(w_addends));
     }
     return w;
 }

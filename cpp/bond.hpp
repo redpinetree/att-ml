@@ -45,14 +45,14 @@ public:
     double& bmi();
     double& cost();
     size_t& order();
-    bool& todo();
+    bool& todo(); //if not yet processed, todo=1
     void bmi(array3d<double>&);
 private:
     std::pair<size_t,size_t> v_;
     std::pair<size_t,size_t> v_orig_;
     size_t virt_count_;
     size_t depth_;
-    array3d<double> w_; //if not yet processed, todo=1
+    array3d<double> w_;
 #ifdef MODEL_CMD
     array2d<size_t> f_;
 #endif

@@ -184,16 +184,16 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
                 for(size_t k=0;k<r_k;k++){
-                    w.at(i,j,k)=log(unif_dist(mpi_utils::prng));
+                    w.at(i,j,k)=unif_dist(mpi_utils::prng);
                     sum_addends.push_back(w.at(i,j,k));
                 }
             }
         }
-        double sum=lse(sum_addends);
+        double sum=vec_add_float(sum_addends);
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
                 for(size_t k=0;k<r_k;k++){
-                    w.at(i,j,k)-=sum;
+                    w.at(i,j,k)/=sum;
                 }
             }
         }
@@ -322,16 +322,16 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
                 for(size_t k=0;k<r_k;k++){
-                    w.at(i,j,k)=log(unif_dist(mpi_utils::prng));
+                    w.at(i,j,k)=unif_dist(mpi_utils::prng);
                     sum_addends.push_back(w.at(i,j,k));
                 }
             }
         }
-        double sum=lse(sum_addends);
+        double sum=vec_add_float(sum_addends);
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
                 for(size_t k=0;k<r_k;k++){
-                    w.at(i,j,k)-=sum;
+                    w.at(i,j,k)/=sum;
                 }
             }
         }
@@ -482,16 +482,16 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
                 for(size_t k=0;k<r_k;k++){
-                    w.at(i,j,k)=log(unif_dist(mpi_utils::prng));
+                    w.at(i,j,k)=unif_dist(mpi_utils::prng);
                     sum_addends.push_back(w.at(i,j,k));
                 }
             }
         }
-        double sum=lse(sum_addends);
+        double sum=vec_add_float(sum_addends);
         for(size_t i=0;i<r_i;i++){
             for(size_t j=0;j<r_j;j++){
                 for(size_t k=0;k<r_k;k++){
-                    w.at(i,j,k)-=sum;
+                    w.at(i,j,k)/=sum;
                 }
             }
         }
