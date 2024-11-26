@@ -20,9 +20,9 @@ array3d<double> transpose(array3d<double>& x){
 
 //matricize by fusing two axes and leaving one axis untouched
 array3d<double> matricize(array3d<double>& x,size_t sep_ax){ //mttkrp order
-    if(x.nz()==1){ //already a matrix
-        return x;
-    }
+    // if(((sep_ax==0)&&(x.nx()==1))&&((sep_ax==1)&&(x.ny()==1))&&((sep_ax==2)&&(x.nz()==1))){ //already a matrix
+        // return x;
+    // }
     array3d<double> res;
     if(sep_ax==0){
         res=array3d<double>(x.ny()*x.nz(),x.nx(),1);
@@ -68,8 +68,9 @@ array3d<double> tensorize(array3d<double>& x,size_t r_1,size_t r_2,size_t sep_ax
         std::cerr<<"Sizes of first two axes to be broken up do not match the size of the matrix axis.\n";
         exit(1);
     }
-    array3d<double> res(r_1,r_2,x.ny());
+    array3d<double> res;
     if(sep_ax==0){
+        res=array3d<double>(x.ny(),r_1,r_2);
         for(size_t i=0;i<x.nx();i++){
             for(size_t j=0;j<x.ny();j++){
                 res.at(j,i/r_2,i%r_2)=x.at(i,j,0);
@@ -77,6 +78,7 @@ array3d<double> tensorize(array3d<double>& x,size_t r_1,size_t r_2,size_t sep_ax
         }
     }
     else if(sep_ax==1){
+        res=array3d<double>(r_1,x.ny(),r_2);
         for(size_t i=0;i<x.nx();i++){
             for(size_t j=0;j<x.ny();j++){
                 res.at(i/r_2,j,i%r_2)=x.at(i,j,0);
@@ -84,6 +86,7 @@ array3d<double> tensorize(array3d<double>& x,size_t r_1,size_t r_2,size_t sep_ax
         }
     }
     else if(sep_ax==2){
+        res=array3d<double>(r_1,r_2,x.ny());
         for(size_t i=0;i<x.nx();i++){ //can this be accelerated?
             for(size_t j=0;j<x.ny();j++){
                 res.at(i/r_2,i%r_2,j)=x.at(i,j,0);
@@ -244,6 +247,76 @@ void svd(array3d<double>& a_mat,array3d<double>& u_mat,array1d<double>& s_vec,ar
     // std::cout<<"s:\n"<<(std::string) s_vec<<"\n";
     // std::cout<<"u:\n"<<(std::string) u_mat<<"\n";
     // std::cout<<"vt:\n"<<(std::string) vt_mat<<"\n";
+}
+
+//calculate the qr factorization
+void qr(array3d<double>& a_mat,array3d<double>& q_mat,array3d<double>& r_mat,size_t& status){
+    //input variables
+    // a_mat=transpose(a_mat); //row major to column major order
+    int m=a_mat.nx(); //rows of a
+    int n=a_mat.ny(); //cols of a
+    int r=(m<n)?m:n; //aux: # of householder reflectors in tau
+    int lda=m; //leading dim of a=m
+    double a[lda*n]; //input a
+    double tau[r]; //output tau
+    std::copy(a_mat.e().begin(),a_mat.e().end(),&a[0]);
+    // a_mat=transpose(a_mat); //row major to column major order
+    
+    //intermediate quantities
+    int lwork=-1; //workspace dim, if lwork=-1, query optimal workspace size
+    double optimal_work; //double because actual argument takes double pointer
+    double* work; //workspace
+    int lwork2=-1; //workspace dim, if lwork=-1, query optimal workspace size
+    double optimal_work2; //double because actual argument takes double pointer
+    double* work2; //workspace
+    
+    //output variables
+    int info; //output status
+    
+    //obtain qr factorization
+    dgeqrf_(&m,&n,a,&lda,tau,&optimal_work,&lwork,&info); //query optimal workspace size, found in optimal_work
+    lwork=(int) optimal_work;
+    work=(double*) malloc(lwork*sizeof(double)); //allocate optimal workspace memory
+    dgeqrf_(&m,&n,a,&lda,tau,work,&lwork,&info); //compute qr
+    if(info>0){
+        std::cout<<"DGEQRF's QR decomposition failed to converge.\n";
+        status=1; //status 1 means failure
+        return;
+    }
+    free((void*) work); //free workspace memory
+    
+    //extract compressed qr representation h
+    array1d<double> tau_vec=array1d<double>(r);
+    std::copy(&tau[0],&tau[r],tau_vec.e().begin());
+    array3d<double> h_mat=array3d<double>(m,n,1);
+    std::copy(&a[0],&a[m*n],h_mat.e().begin());
+    //prepare r matrix from h
+    r_mat=array3d<double>(r,n,1);
+    for(size_t i=0;i<r_mat.nx();i++){
+        for(size_t j=i;j<r_mat.ny();j++){
+            r_mat.at(i,j,0)=h_mat.at(i,j,0); //implicit transpose
+        }
+    }
+    
+    //obtain q
+    dorgqr_(&m,&r,&r,a,&lda,tau,&optimal_work2,&lwork2,&info); //query optimal workspace size, found in optimal_work
+    lwork2=(int) optimal_work2;
+    work2=(double*) malloc(lwork2*sizeof(double)); //allocate optimal workspace memory
+    q_mat=array3d<double>(m,r,1);
+    dorgqr_(&m,&r,&r,a,&lda,tau,work2,&lwork2,&info); //query optimal workspace size, found in optimal_work
+    std::copy(&a[0],&a[m*r],q_mat.e().begin());
+    // q_mat=transpose(q_mat); //col major to row major order
+    if(info>0){
+        std::cout<<"DORGQR's Q calculation failed to converge.\n";
+        status=1; //status 1 means failure
+        return;
+    }
+    free((void*) work2); //free workspace memory
+    
+    // std::cout<<"tau:\n"<<(std::string) tau_vec<<"\n";
+    // std::cout<<"h:\n"<<(std::string) h_mat<<"\n";
+    // std::cout<<"q:\n"<<(std::string) q_mat<<"\n";
+    // std::cout<<"r:\n"<<(std::string) r_mat<<"\n";
 }
 
 array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x,size_t max_it){
@@ -652,9 +725,12 @@ array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,
 void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t r,size_t status){
     //compute svd
     array3d<double> u;
-    array3d<double> vt;
     array1d<double> s;
+    array3d<double> vt;
     svd(target,u,s,vt,status);
+    if(status!=0){
+        std::cout<<"failed on:\n"<<(std::string) target<<"\n";
+    }
     
     w=array3d<double>(u.nx(),r,u.nz());
     h=array3d<double>(r,vt.ny(),vt.nz());
@@ -868,5 +944,47 @@ double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t 
             w.at(i,j,0)/=sum1;
         }
     }
+    return recon_err;
+}
+
+double truncated_svd(array3d<double>& target,array3d<double>& truncated_us,array3d<double>& truncated_vt,size_t r){
+    size_t status=0;
+    array3d<double> u;
+    array1d<double> s;
+    array3d<double> vt;
+    svd(target,u,s,vt,status);
+    
+    truncated_us=array3d<double>(u.nx(),r,1);
+    for(size_t i=0;i<truncated_us.nx();i++){
+        for(size_t j=0;j<truncated_us.ny();j++){
+            truncated_us.at(i,j,0)=u.at(i,j,0)*s.at(j);
+        }
+    }
+    truncated_vt=array3d<double>(r,vt.ny(),1);
+    for(size_t i=0;i<truncated_vt.nx();i++){
+        for(size_t j=0;j<truncated_vt.ny();j++){
+            truncated_vt.at(i,j,0)=vt.at(i,j,0);
+        }
+    }
+    
+    array3d<double> recon_mat(truncated_us.nx(),truncated_vt.ny(),1);
+    for(size_t i=0;i<recon_mat.nx();i++){
+        for(size_t j=0;j<recon_mat.ny();j++){
+            for(size_t k=0;k<r;k++){
+                recon_mat.at(i,j,0)+=truncated_us.at(i,k,0)*truncated_vt.at(k,j,0);
+            }
+        }
+    }
+    double tr_mTm=0;
+    double tr_whTwh=0;
+    double tr_mTwh=0;
+    for(size_t i=0;i<recon_mat.nx();i++){
+        for(size_t j=0;j<recon_mat.ny();j++){
+            tr_mTm+=target.at(i,j,0)*target.at(i,j,0);
+            tr_whTwh+=recon_mat.at(i,j,0)*recon_mat.at(i,j,0);
+            tr_mTwh+=target.at(i,j,0)*recon_mat.at(i,j,0);
+        }
+    }
+    double recon_err=(tr_mTm+tr_whTwh-(2*tr_mTwh))/tr_mTm;
     return recon_err;
 }

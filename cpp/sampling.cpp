@@ -589,7 +589,8 @@ void sampling::update_samples(size_t root,graph<cmp>& g,std::vector<sample_data>
         std::vector<std::vector<array1d<double> > > l_env;
         std::vector<std::vector<array1d<double> > > r_env;
         std::vector<std::vector<array1d<double> > > u_env;
-        calc_w(g,samples,l_env,r_env,u_env);
+        std::vector<size_t> dummy_labels;
+        calc_w(g,samples,dummy_labels,l_env,r_env,u_env);
         array1d<double> x((n==current.v1())?current.w().nx():current.w().ny()); //calculate weight vector
         std::vector<double> sum_addends;
         for(size_t i=0;i<current.w().nx();i++){

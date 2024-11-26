@@ -2,7 +2,88 @@
 
 #include "omp.h"
 
+#include "mat_ops.hpp"
 #include "ttn_ops.hpp"
+
+void normalize(array3d<double>& w){
+    std::vector<double> norm_addends;
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            for(size_t k=0;k<w.nz();k++){
+                norm_addends.push_back(w.at(i,j,k)*w.at(i,j,k));
+            }
+        }
+    }
+    double norm=sqrt(vec_add_float(norm_addends));
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            for(size_t k=0;k<w.nz();k++){
+                w.at(i,j,k)/=norm;
+                if(!(fabs(w.at(i,j,k))>1e-100)){
+                    // std::cout<<"replaced "<<w.at(i,j,k)<<"\n";
+                    w.at(i,j,k)=1e-100;
+                }
+            }
+        }
+    }
+}
+
+void normalize(array4d<double>& w){
+    std::vector<double> norm_addends;
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            for(size_t k=0;k<w.nz();k++){
+                for(size_t l=0;l<w.nw();l++){
+                    norm_addends.push_back(w.at(i,j,k,l)*w.at(i,j,k,l));
+                }
+            }
+        }
+    }
+    double norm=sqrt(vec_add_float(norm_addends));
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            for(size_t k=0;k<w.nz();k++){
+                for(size_t l=0;l<w.nw();l++){
+                    w.at(i,j,k,l)/=norm;
+                    if(!(fabs(w.at(i,j,k,l))>1e-100)){
+                        // std::cout<<"replaced "<<w.at(i,j,k,l)<<"\n";
+                        w.at(i,j,k,l)=1e-100;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void normalize_using_z(array3d<double>& w,double z){
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            for(size_t k=0;k<w.nz();k++){
+                w.at(i,j,k)/=z;
+                if(!(fabs(w.at(i,j,k))>1e-100)){
+                    // std::cout<<"replaced "<<w.at(i,j,k)<<"\n";
+                    w.at(i,j,k)=1e-100;
+                }
+            }
+        }
+    }
+}
+
+void normalize_using_z(array4d<double>& w,double z){
+    for(size_t i=0;i<w.nx();i++){
+        for(size_t j=0;j<w.ny();j++){
+            for(size_t k=0;k<w.nz();k++){
+                for(size_t l=0;l<w.nw();l++){
+                    w.at(i,j,k,l)/=z;
+                    if(!(fabs(w.at(i,j,k,l))>1e-100)){
+                        // std::cout<<"replaced "<<w.at(i,j,k,l)<<"\n";
+                        w.at(i,j,k,l)=1e-100;
+                    }
+                }
+            }
+        }
+    }
+}
 
 std::vector<array3d<double> > calc_dz(std::vector<array1d<double> >& l_env,std::vector<array1d<double> >& r_env,std::vector<array1d<double> >& u_env){ //calculate it for all tensors simultaneously
     std::vector<array3d<double> > res;
@@ -60,7 +141,7 @@ double calc_z(graph<cmp>& g){
     for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
         z_addends.push_back(contracted_vectors[g.vs().size()-1].at(k));
     }
-    double z=log(vec_add_float(z_addends));
+    double z=vec_add_float(z_addends);
     return z;
 }
 template double calc_z(graph<bmi_comparator>&);
@@ -150,13 +231,13 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
     for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
         z_addends.push_back(contracted_vectors[g.vs().size()-1].at(k));
     }
-    double z=log(vec_add_float(z_addends));
+    double z=vec_add_float(z_addends);
     return z;
 }
 template double calc_z(graph<bmi_comparator>&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
 
 template<typename cmp>
-double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >& l_env,std::vector<array1d<double> >& r_env,std::vector<array1d<double> >& u_env,std::set<size_t>& todo_keys){
+double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >& l_env,std::vector<array1d<double> >& r_env,std::vector<array1d<double> >& u_env){
     std::deque<size_t> todo;
     std::set<size_t> done_idxs;
     todo.push_back(center);
@@ -339,10 +420,10 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
     for(size_t k=0;k<g.vs()[top_idx].rank();k++){
         z_addends.push_back(res_vec.at(k));
     }
-    double z=log(vec_add_float(z_addends));
+    double z=vec_add_float(z_addends);
     return z;
 }
-template double update_cache_z(graph<bmi_comparator>&,size_t,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::set<size_t>&);
+template double update_cache_z(graph<bmi_comparator>&,size_t,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
 
 std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env){ //calculate it for all tensors simultaneously
     std::vector<std::vector<array3d<double> > > res;
@@ -410,22 +491,6 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
         u_env.push_back(std::vector<array1d<double> >(n_samples));
     }
     
-    if(labels.size()==0){ //top tensor's u_env is all ones
-        u_env[g.vs().size()-1]=std::vector<array1d<double> >(n_samples);
-        for(size_t n=0;n<u_env.size();n++){
-            for(size_t s=0;s<n_samples;s++){
-                array1d<double> v(g.vs()[g.vs().size()-1].rank());
-                for(size_t i=0;i<v.nx();i++){
-                    v.at(i)=1;
-                }
-                u_env[g.vs().size()-1][s]=v;
-            }
-        }
-    }
-    else{
-        u_env[g.vs().size()-1]=contracted_vectors[g.vs().size()-1];
-    }
-    
     size_t contracted_idx_count=0;
     while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset repeatedly until all idxs processed
         for(auto it=g.es().begin();it!=g.es().end();++it){
@@ -451,6 +516,36 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
             }
         }
     }
+    
+    std::vector<double> w(n_samples);
+    #pragma omp parallel for
+    for(size_t s=0;s<n_samples;s++){
+        if(labels.size()!=0){
+            w[s]=contracted_vectors[g.vs().size()-1][s].at(labels[s]);
+        }
+        else{
+            std::vector<double> w_addends;
+            for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
+                w_addends.push_back(contracted_vectors[g.vs().size()-1][s].at(k));
+            }
+            w[s]=vec_add_float(w_addends);
+        }
+    }
+    
+    if(labels.size()==0){ //top tensor's u_env is all ones
+        u_env[g.vs().size()-1]=std::vector<array1d<double> >(n_samples);
+        for(size_t s=0;s<n_samples;s++){
+            array1d<double> v(g.vs()[g.vs().size()-1].rank());
+            for(size_t i=0;i<v.nx();i++){
+                v.at(i)=1;
+            }
+            u_env[g.vs().size()-1][s]=v;
+        }
+    }
+    else{
+        u_env[g.vs().size()-1]=contracted_vectors[g.vs().size()-1];
+    }
+    
     contracted_idx_count=0; //reset counter
     while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset, in reverse, repeatedly until all idxs processed
         for(auto it=g.es().rbegin();it!=g.es().rend();++it){
@@ -488,33 +583,12 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::
             }
         }
     }
-    std::vector<double> w(n_samples);
-    #pragma omp parallel for
-    for(size_t s=0;s<n_samples;s++){
-        if(labels.size()!=0){
-            w[s]=log(contracted_vectors[g.vs().size()-1][s].at(labels[s]));
-        }
-        else{
-            std::vector<double> w_addends;
-            for(size_t k=0;k<g.vs()[g.vs().size()-1].rank();k++){
-                w_addends.push_back(contracted_vectors[g.vs().size()-1][s].at(k));
-            }
-            w[s]=log(vec_add_float(w_addends));
-        }
-    }
     return w;
 }
 template std::vector<double> calc_w(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 
 template<typename cmp>
-std::vector<double> calc_w(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env){
-    std::vector<size_t> dummy_labels;
-    return calc_w(g,samples,dummy_labels,l_env,r_env,u_env);
-}
-template std::vector<double> calc_w(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
-
-template<typename cmp>
-std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env,std::set<size_t>& todo_keys){
+std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env){
     size_t n_samples=u_env[g.vs().size()-1].size();
     std::deque<size_t> todo;
     std::set<size_t> done_idxs;
@@ -717,8 +791,8 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
         for(size_t k=0;k<g.vs()[top_idx].rank();k++){
             w_addends.push_back(res_vec.at(k));
         }
-        w[s]=log(vec_add_float(w_addends));
+        w[s]=vec_add_float(w_addends);
     }
     return w;
 }
-template std::vector<double> update_cache_w(graph<bmi_comparator>&,size_t,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&);
+template std::vector<double> update_cache_w(graph<bmi_comparator>&,size_t,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);

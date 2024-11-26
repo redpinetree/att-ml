@@ -17,10 +17,11 @@
 #include "graph.hpp"
 #include "graph_utils.hpp"
 #include "algorithm_nll.hpp"
+#include "ttn_ops_born.hpp"
 #include "observables.hpp"
 
 void print_usage(){
-    std::cerr<<"usage: tree_ml [--options] <input_dim> <d> <{l|l0,l1,...}>\n";
+    std::cerr<<"usage: tree_ml_born [--options] <input_dim> <d> <{l|l0,l1,...}>\n";
     std::cerr<<"options:\n";
     std::cerr<<"\t-h,--help: display this message\n";
     std::cerr<<"\t-v,--verbose:\n\t\t0->nothing printed to stdout (forced for MPI)\n\t\t1->sample number and aggregate timing data\n\t\t2->per-instance timing\n\t\t3->more detailed timing breakdown\n\t\t4->graph contents, debug observable data\n";
@@ -241,10 +242,10 @@ int main(int argc,char **argv){
         train_data_labels=algorithm::load_data_labels_from_file(test_label_file,test_n_samples,tdim);
     }
     graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,init_tree_type);
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        bond current=*it;
-        algorithm::calculate_site_probs(g,current);
-    }
+    // for(auto it=g.es().begin();it!=g.es().end();++it){
+        // bond current=*it;
+        // algorithm::calculate_site_probs(g,current);
+    // }
     
     if(g.n_phys_sites()!=train_data_total_length){
         std::cout<<"Mismatch in input site count between training data ("<<train_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
@@ -285,17 +286,22 @@ int main(int argc,char **argv){
     sw.start();
     std::map<size_t,double> train_nll_history,test_nll_history;
     std::map<size_t,size_t> sweep_history;
+    
+    // std::cout<<"center_idx: "<<g.center_idx()<<"\n";
+    // std::cout<<"dz: "<<(std::string)calc_dz_born(g)<<"\n";
+    // std::cout<<"z: "<<exp(calc_z_born(g))<<"\n";
+    
     if(label_set&&test_set&&test_label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
+        algorithm::train_nll_born(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
     }
     else if(label_set&&(!test_set)){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,sweep_history,struct_opt); //nll training with labels
+        algorithm::train_nll_born(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,sweep_history,struct_opt); //nll training with labels
     }
     else if((!label_set)&&test_set){
-        algorithm::train_nll(g,train_data,test_data,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with test data
+        algorithm::train_nll_born(g,train_data,test_data,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with test data
     }
     else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,sweep_history,struct_opt); //nll training
+        algorithm::train_nll_born(g,train_data,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,sweep_history,struct_opt); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
@@ -334,21 +340,27 @@ int main(int argc,char **argv){
     observables::output_lines.push_back(sweep_string);
     
     double total_mi=0;
+    double total_ee=0;
     for(auto it=g.es().begin();it!=--g.es().end();++it){
         total_mi+=(*it).bmi();
+        total_ee+=(*it).ee();
     }
     std::string total_mi_string="total mi: ";
     total_mi_string+=std::to_string(total_mi);
     total_mi_string+="\n";
     observables::output_lines.push_back(total_mi_string);
+    std::string total_ee_string="total ee: ";
+    total_ee_string+=std::to_string(total_ee);
+    total_ee_string+="\n";
+    observables::output_lines.push_back(total_ee_string);
     
-    std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
-    for(size_t i=0;i<generated_samples.size();i++){
-        for(size_t j=0;j<generated_samples[i].n_phys_sites();j++){
-            std::cout<<generated_samples[i].s()[j]<<" ";
-        }
-        std::cout<<"\n";
-    }
+    // std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
+    // for(size_t i=0;i<generated_samples.size();i++){
+        // for(size_t j=0;j<generated_samples[i].n_phys_sites();j++){
+            // std::cout<<generated_samples[i].s()[j]<<" ";
+        // }
+        // std::cout<<"\n";
+    // }
     //compute output quantities
     // if(verbose>=4){std::cout<<std::string(g);}
     if(verbose>=2){std::cout<<"Time elapsed: "<<trial_time<<"ms\n";}

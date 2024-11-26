@@ -12,10 +12,13 @@ array3d<double> matmul_xTy(array3d<double>&,array3d<double>&);
 extern "C" {
     extern void dgelsd_(int* m,int* n,int* nrhs,double* a,int* lda,double* b,int* ldb,double* s,double* rcond,int* rank,double* work,int* lwork,int* iwork,int* info);
     extern void dgesvd_(char* jobu,char* jobvt,int* m,int* n,double* a,int* lda,double* s,double* u,int* ldu,double* vt,int* ldvt,double* work,int* lwork,int* info);
+    extern void dgeqrf_(int* m,int* n,double* a,int* lda,double* tau,double* work,int* lwork,int* info);
+    extern void dorgqr_(int* m,int* n,int* k,double* a,int* lda,double* tau,double* work,int* lwork,int* info);
 }
 array3d<double> hadamard(array3d<double>&,array3d<double>&);
 void lstsq(array3d<double>&,array3d<double>&,array3d<double>&,size_t&);
 void svd(array3d<double>&,array3d<double>&,array1d<double>&,array3d<double>&,size_t&);
+void qr(array3d<double>&,array3d<double>&,array3d<double>&,size_t&);
 
 array3d<double> nn_hals(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 array3d<double> nn_hals2(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
@@ -27,5 +30,6 @@ array3d<double> mu_kl2(array3d<double>&,array3d<double>&,array3d<double>&,size_t
 
 void nndsvda(array3d<double>&,array3d<double>&,array3d<double>&,size_t,size_t);
 double nmf(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
+double truncated_svd(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 
 #endif

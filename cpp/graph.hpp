@@ -53,6 +53,10 @@ public:
     std::vector<size_t>& dims(){return this->dims_;};
     double& beta(){return this->beta_;}
     std::vector<std::tuple<size_t,size_t,double> >& orig_ks(){return this->orig_ks_;};
+#ifdef MODEL_TREE_ML_BORN
+    size_t center_idx() const{return this->center_idx_;};
+    size_t& center_idx(){return this->center_idx_;};
+#endif
 private:
     std::vector<site> vs_;
     std::multiset<bond,cmp> es_;
@@ -62,6 +66,9 @@ private:
     //original bond coupling data for energy calculation, if applicable (for potts models)
     double beta_;
     std::vector<std::tuple<size_t,size_t,double> > orig_ks_;
+#ifdef MODEL_TREE_ML_BORN
+    size_t center_idx_;
+#endif
 };
 
 #endif

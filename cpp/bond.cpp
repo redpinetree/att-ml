@@ -8,14 +8,24 @@ bond::bond(size_t v1,size_t v2,size_t depth,array3d<double> w):w_(w),virt_count_
     this->v_=(v1<v2)?std::pair<size_t,size_t>(v1,v2):std::pair<size_t,size_t>(v2,v1);
     this->v_orig_=this->v();
     this->bmi(w);
+#ifdef MODEL_TREE_ML_BORN
+    this->ee()=0;
+#endif
 }
 
 bond::bond(std::pair<size_t,size_t> v,size_t depth,array3d<double> w):v_(v),v_orig_(v),virt_count_(0),depth_(depth),w_(w),cost_(0),order_(0),todo_(true){
     this->bmi(w);
+#ifdef MODEL_TREE_ML_BORN
+    this->ee()=0;
+#endif
 }
 
 bond::operator std::string() const{
+#ifdef MODEL_TREE_ML_BORN
+    return "[("+std::to_string(this->v1())+","+std::to_string(this->v2())+"),("+std::to_string(this->w().nx())+","+std::to_string(this->w().ny())+","+std::to_string(this->w().nz())+"),"+std::to_string(this->bmi())+","+std::to_string(this->ee())+","+std::to_string(this->cost())+","+std::to_string(this->depth())+","+std::to_string(this->order())+","+std::to_string(this->todo())+"]";
+#else
     return "[("+std::to_string(this->v1())+","+std::to_string(this->v2())+"),("+std::to_string(this->w().nx())+","+std::to_string(this->w().ny())+","+std::to_string(this->w().nz())+"),"+std::to_string(this->bmi())+","+std::to_string(this->cost())+","+std::to_string(this->depth())+","+std::to_string(this->order())+","+std::to_string(this->todo())+"]";
+#endif
 }
 
 std::ostream& operator<<(std::ostream& os,const bond& e){
@@ -36,6 +46,9 @@ array3d<double> bond::w() const{return this->w_;}
 array2d<size_t> bond::f() const{return this->f_;}
 #endif
 double bond::bmi() const{return this->bmi_;}
+#ifdef MODEL_TREE_ML_BORN
+double bond::ee() const{return this->ee_;}
+#endif
 double bond::cost() const{return this->cost_;}
 size_t bond::order() const{return this->order_;}
 bool bond::todo() const{return this->todo_;}
@@ -52,6 +65,9 @@ array3d<double>& bond::w(){return this->w_;}
 array2d<size_t>& bond::f(){return this->f_;}
 #endif
 double& bond::bmi(){return this->bmi_;}
+#ifdef MODEL_TREE_ML_BORN
+double& bond::ee(){return this->ee_;}
+#endif
 double& bond::cost(){return this->cost_;}
 size_t& bond::order(){return this->order_;}
 bool& bond::todo(){return this->todo_;}

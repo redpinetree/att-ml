@@ -62,7 +62,7 @@ array3d<double> proj_probability_simplex(array3d<double>& w){
     for(size_t i=0;i<res.nx();i++){
         for(size_t j=0;j<res.ny();j++){
             for(size_t k=0;k<res.nz();k++){
-                res.at(i,j,k)=log(((res.at(i,j,k)-tau)>1e-100)?(res.at(i,j,k)-tau):1e-100);
+                res.at(i,j,k)=((res.at(i,j,k)-tau)>1e-100)?(res.at(i,j,k)-tau):1e-100;
             }
         }
     }
@@ -120,7 +120,7 @@ array4d<double> proj_probability_simplex(array4d<double>& w){
         for(size_t j=0;j<res.ny();j++){
             for(size_t k=0;k<res.nz();k++){
                 for(size_t l=0;l<res.nw();l++){
-                    res.at(i,j,k,l)=log(((res.at(i,j,k,l)-tau)>1e-100)?(res.at(i,j,k,l)-tau):1e-100);
+                    res.at(i,j,k,l)=((res.at(i,j,k,l)-tau)>1e-100)?(res.at(i,j,k,l)-tau):1e-100;
                 }
             }
         }
@@ -152,7 +152,7 @@ array3d<double> proj_probability_simplex2(array3d<double>& w){
     for(size_t i=0;i<res.nx();i++){
         for(size_t j=0;j<res.ny();j++){
             for(size_t k=0;k<res.nz();k++){
-                res.at(i,j,k)=log(((res.at(i,j,k)+lambda)>1e-100)?(res.at(i,j,k)+lambda):1e-100);
+                res.at(i,j,k)=((res.at(i,j,k)+lambda)>1e-100)?(res.at(i,j,k)+lambda):1e-100;
             }
         }
     }
@@ -305,7 +305,7 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::ve
                             grad_w_term_addends.push_back(dw[n][s].at(i,j,k)/w[s]);
                         }
                         // std::cout<<lse(grad_w_term_addends)<<" "<<log(samples.size())<<"\n";
-                        grad_w_term.at(i,j,k)=lse(grad_w_term_addends)-log(samples.size());
+                        grad_w_term.at(i,j,k)=vec_add_float(grad_w_term_addends)/(double) samples.size();
                         
                         //perform unconstrained gd on log-parametrized problem
                         // grad.at(i,j,k)=(exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k)))*exp(current.w().at(i,j,k));
@@ -321,20 +321,20 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::ve
                         // else{current.w().at(i,j,k)-=lr*(corrected_m/(sqrt(corrected_v)+epsilon));}
                         
                         //perform unconstrained gd on original problem
-                        // grad.at(i,j,k)=exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k));
-                        if(grad_z_term.at(i,j,k)>grad_w_term.at(i,j,k)){ //more accurate calculation
-                            grad.at(i,j,k)=exp(grad_z_term.at(i,j,k)+log1p(-exp(-(grad_z_term.at(i,j,k)-grad_w_term.at(i,j,k)))));
-                        }
-                        else{
-                            grad.at(i,j,k)=-exp(grad_w_term.at(i,j,k)+log1p(-exp(-(grad_w_term.at(i,j,k)-grad_z_term.at(i,j,k)))));
-                        }
+                        grad.at(i,j,k)=grad_z_term.at(i,j,k)-grad_w_term.at(i,j,k);
+                        // if(grad_z_term.at(i,j,k)>grad_w_term.at(i,j,k)){ //more accurate calculation
+                            // grad.at(i,j,k)=exp(grad_z_term.at(i,j,k)+log1p(-exp(-(grad_z_term.at(i,j,k)-grad_w_term.at(i,j,k)))));
+                        // }
+                        // else{
+                            // grad.at(i,j,k)=-exp(grad_w_term.at(i,j,k)+log1p(-exp(-(grad_w_term.at(i,j,k)-grad_z_term.at(i,j,k)))));
+                        // }
                         
                         m[n].at(i,j,k)=(beta1*m[n].at(i,j,k))+((1-beta1)*grad.at(i,j,k));
                         v[n].at(i,j,k)=(beta2*v[n].at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
                         double corrected_m=m[n].at(i,j,k)/(1-pow(beta1,(double) t));
                         double corrected_v=v[n].at(i,j,k)/(1-pow(beta2,(double) t));
                         // current.w().at(i,j,k)=exp(current.w().at(i,j,k))-(lr*grad.at(i,j,k));
-                        current.w().at(i,j,k)=exp(current.w().at(i,j,k))-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
+                        current.w().at(i,j,k)=current.w().at(i,j,k)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
                         // if((exp(current.w().at(i,j,k))-(lr*grad.at(i,j,k)))<0){current.w().at(i,j,k)=1e-100;}
                         // else{current.w().at(i,j,k)=exp(current.w().at(i,j,k))-(lr*grad.at(i,j,k));}
                         // if((exp(current.w().at(i,j,k))-(lr*(corrected_m/(sqrt(corrected_v)+epsilon))))<0){current.w().at(i,j,k)=1e-100;}
@@ -446,6 +446,20 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
     std::vector<std::vector<array1d<double> > > r_env_sample;
     std::vector<std::vector<array1d<double> > > u_env_sample;
     double z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
+    for(auto it=g.es().begin();it!=g.es().end();++it){
+        bond current=*it;
+        for(size_t i=0;i<current.w().nx();i++){
+            for(size_t j=0;j<current.w().ny();j++){
+                for(size_t k=0;k<current.w().nz();k++){
+                    current.w().at(i,j,k)/=pow(z,1/(double) g.es().size());
+                }
+            }
+        }
+        g.vs()[current.order()].p_bond()=current;
+        g.es().erase(it);
+        it=g.es().insert(current);
+    }
+    z=calc_z(g,l_env_z,r_env_z,u_env_z);
     std::vector<double> w=calc_w(g,train_samples,train_labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
     
     double best_nll=1e50;
@@ -461,7 +475,6 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
         // std::cout<<"iter "<<t<<" ";
         std::set<size_t> done_idxs; //set to store processed bond idxs
         // std::cout<<(std::string)g<<"\n";
-        //TODO: traversal scheme, not by looping over set, but by moving to adjacent bonds in upward an d downward sweep. always traverse downwards (like DFS) when possible and exit loop when all done_idxs.size()==g.es().size()-1
         auto it=g.es().begin();
         while(done_idxs.size()<g.es().size()){
         // for(auto it=g.es().begin();done_idxs.size()<g.es().size();++it){
@@ -513,8 +526,16 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
             std::vector<std::vector<array1d<double> > > orig_r_env_sample=r_env_sample;
             std::vector<std::vector<array1d<double> > > orig_u_env_sample=u_env_sample;
             
-            double bmi1=way1(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
+    // if(t>=145){
+        // std::cout<<"old current:\n"<<(std::string) current.w()<<"\n";
+        // std::cout<<"old parent:\n"<<(std::string) parent.w()<<"\n";
+    // }
+            double bmi1=way1(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
             
+    // if(t>=145){
+        // std::cout<<"new current:\n"<<(std::string) current.w()<<"\n";
+        // std::cout<<"new parent:\n"<<(std::string) parent.w()<<"\n";
+    // }
             if(struct_opt){
                 graph<cmp> way1_g=g;
                 bond way1_current=current;
@@ -542,7 +563,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
                 it=g.es().find(current);
                 it_parent=g.es().find(parent);
                 
-                double bmi2=way2(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
+                double bmi2=way2(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
                 
                 graph<bmi_comparator> way2_g=g;
                 bond way2_current=current;
@@ -570,7 +591,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
                 it=g.es().find(current);
                 it_parent=g.es().find(parent);
                 
-                double bmi3=way3(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
+                double bmi3=way3(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,fused,r_max,compress_r,train_samples,train_labels,single_site_update_count,lr,beta1,beta2,epsilon);
                 
                 graph<bmi_comparator> way3_g=g;
                 bond way3_current=current;
@@ -599,6 +620,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
                     r_env_sample=way1_r_env_sample;
                     u_env_sample=way1_u_env_sample;
                     it=g.es().find(current);
+                    it_parent=g.es().find(parent);
                     // std::cout<<"selected bmi1\n";
                 }
                 else if((bmi2<bmi1)&&(bmi2<=bmi3)){
@@ -614,6 +636,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
                     r_env_sample=way2_r_env_sample;
                     u_env_sample=way2_u_env_sample;
                     it=g.es().find(current);
+                    it_parent=g.es().find(parent);
                     // std::cout<<"selected bmi2\n";
                 }
                 else if((bmi3<bmi1)&&(bmi3<bmi2)){
@@ -629,15 +652,43 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
                     r_env_sample=way3_r_env_sample;
                     u_env_sample=way3_u_env_sample;
                     it=g.es().find(current);
+                    it_parent=g.es().find(parent);
                     // std::cout<<"selected bmi3\n";
                 }
             }
             
-            bond b=*it;
-            g.es().erase(it);
-            g.es().insert(b);
             done_idxs.insert(current.order());
             // std::cout<<(std::string)g<<"\n";
+            
+            normalize(current.w());
+            normalize(parent.w());
+            //keep z=1 by normalizing
+            // for(size_t i=0;i<current.w().nx();i++){
+                // for(size_t j=0;j<current.w().ny();j++){
+                    // for(size_t k=0;k<current.w().nz();k++){
+                        // current.w().at(i,j,k)/=pow(z,0.5);
+                        // if(!(current.w().at(i,j,k)>1e-100)){current.w().at(i,j,k)=1e-100;}
+                    // }
+                // }
+            // }
+            // for(size_t i=0;i<parent.w().nx();i++){
+                // for(size_t j=0;j<parent.w().ny();j++){
+                    // for(size_t k=0;k<parent.w().nz();k++){
+                        // parent.w().at(i,j,k)/=pow(z,0.5);
+                        // if(!(parent.w().at(i,j,k)>1e-100)){parent.w().at(i,j,k)=1e-100;}
+                    // }
+                // }
+            // }
+            
+            g.vs()[current.order()].p_bond()=current;
+            g.es().erase(it);
+            it=g.es().insert(current);
+            g.vs()[parent.order()].p_bond()=parent;
+            g.es().erase(it_parent);
+            it_parent=g.es().insert(parent);
+            
+            z=calc_z(g,l_env_z,r_env_z,u_env_z);
+            w=calc_w(g,train_samples,train_labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
             
             //next bond
             key.todo()=0;
@@ -660,20 +711,20 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
             
             // nll=0;
             // for(size_t s=0;s<train_samples.size();s++){
-                // nll-=w[s]; //w[s] is log(w(s))
+                // nll-=log(w[s]);
             // }
             // nll/=(double) train_samples.size();
-            // nll+=z; //z is log(z)
+            // nll+=log(z);
             // std::cout<<"inner loop nll="<<nll<<"\n";
             
             //calculate train nll
             nll=0;
             #pragma omp parallel for reduction(-:nll)
             for(size_t s=0;s<train_samples.size();s++){
-                nll-=w[s]; //w[s] is log(w(s))
+                nll-=log(w[s]);
             }
             nll/=(double) train_samples.size();
-            nll+=z; //z is log(z)
+            nll+=log(z);
             train_nll_history.insert(std::pair<size_t,double>(iter,nll));
             
             if(iter==iter_max){break;}
@@ -694,10 +745,10 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
             test_nll=0;
             #pragma omp parallel for reduction(-:test_nll)
             for(size_t s=0;s<test_samples.size();s++){
-                test_nll-=test_w[s]; //w[s] is log(w(s))
+                test_nll-=log(test_w[s]);
             }
             test_nll/=(double) test_samples.size();
-            test_nll+=z; //z is log(z)
+            test_nll+=log(z);
             test_nll_history.insert(std::pair<size_t,double>(iter,test_nll));
         }
         
@@ -775,320 +826,9 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
         g.vs()[i].bmi()=input_bmi;
         // g.vs()[i].bmi()=0;
     }
-    
     return best_nll;
 }
 template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
-
-template<typename cmp>
-double optimize::hopt_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
-    double nll=0;
-    //adam variables
-    double alpha=0.01;
-    double beta1=0.9;
-    double beta2=0.999;
-    double epsilon=1e-8;
-    //initialize adam m,v caches
-    std::map<size_t,array3d<double> > m;
-    std::map<size_t,array3d<double> > v;
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        bond current=*it;
-        size_t n=current.order();
-        m[n]=array3d<double>(current.w().nx(),current.w().ny(),current.w().nz());
-        v[n]=array3d<double>(current.w().nx(),current.w().ny(),current.w().nz());
-    }
-    
-    size_t current_depth=1;
-    size_t max_depth=1;
-    auto it=g.es().begin();
-    std::vector<sample_data> sym_samples;
-    std::multiset<bond,bmi_comparator> new_es;
-    while(it!=g.es().end()){ //due to comparator, bonds are already sorted by depth
-        bond current=*it;
-        current_depth=(*it).depth();
-        size_t n=(*it).order();
-        
-        //construct sample data, only when considering tensors at max layer or at next layer
-        if(current_depth>=max_depth){
-            std::cout<<"constructing new dataset rooted at tensor "<<n<<"\n";
-            // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
-            std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
-            //symmetrize samples
-            sym_samples=sampling::symmetrize_samples(samples);
-        }
-        
-        if(current_depth>max_depth){ //if bond is in next layer, reset layer counter and increment maximum layer
-            current_depth=1;
-            max_depth++;
-            it=g.es().begin();
-            std::cout<<"next layer "<<max_depth<<"\n";
-            continue;
-        }
-        
-        std::vector<array1d<double> > l_env_z;
-        std::vector<array1d<double> > r_env_z;
-        std::vector<array1d<double> > u_env_z;
-        double z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
-        std::vector<array3d<double> > dz=calc_dz(l_env_z,r_env_z,u_env_z); //index i corresponds to tensor with order i so some (for input sites) are empty
-        
-        std::vector<std::vector<array1d<double> > > l_env_sample;
-        std::vector<std::vector<array1d<double> > > r_env_sample;
-        std::vector<std::vector<array1d<double> > > u_env_sample;
-        std::vector<double> w=calc_w(g,sym_samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
-        std::vector<std::vector<array3d<double> > > dw=calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
-        double prev_nll=1e50;
-        for(size_t t=1;t<=iter_max;t++){
-            array3d<double> grad(current.w().nx(),current.w().ny(),current.w().nz());
-            array3d<double> grad_z_term(current.w().nx(),current.w().ny(),current.w().nz());
-            array3d<double> grad_w_term(current.w().nx(),current.w().ny(),current.w().nz());
-            // std::cout<<"n="<<n<<"\n";
-            // std::cout<<(std::string) current.w()<<"\n";
-            std::vector<double> sum_addends;
-            for(size_t i=0;i<grad_z_term.nx();i++){
-                for(size_t j=0;j<grad_z_term.ny();j++){
-                    for(size_t k=0;k<grad_z_term.nz();k++){
-                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)/z;
-                        std::vector<double> grad_w_term_addends;
-                        for(size_t s=0;s<sym_samples.size();s++){
-                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)/w[s]);
-                        }
-                        // std::cout<<lse(grad_w_term_addends)<<" "<<log(sym_samples.size())<<"\n";
-                        grad_w_term.at(i,j,k)=lse(grad_w_term_addends)-log(sym_samples.size());
-                        grad.at(i,j,k)=(exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k)))*exp(current.w().at(i,j,k));
-                        m[n].at(i,j,k)=(beta1*m[n].at(i,j,k))+((1-beta1)*grad.at(i,j,k));
-                        v[n].at(i,j,k)=(beta2*v[n].at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
-                        double corrected_m=m[n].at(i,j,k)/(1-pow(beta1,(double) t));
-                        double corrected_v=v[n].at(i,j,k)/(1-pow(beta2,(double) t));
-                        current.w().at(i,j,k)-=alpha*(corrected_m/(sqrt(corrected_v)+epsilon));
-                        // std::cout<<current.w().at(i,j,k)<<"\n";
-                        sum_addends.push_back(current.w().at(i,j,k));
-                    }
-                }
-            }
-            double sum=lse(sum_addends);
-            for(size_t i=0;i<current.w().nx();i++){
-                for(size_t j=0;j<current.w().ny();j++){
-                    for(size_t k=0;k<current.w().nz();k++){
-                        current.w().at(i,j,k)-=sum;
-                        if(current.w().at(i,j,k)<log(1e-100)){current.w().at(i,j,k)=log(1e-100);}
-                    }
-                }
-            }
-            // std::cout<<(std::string) grad_z_term.exp_form()<<"\n";
-            // std::cout<<(std::string) grad_w_term.exp_form()<<"\n";
-            // std::cout<<(std::string) grad<<"\n";
-            
-            //update z
-            std::vector<double> z_addends;
-            for(size_t i=0;i<l_env_z[n].nx();i++){
-                for(size_t j=0;j<r_env_z[n].nx();j++){
-                    for(size_t k=0;k<u_env_z[n].nx();k++){
-                        z_addends.push_back(current.w().at(i,j,k)+l_env_z[n].at(i)+r_env_z[n].at(j)+u_env_z[n].at(k));
-                    }
-                }
-            }
-            z=lse(z_addends);
-            //update w[s]
-            for(size_t s=0;s<w.size();s++){
-                std::vector<double> w_addends;
-                for(size_t i=0;i<l_env_sample[n][s].nx();i++){
-                    for(size_t j=0;j<r_env_sample[n][s].nx();j++){
-                        for(size_t k=0;k<u_env_sample[n][s].nx();k++){
-                            w_addends.push_back(current.w().at(i,j,k)+l_env_sample[n][s].at(i)+r_env_sample[n][s].at(j)+u_env_sample[n][s].at(k));
-                        }
-                    }
-                }
-                w[s]=lse(w_addends);
-            }
-            
-            //calculate nll and check for convergence
-            nll=0;
-            for(size_t s=0;s<sym_samples.size();s++){
-                nll-=w[s]; //w[s] is log(w(s))
-            }
-            nll/=(double) sym_samples.size();
-            nll+=z; //z is log(z)
-            if(fabs(prev_nll-nll)<1e-8){
-                std::cout<<"NLL optimization converged after "<<t<<" iterations.\n";
-                std::cout<<"nll="<<nll<<" for tensor "<<n<<", with max depth "<<max_depth<<"\n";
-                break;
-            }
-            else{
-                if(((t-1)%100)==0){
-                    std::cout<<"nll="<<nll<<" for tensor "<<n<<", with max depth "<<max_depth<<"\n";
-                }
-            }
-            prev_nll=nll;
-        }
-        
-        g.es().erase(g.es().lower_bound(current)); //remove element
-        g.es().insert(current); //reinsert element
-        algorithm::calculate_site_probs(g,current);
-        it=g.es().upper_bound(current); //point iterator to next element
-    }
-    
-    return nll;
-}
-template double optimize::hopt_nll(graph<bmi_comparator>&,size_t,size_t,size_t);
-
-template<typename cmp>
-double optimize::hopt_nll2(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max){
-    double nll=0;
-    //adam variables
-    double alpha=0.01;
-    double beta1=0.9;
-    double beta2=0.999;
-    double epsilon=1e-8;
-    //initialize adam m,v caches
-    std::map<size_t,array3d<double> > m;
-    std::map<size_t,array3d<double> > v;
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        bond current=*it;
-        size_t n=current.order();
-        m[n]=array3d<double>(current.w().nx(),current.w().ny(),current.w().nz());
-        v[n]=array3d<double>(current.w().nx(),current.w().ny(),current.w().nz());
-    }
-    
-    size_t current_depth=1;
-    size_t max_depth=1;
-    auto it=g.es().begin();
-    // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
-    std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
-    std::vector<sample_data> sym_samples=sampling::symmetrize_samples(samples);
-    std::multiset<bond,bmi_comparator> new_es;
-    while(it!=g.es().end()){ //due to comparator, bonds are already sorted by depth
-        bond current=*it;
-        current_depth=(*it).depth();
-        size_t n=(*it).order();
-        size_t shifted_n=n-g.n_phys_sites();
-        
-        if(current_depth>max_depth){ //if bond is in next layer, reset layer counter and increment maximum layer
-            current_depth=1;
-            max_depth++;
-            it=g.es().begin();
-            std::cout<<"next layer "<<max_depth<<"\n";
-            continue;
-        }
-        
-        std::vector<array1d<double> > l_env_z;
-        std::vector<array1d<double> > r_env_z;
-        std::vector<array1d<double> > u_env_z;
-        double z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
-        std::vector<array3d<double> > dz=calc_dz(l_env_z,r_env_z,u_env_z); //index i corresponds to tensor with order i so some (for input sites) are empty
-        
-        std::vector<std::vector<array1d<double> > > l_env_sample;
-        std::vector<std::vector<array1d<double> > > r_env_sample;
-        std::vector<std::vector<array1d<double> > > u_env_sample;
-        std::vector<double> w=calc_w(g,sym_samples,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
-        std::vector<std::vector<array3d<double> > > dw=calc_dw(l_env_sample,r_env_sample,u_env_sample); //index i corresponds to tensor with order i so some (for input sites) are empty
-        double prev_nll=1e50;
-        for(size_t t=1;t<=iter_max;t++){
-            array3d<double> grad(current.w().nx(),current.w().ny(),current.w().nz());
-            array3d<double> grad_z_term(current.w().nx(),current.w().ny(),current.w().nz());
-            array3d<double> grad_w_term(current.w().nx(),current.w().ny(),current.w().nz());
-            // std::cout<<"n="<<n<<"\n";
-            // std::cout<<(std::string) current.w()<<"\n";
-            std::vector<double> sum_addends;
-            for(size_t i=0;i<grad_z_term.nx();i++){
-                for(size_t j=0;j<grad_z_term.ny();j++){
-                    for(size_t k=0;k<grad_z_term.nz();k++){
-                        grad_z_term.at(i,j,k)=dz[n].at(i,j,k)/z;
-                        std::vector<double> grad_w_term_addends;
-                        for(size_t s=0;s<sym_samples.size();s++){
-                            grad_w_term_addends.push_back(dw[n][s].at(i,j,k)/w[s]);
-                        }
-                        // std::cout<<lse(grad_w_term_addends)<<" "<<log(sym_samples.size())<<"\n";
-                        grad_w_term.at(i,j,k)=lse(grad_w_term_addends)-log(sym_samples.size());
-                        grad.at(i,j,k)=(exp(grad_z_term.at(i,j,k))-exp(grad_w_term.at(i,j,k)))*exp(current.w().at(i,j,k));
-                        m[n].at(i,j,k)=(beta1*m[n].at(i,j,k))+((1-beta1)*grad.at(i,j,k));
-                        v[n].at(i,j,k)=(beta2*v[n].at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
-                        double corrected_m=m[n].at(i,j,k)/(1-pow(beta1,(double) t));
-                        double corrected_v=v[n].at(i,j,k)/(1-pow(beta2,(double) t));
-                        current.w().at(i,j,k)-=alpha*(corrected_m/(sqrt(corrected_v)+epsilon));
-                        // std::cout<<current.w().at(i,j,k)<<"\n";
-                        sum_addends.push_back(current.w().at(i,j,k));
-                    }
-                }
-            }
-            double sum=lse(sum_addends);
-            for(size_t i=0;i<current.w().nx();i++){
-                for(size_t j=0;j<current.w().ny();j++){
-                    for(size_t k=0;k<current.w().nz();k++){
-                        current.w().at(i,j,k)-=sum;
-                        if(current.w().at(i,j,k)<log(1e-100)){current.w().at(i,j,k)=log(1e-100);}
-                    }
-                }
-            }
-            // std::cout<<(std::string) grad_z_term.exp_form()<<"\n";
-            // std::cout<<(std::string) grad_w_term.exp_form()<<"\n";
-            // std::cout<<(std::string) grad<<"\n";
-            
-            //update z
-            std::vector<double> z_addends;
-            for(size_t i=0;i<l_env_z[n].nx();i++){
-                for(size_t j=0;j<r_env_z[n].nx();j++){
-                    for(size_t k=0;k<u_env_z[n].nx();k++){
-                        z_addends.push_back(current.w().at(i,j,k)+l_env_z[n].at(i)+r_env_z[n].at(j)+u_env_z[n].at(k));
-                    }
-                }
-            }
-            z=lse(z_addends);
-            //update w[s]
-            for(size_t s=0;s<w.size();s++){
-                std::vector<double> w_addends;
-                for(size_t i=0;i<l_env_sample[n][s].nx();i++){
-                    for(size_t j=0;j<r_env_sample[n][s].nx();j++){
-                        for(size_t k=0;k<u_env_sample[n][s].nx();k++){
-                            w_addends.push_back(current.w().at(i,j,k)+l_env_sample[n][s].at(i)+r_env_sample[n][s].at(j)+u_env_sample[n][s].at(k));
-                        }
-                    }
-                }
-                w[s]=lse(w_addends);
-            }
-            
-            //calculate nll and check for convergence
-            nll=0;
-            for(size_t s=0;s<sym_samples.size();s++){
-                nll-=w[s]; //w[s] is log(w(s))
-            }
-            nll/=(double) sym_samples.size();
-            nll+=z; //z is log(z)
-            if(fabs(prev_nll-nll)<1e-8){
-                std::cout<<"NLL optimization converged after "<<t<<" iterations.\n";
-                std::cout<<"nll="<<nll<<" for tensor "<<n<<", with max depth "<<max_depth<<"\n";
-                break;
-            }
-            else{
-                if(((t-1)%100)==0){
-                    // std::cout<<"nll="<<nll<<" for tensor "<<n<<", with max depth "<<max_depth<<"\n";
-                }
-            }
-            prev_nll=nll;
-        }
-        
-        g.es().erase(g.es().lower_bound(current)); //remove element
-        g.es().insert(current); //reinsert element
-        algorithm::calculate_site_probs(g,current);
-        
-        //update samples according to updated tree
-        sampling::update_samples(n,g,samples);
-        sym_samples=sampling::symmetrize_samples(samples);
-        
-        // for(size_t s=0;s<samples.size();s++){
-            // for(size_t m=0;m<samples[s].s().size();m++){
-                // if(m==g.n_phys_sites()){std::cout<<": ";}
-                // std::cout<<samples[s].s()[m]<<" ";
-            // }
-            // std::cout<<"\n";
-        // }
-        // std::cout<<"\n";
-        
-        it=g.es().upper_bound(current); //point iterator to next element
-    }
-    
-    return nll;
-}
-template double optimize::hopt_nll2(graph<bmi_comparator>&,size_t,size_t,size_t);
 
 template<typename cmp>
 std::vector<size_t> optimize::classify(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<array1d<double> >& probs){
@@ -1145,7 +885,7 @@ std::vector<size_t> optimize::classify(graph<cmp>& g,std::vector<sample_data>& s
     for(size_t s=0;s<n_samples;s++){
         double prob_sum=vec_add_float(probs[s].e());
         for(size_t i=0;i<probs[s].nx();i++){
-            probs[s].at(i)-=prob_sum;
+            probs[s].at(i)/=prob_sum;
         }
     }
     
@@ -1185,35 +925,55 @@ void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<a
     array3d<double> grad(b.w().nx(),b.w().ny(),b.w().nz());
     array3d<double> grad_z_term(b.w().nx(),b.w().ny(),b.w().nz());
     array3d<double> grad_w_term(b.w().nx(),b.w().ny(),b.w().nz());
-    for(size_t i=0;i<grad_z_term.nx();i++){
-        for(size_t j=0;j<grad_z_term.ny();j++){
-            for(size_t k=0;k<grad_z_term.nz();k++){
-                grad_z_term.at(i,j,k)=dz.at(i,j,k)/exp(z);
+    for(size_t i=0;i<grad.nx();i++){
+        for(size_t j=0;j<grad.ny();j++){
+            for(size_t k=0;k<grad.nz();k++){
+                grad_z_term.at(i,j,k)=dz.at(i,j,k)/z;
                 std::vector<double> grad_w_term_addends(w.size());
                 #pragma omp parallel for
                 for(size_t s=0;s<w.size();s++){
-                    grad_w_term_addends[s]=dw[s].at(i,j,k)/exp(w[s]);
+                    grad_w_term_addends[s]=dw[s].at(i,j,k)/w[s];
                 }
                 grad_w_term.at(i,j,k)=vec_add_float(grad_w_term_addends)/(double) w.size();
-                
                 //perform unconstrained gd on original problem
                 grad.at(i,j,k)=grad_z_term.at(i,j,k)-grad_w_term.at(i,j,k);
-                // if(grad_z_term.at(i,j,k)>grad_w_term.at(i,j,k)){ //more accurate calculation
-                    // grad.at(i,j,k)=exp(log(grad_z_term.at(i,j,k))+log1p(-grad_w_term.at(i,j,k)/grad_z_term.at(i,j,k)));
-                // }
-                // else{
-                    // grad.at(i,j,k)=-exp(log(grad_w_term.at(i,j,k))+log1p(-grad_z_term.at(i,j,k)/grad_w_term.at(i,j,k)));
-                // }
+            }
+        }
+    }
+    std::vector<double> grad_norm_addends;
+    for(size_t i=0;i<grad.nx();i++){
+        for(size_t j=0;j<grad.ny();j++){
+            for(size_t k=0;k<grad.nz();k++){
+                grad_norm_addends.push_back(grad.at(i,j,k)*grad.at(i,j,k));
+            }
+        }
+    }
+    double grad_norm=sqrt(vec_add_float(grad_norm_addends));
+    if(grad_norm>1){ //gradient clipping by norm
+        for(size_t i=0;i<grad.nx();i++){
+            for(size_t j=0;j<grad.ny();j++){
+                for(size_t k=0;k<grad.nz();k++){
+                    grad.at(i,j,k)=1*(grad.at(i,j,k)/grad_norm);
+                }
+            }
+        }
+    }
+    for(size_t i=0;i<grad.nx();i++){
+        for(size_t j=0;j<grad.ny();j++){
+            for(size_t k=0;k<grad.nz();k++){
                 m_cache.at(i,j,k)=(beta1*m_cache.at(i,j,k))+((1-beta1)*grad.at(i,j,k));
                 v_cache.at(i,j,k)=(beta2*v_cache.at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
                 double corrected_m=m_cache.at(i,j,k)/(1-pow(beta1,(double) t));
                 double corrected_v=v_cache.at(i,j,k)/(1-pow(beta2,(double) t));
+                b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*0.01*b.w().at(i,j,k)); //weight decay (adamw)
                 b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
                 // b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*grad.at(i,j,k));
-                if(b.w().at(i,j,k)<=0){b.w().at(i,j,k)=1e-300;}
+                if(b.w().at(i,j,k)<=0){b.w().at(i,j,k)=1e-100;}
+                // if(b.w().at(i,j,k)>1){b.w().at(i,j,k)=1;}
             }
         }
     }
+    normalize(b.w());
 }
 
 array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<double>& w,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::map<std::pair<size_t,size_t>,array4d<double> >& m_cache,std::map<std::pair<size_t,size_t>,array4d<double> >& v_cache,size_t t,double lr,double beta1,double beta2,double epsilon){
@@ -1277,33 +1037,59 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
         for(size_t j=0;j<grad_2site.ny();j++){
             for(size_t k=0;k<grad_2site.nz();k++){
                 for(size_t l=0;l<grad_2site.nw();l++){
-                    grad_z_term_2site.at(i,j,k,l)=dz.at(i,j,k,l)/exp(z);
+                    grad_z_term_2site.at(i,j,k,l)=dz.at(i,j,k,l)/z;
                     std::vector<double> grad_w_term_2site_addends(w.size());
                     #pragma omp parallel for
                     for(size_t s=0;s<w.size();s++){
-                        grad_w_term_2site_addends[s]=dw[s].at(i,j,k,l)/exp(w[s]);
+                        grad_w_term_2site_addends[s]=dw[s].at(i,j,k,l)/w[s];
                     }
                     grad_w_term_2site.at(i,j,k,l)=vec_add_float(grad_w_term_2site_addends)/(double) w.size();
-                    
                     //perform projected nonnegative gd on original problem
                     grad_2site.at(i,j,k,l)=grad_z_term_2site.at(i,j,k,l)-grad_w_term_2site.at(i,j,k,l);
-                    // if(grad_z_term_2site.at(i,j,k,l)>grad_w_term_2site.at(i,j,k,l)){ //more accurate calculation
-                        // grad_2site.at(i,j,k,l)=exp(log(grad_z_term_2site.at(i,j,k,l))+log1p(-grad_w_term_2site.at(i,j,k,l)/grad_z_term_2site.at(i,j,k,l)));
-                    // }
-                    // else{
-                        // grad_2site.at(i,j,k,l)=-exp(log(grad_w_term_2site.at(i,j,k,l))+log1p(-grad_z_term_2site.at(i,j,k,l)/grad_w_term_2site.at(i,j,k,l)));
-                    // }
-                    m_cache[key].at(i,j,k,l)=(beta1*m_cache[key].at(i,j,k,l))+((1-beta1)*grad_2site.at(i,j,k,l));
-                    v_cache[key].at(i,j,k,l)=(beta2*v_cache[key].at(i,j,k,l))+((1-beta2)*grad_2site.at(i,j,k,l)*grad_2site.at(i,j,k,l));
-                    double corrected_m=m_cache[key].at(i,j,k,l)/(1-pow(beta1,(double) t));
-                    double corrected_v=v_cache[key].at(i,j,k,l)/(1-pow(beta2,(double) t));
-                    fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
-                    // fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*grad_2site.at(i,j,k,l));
-                    if(fused.at(i,j,k,l)<=0){fused.at(i,j,k,l)=1e-300;}
                 }
             }
         }
     }
+    std::vector<double> grad_2site_norm_addends;
+    for(size_t i=0;i<grad_2site.nx();i++){
+        for(size_t j=0;j<grad_2site.ny();j++){
+            for(size_t k=0;k<grad_2site.nz();k++){
+                for(size_t l=0;l<grad_2site.nw();l++){
+                    grad_2site_norm_addends.push_back(grad_2site.at(i,j,k,l)*grad_2site.at(i,j,k,l));
+                }
+            }
+        }
+    }
+    double grad_2site_norm=sqrt(vec_add_float(grad_2site_norm_addends));
+    if(grad_2site_norm>1){ //gradient clipping by norm
+        for(size_t i=0;i<grad_2site.nx();i++){
+            for(size_t j=0;j<grad_2site.ny();j++){
+                for(size_t k=0;k<grad_2site.nz();k++){
+                    for(size_t l=0;l<grad_2site.nw();l++){
+                        grad_2site.at(i,j,k,l)=1*(grad_2site.at(i,j,k,l)/grad_2site_norm);
+                    }
+                }
+            }
+        }
+    }
+    for(size_t i=0;i<grad_2site.nx();i++){
+        for(size_t j=0;j<grad_2site.ny();j++){
+            for(size_t k=0;k<grad_2site.nz();k++){
+                for(size_t l=0;l<grad_2site.nw();l++){
+                    m_cache[key].at(i,j,k,l)=(beta1*m_cache[key].at(i,j,k,l))+((1-beta1)*grad_2site.at(i,j,k,l));
+                    v_cache[key].at(i,j,k,l)=(beta2*v_cache[key].at(i,j,k,l))+((1-beta2)*grad_2site.at(i,j,k,l)*grad_2site.at(i,j,k,l));
+                    double corrected_m=m_cache[key].at(i,j,k,l)/(1-pow(beta1,(double) t));
+                    double corrected_v=v_cache[key].at(i,j,k,l)/(1-pow(beta2,(double) t));
+                    fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*0.01*fused.at(i,j,k,l)); //weight decay (adamw)
+                    fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
+                    // fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*grad_2site.at(i,j,k,l));
+                    if(fused.at(i,j,k,l)<=0){fused.at(i,j,k,l)=1e-100;}
+                    // if(fused.at(i,j,k,l)>1){fused.at(i,j,k,l)=1;}
+                }
+            }
+        }
+    }
+    normalize(fused);
     return fused;
 }
 
@@ -1419,7 +1205,6 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
 
 double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_data>& samples,bond& parent,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample){
     if(input_rank==1){return 0;} //bmi is nonnegative and upper-bounded by bond dimension, so dim=1 -> bmi=0
-    // size_t top_idx=
     size_t n_samples=samples.size();
     array1d<double> a_subsystem_vec_z(input_rank);
     array1d<double> b_subsystem_vec_z(input_rank);
@@ -1434,11 +1219,7 @@ double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_
             }
         }
         a_subsystem_vec_sample[s]=vec_e;
-        array1d<double> vec_e2(input_rank);
-        for(size_t bs=0;bs<vec_e2.nx();bs++){
-            vec_e2.at(bs)=1;
-        }
-        b_subsystem_vec_sample[s]=vec_e2;
+        b_subsystem_vec_sample[s]=array1d<double>(input_rank);
         array1d<double> vec_e3(input_rank);
         for(size_t az=0;az<vec_e3.nx();az++){
             vec_e3.at(az)=1;
@@ -1560,7 +1341,7 @@ size_t inner_nmf(array3d<double>& fused_mat,array3d<double>& mat1,array3d<double
 }
 
 template<typename cmp>
-void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
     w=calc_w(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
     
@@ -1568,8 +1349,8 @@ void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,
     // aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
     // aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
     
-    // z=update_cache_z(g,current.order(),l_env_z,r_env_z,u_env_z,done_idxs);
-    // w=update_cache_w(g,current.order(),l_env_sample,r_env_sample,u_env_sample,done_idxs);
+    // z=update_cache_z(g,current.order(),l_env_z,r_env_z,u_env_z);
+    // w=update_cache_w(g,current.order(),l_env_sample,r_env_sample,u_env_sample);
     
     array3d<double> current_m(current.w().nx(),current.w().ny(),current.w().nz());
     array3d<double> current_v(current.w().nx(),current.w().ny(),current.w().nz());
@@ -1578,8 +1359,10 @@ void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,
     
     //single-site updates
     for(size_t t2=1;t2<=single_site_update_count;t2++){
+        // std::cout<<"before z: "<<z<<"\n";
         optimize::site_update(current,z,w,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample,current_m,current_v,t2,lr,beta1,beta2,epsilon);
-    
+        
+        g.vs()[current.order()].p_bond()=current;
         g.es().erase(it);
         it=g.es().insert(current);
         
@@ -1590,11 +1373,29 @@ void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,
         aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
         aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
 
-        z=update_cache_z(g,current.order(),l_env_z,r_env_z,u_env_z,done_idxs);
-        w=update_cache_w(g,current.order(),l_env_sample,r_env_sample,u_env_sample,done_idxs);
+        z=update_cache_z(g,current.order(),l_env_z,r_env_z,u_env_z);
+        w=update_cache_w(g,current.order(),l_env_sample,r_env_sample,u_env_sample);
+        // std::cout<<"after z: "<<z<<"\n";
         
+        normalize_using_z(current.w(),z);
+        
+        g.vs()[current.order()].p_bond()=current;
+        g.es().erase(it);
+        it=g.es().insert(current);
+        
+        aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
+        aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
+        
+        z=update_cache_z(g,current.order(),l_env_z,r_env_z,u_env_z);
+        w=update_cache_w(g,current.order(),l_env_sample,r_env_sample,u_env_sample);
+        // std::cout<<"after2 z: "<<z<<"\n";
+        
+        // std::cout<<"before z: "<<z<<"\n";
+        // std::cout<<"old_parent: "<<(std::string)parent.w()<<"\n";
         optimize::site_update(parent,z,w,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample,parent_m,parent_v,t2,lr,beta1,beta2,epsilon);
+        // std::cout<<"new_parent: "<<(std::string)parent.w()<<"\n";
         
+        g.vs()[parent.order()].p_bond()=parent;
         g.es().erase(it_parent);
         it_parent=g.es().insert(parent);
         
@@ -1605,11 +1406,25 @@ void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,
         aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
         aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
         
-        z=update_cache_z(g,parent.order(),l_env_z,r_env_z,u_env_z,done_idxs);
-        w=update_cache_w(g,parent.order(),l_env_sample,r_env_sample,u_env_sample,done_idxs);
+        z=update_cache_z(g,parent.order(),l_env_z,r_env_z,u_env_z);
+        w=update_cache_w(g,parent.order(),l_env_sample,r_env_sample,u_env_sample);
+        // std::cout<<"after z: "<<z<<"\n";
+        
+        normalize_using_z(parent.w(),z);
+        
+        g.vs()[parent.order()].p_bond()=parent;
+        g.es().erase(it_parent);
+        it_parent=g.es().insert(parent);
+        
+        aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
+        aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
+        
+        z=update_cache_z(g,parent.order(),l_env_z,r_env_z,u_env_z);
+        w=update_cache_w(g,parent.order(),l_env_sample,r_env_sample,u_env_sample);
+        // std::cout<<"after2 z: "<<z<<"\n";
     }
 }
-template void inner_updates(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
+template void inner_updates(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
 
 double inner_bmi(bond& current,bond& parent,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample){
     //calculate bmi using improved tensors
@@ -1622,7 +1437,7 @@ double inner_bmi(bond& current,bond& parent,std::vector<array1d<double> >& l_env
 }
 
 template<typename cmp>
-double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 1
     array3d<double> fused_mat(fused.nx()*fused.ny(),fused.nz()*fused.nw(),1);
     for(size_t i=0;i<fused.nx();i++){
@@ -1668,7 +1483,7 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     g.es().erase(it_parent);
     it_parent=g.es().insert(parent);
     
-    inner_updates(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+    inner_updates(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
     
     double bmi=inner_bmi(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
     // std::cout<<"way1: "<<(std::string) g<<"\n";
@@ -1676,17 +1491,19 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     //update bmi and p_bond after every optimization sweep
     current.bmi()=bmi;
     g.vs()[current.order()].bmi()=bmi;
-    g.vs()[current.order()].p_bond()=current;
-    g.vs()[parent.order()].p_bond()=parent;
     
+    g.vs()[current.order()].p_bond()=current;
     g.es().erase(it);
     it=g.es().insert(current);
+    g.vs()[parent.order()].p_bond()=parent;
+    g.es().erase(it_parent);
+    it_parent=g.es().insert(parent);
     return bmi;
 }
-template double way1(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
+template double way1(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
 
 template<typename cmp>
-double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 2
     array3d<double> fused_mat(fused.nx()*fused.nz(),fused.ny()*fused.nw(),1);
     for(size_t i=0;i<fused.nx();i++){
@@ -1800,7 +1617,7 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     }
     // std::cout<<(std::string) g<<"\n";
     
-    inner_updates(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+    inner_updates(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
     
     double bmi=inner_bmi(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
     // std::cout<<"way2: "<<(std::string) g<<"\n";
@@ -1808,17 +1625,19 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     //update bmi and p_bond after every optimization sweep
     current.bmi()=bmi;
     g.vs()[current.order()].bmi()=bmi;
-    g.vs()[current.order()].p_bond()=current;
-    g.vs()[parent.order()].p_bond()=parent;
     
+    g.vs()[current.order()].p_bond()=current;
     g.es().erase(it);
     it=g.es().insert(current);
+    g.vs()[parent.order()].p_bond()=parent;
+    g.es().erase(it_parent);
+    it_parent=g.es().insert(parent);
     return bmi;
 }
-template double way2(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
+template double way2(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
 
 template<typename cmp>
-double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::set<size_t>& done_idxs,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 2
     array3d<double> fused_mat(fused.nz()*fused.ny(),fused.nx()*fused.nw(),1);
     for(size_t i=0;i<fused.nz();i++){
@@ -1931,7 +1750,7 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     }
     // std::cout<<(std::string) g<<"\n";
     
-    inner_updates(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,done_idxs,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
+    inner_updates(g,it,it_parent,current,parent,z,l_env_z,r_env_z,u_env_z,w,l_env_sample,r_env_sample,u_env_sample,samples,labels,single_site_update_count,lr,beta1,beta2,epsilon);
     
     double bmi=inner_bmi(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
     // std::cout<<"way3: "<<(std::string) g<<"\n";
@@ -1939,11 +1758,13 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     //update bmi and p_bond after every optimization sweep
     current.bmi()=bmi;
     g.vs()[current.order()].bmi()=bmi;
-    g.vs()[current.order()].p_bond()=current;
-    g.vs()[parent.order()].p_bond()=parent;
     
+    g.vs()[current.order()].p_bond()=current;
     g.es().erase(it);
     it=g.es().insert(current);
+    g.vs()[parent.order()].p_bond()=parent;
+    g.es().erase(it_parent);
+    it_parent=g.es().insert(parent);
     return bmi;
 }
-template double way3(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::set<size_t>&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
+template double way3(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,array4d<double>&,size_t,bool,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);

@@ -27,6 +27,9 @@ public:
     array2d<size_t> f() const;
 #endif
     double bmi() const;
+#ifdef MODEL_TREE_ML_BORN
+    double ee() const;
+#endif
     double cost() const;
     size_t order() const;
     bool todo() const;
@@ -43,6 +46,9 @@ public:
     array2d<size_t>& f();
 #endif
     double& bmi();
+#ifdef MODEL_TREE_ML_BORN
+    double& ee();
+#endif
     double& cost();
     size_t& order();
     bool& todo(); //if not yet processed, todo=1
@@ -57,6 +63,9 @@ private:
     array2d<size_t> f_;
 #endif
     double bmi_;
+#ifdef MODEL_TREE_ML_BORN
+    double ee_;
+#endif
     double cost_;
     size_t order_; //in observable computation, this is the upstream site
     bool todo_;

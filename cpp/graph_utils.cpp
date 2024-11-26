@@ -203,6 +203,7 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
+        vs[vs.size()-1].p_bond()=b;
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
         // std::cout<<(std::string) b<<"\n";g.vs()[current.v1()].p_k()
@@ -341,6 +342,7 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
+        vs[vs.size()-1].p_bond()=b;
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
         // std::cout<<(std::string) b<<"\n";g.vs()[current.v1()].p_k()
@@ -501,6 +503,7 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
+        vs[vs.size()-1].p_bond()=b;
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
         // std::cout<<(std::string) b<<"\n";g.vs()[current.v1()].p_k()
