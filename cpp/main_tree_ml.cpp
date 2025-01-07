@@ -335,7 +335,9 @@ int main(int argc,char **argv){
     
     double total_mi=0;
     for(auto it=g.es().begin();it!=--g.es().end();++it){
-        total_mi+=(*it).bmi();
+        if(!std::isnan((*it).bmi())){
+            total_mi+=(*it).bmi();
+        }
     }
     std::string total_mi_string="total mi: ";
     total_mi_string+=std::to_string(total_mi);
