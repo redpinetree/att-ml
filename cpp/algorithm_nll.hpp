@@ -10,23 +10,23 @@ namespace algorithm{
     template<typename cmp>
     void train_nll(graph<cmp>&,size_t,size_t,size_t,double);
     template<typename cmp>
-    void train_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    void train_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
-    void train_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    void train_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
-    void train_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<sample_data>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    void train_nll(graph<cmp>&,std::vector<sample_data>&,std::vector<sample_data>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
-    void train_nll(graph<cmp>&,std::vector<sample_data>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    void train_nll(graph<cmp>&,std::vector<sample_data>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     
 #ifdef MODEL_TREE_ML_BORN
     template<typename cmp>
-    void train_nll_born(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    void train_nll_born(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
-    void train_nll_born(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    void train_nll_born(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
-    void train_nll_born(graph<cmp>&,std::vector<sample_data>&,std::vector<sample_data>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    void train_nll_born(graph<cmp>&,std::vector<sample_data>&,std::vector<sample_data>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
-    void train_nll_born(graph<cmp>&,std::vector<sample_data>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    void train_nll_born(graph<cmp>&,std::vector<sample_data>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     #endif
     
     template<typename cmp>

@@ -76,6 +76,7 @@ int main(int argc,char **argv){
     size_t n_config_samples=1000;
     size_t n_nll_iter_max=10000;
     double lr=0.001;
+    size_t batch_size=1000;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -93,10 +94,11 @@ int main(int argc,char **argv){
             {"r-max",required_argument,0,'r'},
             {"nll-iter-max",required_argument,0,'N'},
             {"learning-rate",required_argument,0,'l'},
+            {"batch_size",required_argument,0,'b'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:t:L:V:B:T:r:N:l:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:t:L:V:B:T:r:N:l:b:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -115,6 +117,7 @@ int main(int argc,char **argv){
             case 'r': r_max=(size_t) atoi(optarg); break;
             case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
             case 'l': lr=atof(optarg); break;
+            case 'b': batch_size=(size_t) atoi(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -267,11 +270,13 @@ int main(int argc,char **argv){
     }
     
     std::cout<<"Training details:\n\ttrain data: "<<input<<"\n";
+    std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
     if(label_set){
         std::cout<<"\ttrain labels: "<<label_file<<"\n";
     }
     if(test_set){
-        std::cout<<"\ttest data: "<<label_file<<"\n";
+        std::cout<<"\ttest data: "<<test_file<<"\n";
+        std::cout<<"\ttest data size: "<<test_data.size()<<"\n";
     }
     if(test_label_set){
         std::cout<<"\ttest labels: "<<test_label_file<<"\n";
@@ -281,6 +286,7 @@ int main(int argc,char **argv){
     std::cout<<"\tr max: "<<r_max<<"\n";
     std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
     std::cout<<"\tlearning rate: "<<lr<<"\n";
+    std::cout<<"\tbatch size: "<<batch_size<<"\n";
     std::cout<<"\tstruct opt: "<<(struct_opt?"true":"false")<<"\n";
     std::cout<<"\tcompress r: "<<(compress_r?"true":"false")<<"\n";
     sw.start();
@@ -292,16 +298,16 @@ int main(int argc,char **argv){
     // std::cout<<"z: "<<exp(calc_z_born(g))<<"\n";
     
     if(label_set&&test_set&&test_label_set){
-        algorithm::train_nll_born(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
+        algorithm::train_nll_born(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
     }
     else if(label_set&&(!test_set)){
-        algorithm::train_nll_born(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,sweep_history,struct_opt); //nll training with labels
+        algorithm::train_nll_born(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,sweep_history,struct_opt); //nll training with labels
     }
     else if((!label_set)&&test_set){
-        algorithm::train_nll_born(g,train_data,test_data,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with test data
+        algorithm::train_nll_born(g,train_data,test_data,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with test data
     }
     else{
-        algorithm::train_nll_born(g,train_data,n_nll_iter_max,r_max,compress_r,lr,train_nll_history,sweep_history,struct_opt); //nll training
+        algorithm::train_nll_born(g,train_data,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,sweep_history,struct_opt); //nll training
     }
     sw.split();
     if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}

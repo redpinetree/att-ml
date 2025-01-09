@@ -10,7 +10,7 @@
 
 namespace optimize{
     template<typename cmp>
-    double opt_struct_nll_born(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
+    double opt_struct_nll_born(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
     template<typename cmp>
     std::vector<size_t> classify_born(graph<cmp>&,std::vector<sample_data>&,std::vector<array1d<double> >&);
     
