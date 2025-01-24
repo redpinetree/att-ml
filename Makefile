@@ -11,18 +11,21 @@ TARGET_CPD = ./bin/cpd_approx
 TARGET_TREE_ML_SPIN = ./bin/tree_ml_approx
 TARGET_TREE_ML = ./bin/tree_ml
 TARGET_TREE_ML_BORN = ./bin/tree_ml_born
+TARGET_TREE_ML_HYBRID = ./bin/tree_ml_hybrid
 
 SRC_OLD_OLD = ./cpp_old_old/tree_approx_potts.cpp ./cpp_old_old/algorithm.cpp ./cpp_old_old/graph.cpp ./cpp_old_old/graph_utils.cpp ./cpp_old_old/site.cpp ./cpp_old_old/bond.cpp ./cpp_old_old/bond_utils.cpp
 SRC_OLD = ./cpp_old/tree_approx_potts.cpp ./cpp_old/observables.cpp ./cpp_old/algorithm.cpp ./cpp_old/graph_utils.cpp ./cpp_old/site.cpp ./cpp_old/bond.cpp ./cpp_old/bond_utils.cpp ./cpp_old/mpi_utils.cpp
 SRC_COMMON_APPROX = ./cpp/main.cpp ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/ttn_ops.cpp ./cpp/mat_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
 SRC_COMMON_TREE_ML = ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/ttn_ops.cpp ./cpp/mat_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
 SRC_COMMON_TREE_ML_BORN = ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/ttn_ops.cpp ./cpp/mat_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
+SRC_COMMON_TREE_ML_HYBRID = ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/ttn_ops.cpp ./cpp/mat_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
 SRC_CMD = ./cpp/cmd/algorithm.cpp ./cpp/cmd/optimize.cpp
 SRC_RENYI = ./cpp/renyi/algorithm.cpp ./cpp/renyi/optimize.cpp
 SRC_CPD = ./cpp/cpd/algorithm.cpp ./cpp/cpd/optimize.cpp
 SRC_TREE_ML_SPIN = ./cpp/main_tree_ml_spin.cpp
 SRC_TREE_ML = ./cpp/main_tree_ml.cpp
 SRC_TREE_ML_BORN = ./cpp/optimize_nll_born.cpp ./cpp/ttn_ops_born.cpp ./cpp/main_tree_ml_born.cpp
+SRC_TREE_ML_HYBRID = ./cpp/optimize_nll_born.cpp ./cpp/ttn_ops_born.cpp ./cpp/main_tree_ml_hybrid.cpp
 
 OBJ_OLD_OLD = $(SRC_OLD_OLD:%.cpp=%.o)
 OBJ_OLD = $(SRC_OLD:%.cpp=%.o)
@@ -32,12 +35,14 @@ OBJ_COMMON_CPD = $(SRC_COMMON_APPROX:%.cpp=%_cpd.o)
 OBJ_COMMON_TREE_ML_SPIN = $(SRC_COMMON_TREE_ML:%.cpp=%_tree_ml_spin.o)
 OBJ_COMMON_TREE_ML = $(SRC_COMMON_TREE_ML:%.cpp=%_tree_ml.o)
 OBJ_COMMON_TREE_ML_BORN = $(SRC_COMMON_TREE_ML_BORN:%.cpp=%_tree_ml_born.o)
+OBJ_COMMON_TREE_ML_HYBRID = $(SRC_COMMON_TREE_ML_HYBRID:%.cpp=%_tree_ml_hybrid.o)
 OBJ_CMD = $(SRC_CMD:%.cpp=%.o)
 OBJ_RENYI = $(SRC_RENYI:%.cpp=%.o)
 OBJ_CPD = $(SRC_CPD:%.cpp=%.o)
 OBJ_TREE_ML_SPIN = $(SRC_TREE_ML_SPIN:%.cpp=%.o)
 OBJ_TREE_ML = $(SRC_TREE_ML:%.cpp=%.o)
 OBJ_TREE_ML_BORN = $(SRC_TREE_ML_BORN:%.cpp=%.o)
+OBJ_TREE_ML_HYBRID = $(SRC_TREE_ML_HYBRID:%.cpp=%.o)
 
 .PHONY: clean graph
 
@@ -49,6 +54,7 @@ cpd: $(TARGET_CPD)
 tree_ml_spin: $(TARGET_TREE_ML_SPIN)
 tree_ml: $(TARGET_TREE_ML)
 tree_ml_born: $(TARGET_TREE_ML_BORN)
+tree_ml_hybrid: $(TARGET_TREE_ML_HYBRID)
 # all: $(TARGET_OLD) $(TARGET_CMD) $(TARGET_RENYI) $(TARGET_CPD)
 # all: $(TARGET_OLD_OLD) $(TARGET_OLD) $(TARGET_CMD) $(TARGET_RENYI) $(TARGET_CPD)
 
@@ -76,6 +82,9 @@ $(TARGET_TREE_ML): $(OBJ_COMMON_TREE_ML) $(OBJ_TREE_ML)
 $(TARGET_TREE_ML_BORN): $(OBJ_COMMON_TREE_ML_BORN) $(OBJ_TREE_ML_BORN)
 	$(MPICXX) $(OBJ_COMMON_TREE_ML_BORN) $(OBJ_TREE_ML_BORN) -llapack -lopenblas -o $(TARGET_TREE_ML_BORN) $(CXXFLAGS)
 
+$(TARGET_TREE_ML_HYBRID): $(OBJ_COMMON_TREE_ML_HYBRID) $(OBJ_TREE_ML_HYBRID)
+	$(MPICXX) $(OBJ_COMMON_TREE_ML_HYBRID) $(OBJ_TREE_ML_HYBRID) -llapack -lopenblas -o $(TARGET_TREE_ML_HYBRID) $(CXXFLAGS)
+
 $(OBJ_COMMON_CMD): %_cmd.o: %.cpp
 	$(MPICXX) -I ./cpp/cmd -D MODEL_CMD -c $< -o $@ $(CXXFLAGS)
 
@@ -92,6 +101,9 @@ $(OBJ_COMMON_TREE_ML): %_tree_ml.o: %.cpp
 	$(MPICXX) -D MODEL_TREE_ML -c $< -o $@ $(CXXFLAGS)
 
 $(OBJ_COMMON_TREE_ML_BORN): %_tree_ml_born.o: %.cpp
+	$(MPICXX) -D MODEL_TREE_ML_BORN -c $< -o $@ $(CXXFLAGS)
+
+$(OBJ_COMMON_TREE_ML_HYBRID): %_tree_ml_hybrid.o: %.cpp
 	$(MPICXX) -D MODEL_TREE_ML_BORN -c $< -o $@ $(CXXFLAGS)
 
 $(OBJ_OLD_OLD): %.o: %.cpp
@@ -118,6 +130,9 @@ $(OBJ_TREE_ML): %.o: %.cpp
 $(OBJ_TREE_ML_BORN): %.o: %.cpp
 	$(MPICXX) -D MODEL_TREE_ML_BORN -c $< -o $@ $(CXXFLAGS)
 
+$(OBJ_TREE_ML_HYBRID): %.o: %.cpp
+	$(MPICXX) -D MODEL_TREE_ML_BORN -c $< -o $@ $(CXXFLAGS)
+
 clean:
 	# @rm -f ./cpp_old_old/*.o 2>/dev/null || true
 	# @rm -f ./cpp_old/*.o 2>/dev/null || true
@@ -131,6 +146,7 @@ clean:
 	@rm $(TARGET_TREE_ML_SPIN) 2>/dev/null || true
 	@rm $(TARGET_TREE_ML) 2>/dev/null || true
 	@rm $(TARGET_TREE_ML_BORN) 2>/dev/null || true
+	@rm $(TARGET_TREE_ML_HYBRID) 2>/dev/null || true
 
 graph: 
 	@make -dn MAKE=: all | sed -rn "s/^(\s+)Considering target file '(.*)'\.$$/\1\2/p"
