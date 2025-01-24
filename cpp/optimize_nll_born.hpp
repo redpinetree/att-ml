@@ -20,8 +20,6 @@ namespace optimize{
     array4d<double> fused_update_born(graph<cmp>&,bond&,bond&,double,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::map<std::pair<size_t,size_t>,array4d<double> >&,std::map<std::pair<size_t,size_t>,array4d<double> >&,size_t,double,double,double,double);
     template<typename cmp>
     double calc_bmi_born(graph<cmp>&,bond&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
-    template<typename cmp>
-    double calc_bmi_input_born(graph<cmp>&,size_t,size_t,bond&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
     double calc_ee_born(bond&,bond&);
 };
 

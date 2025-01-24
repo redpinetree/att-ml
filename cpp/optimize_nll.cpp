@@ -415,7 +415,6 @@ double optimize::opt_nll(graph<cmp>& g,std::vector<sample_data>& samples,std::ve
 }
 template double optimize::opt_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,double);
 
-
 template<typename cmp>
 double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_samples,std::vector<size_t>& train_labels,std::vector<sample_data>& test_samples,std::vector<size_t>& test_labels,size_t iter_max,size_t r_max,bool compress_r,double lr,size_t batch_size,std::map<size_t,double>& train_nll_history,std::map<size_t,double>& test_nll_history,std::map<size_t,size_t>& sweep_history,bool struct_opt){
     if(iter_max==0){return 0;}
@@ -828,15 +827,6 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
     z=calc_z(g,l_env_z,r_env_z,u_env_z);
     w=calc_w(g,train_samples,train_labels,l_env_sample,r_env_sample,u_env_sample);
     
-    // std::cout<<(std::string)g<<"\n";
-    for(size_t i=0;i<g.n_phys_sites();i++){
-        // double input_bmi=fabs(optimize::calc_bmi_input(i,g.vs()[i].rank(),train_samples,g.vs()[g.vs()[i].u_idx()].p_bond(),l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample)) //take abs
-        double input_bmi=optimize::calc_bmi_input(i,g.vs()[i].rank(),train_samples,g.vs()[g.vs()[i].u_idx()].p_bond(),l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
-        // std::cout<<input_bmi<<"\n";
-        if(input_bmi<-log(g.vs()[i].rank())){input_bmi=2*log(g.vs()[i].rank());}
-        g.vs()[i].bmi()=input_bmi;
-        // g.vs()[i].bmi()=0;
-    }
     return best_nll;
 }
 template double optimize::opt_struct_nll(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<sample_data>&,std::vector<size_t>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
@@ -1211,118 +1201,6 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
     // std::cout<<"s_b: "<<s_b<<"\n";
     // std::cout<<"s_ab: "<<s_ab<<"\n";
     // std::cout<<"("<<current.order()<<","<<parent.order()<<") bmi: "<<bmi<<"\n";
-    return bmi;
-}
-
-double optimize::calc_bmi_input(size_t idx,size_t input_rank,std::vector<sample_data>& samples,bond& parent,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample){
-    if(input_rank==1){return 0;} //bmi is nonnegative and upper-bounded by bond dimension, so dim=1 -> bmi=0
-    size_t n_samples=samples.size();
-    array1d<double> a_subsystem_vec_z(input_rank);
-    array1d<double> b_subsystem_vec_z(input_rank);
-    std::vector<array1d<double> > a_subsystem_vec_sample(n_samples);
-    std::vector<array1d<double> > b_subsystem_vec_sample(n_samples);
-    #pragma omp parallel for
-    for(size_t s=0;s<n_samples;s++){
-        array1d<double> vec_e(input_rank);
-        for(size_t as=0;as<vec_e.nx();as++){
-            if(as==(samples[s].s()[idx]-1)){ //if a==samples[s].s()[n]-1, element is 1. else 0
-                vec_e.at(as)=1;
-            }
-        }
-        a_subsystem_vec_sample[s]=vec_e;
-        b_subsystem_vec_sample[s]=array1d<double>(input_rank);
-        array1d<double> vec_e3(input_rank);
-        for(size_t az=0;az<vec_e3.nx();az++){
-            vec_e3.at(az)=1;
-        }
-        a_subsystem_vec_z=vec_e3;
-    }
-    if((idx==parent.v1())){
-        for(size_t k=0;k<parent.w().nx();k++){
-        // for(size_t k=0;k<input_rank;k++){
-            std::vector<double> b_subsystem_vec_z_addends;
-            for(size_t l=0;l<parent.w().ny();l++){
-                for(size_t m=0;m<parent.w().nz();m++){
-            // for(size_t l=0;l<r_env_z[parent.order()].nx();l++){
-                // for(size_t m=0;m<u_env_z[parent.order()].nx();m++){
-                    b_subsystem_vec_z_addends.push_back(r_env_z[parent.order()].at(l)*u_env_z[parent.order()].at(m)*parent.w().at(k,l,m));
-                }
-            }
-            b_subsystem_vec_z.at(k)=vec_add_float(b_subsystem_vec_z_addends);
-        }
-        #pragma omp parallel for
-        for(size_t s=0;s<n_samples;s++){
-            for(size_t k=0;k<parent.w().nx();k++){
-            // for(size_t k=0;k<input_rank;k++){
-                std::vector<double> b_subsystem_vec_sample_addends;
-                for(size_t l=0;l<parent.w().ny();l++){
-                    for(size_t m=0;m<parent.w().nz();m++){
-                // for(size_t l=0;l<r_env_z[parent.order()].nx();l++){
-                    // for(size_t m=0;m<u_env_z[parent.order()].nx();m++){
-                        b_subsystem_vec_sample_addends.push_back(r_env_sample[parent.order()][s].at(l)*u_env_sample[parent.order()][s].at(m)*parent.w().at(k,l,m));
-                    }
-                }
-                b_subsystem_vec_sample[s].at(k)=vec_add_float(b_subsystem_vec_sample_addends);
-            }
-        }
-    }
-    else{
-        for(size_t l=0;l<parent.w().ny();l++){
-        // for(size_t l=0;l<input_rank;l++){
-            std::vector<double> b_subsystem_vec_z_addends;
-            for(size_t k=0;k<parent.w().nx();k++){
-                for(size_t m=0;m<parent.w().nz();m++){
-            // for(size_t k=0;k<l_env_z[parent.order()].nx();k++){
-                // for(size_t m=0;m<u_env_z[parent.order()].nx();m++){
-                    b_subsystem_vec_z_addends.push_back(l_env_z[parent.order()].at(k)*u_env_z[parent.order()].at(m)*parent.w().at(k,l,m));
-                }
-            }
-            b_subsystem_vec_z.at(l)=vec_add_float(b_subsystem_vec_z_addends);
-        }
-        #pragma omp parallel for
-        for(size_t s=0;s<n_samples;s++){
-            for(size_t l=0;l<parent.w().ny();l++){
-            // for(size_t l=0;l<input_rank;l++){
-                std::vector<double> b_subsystem_vec_sample_addends;
-                for(size_t k=0;k<parent.w().nx();k++){
-                    for(size_t m=0;m<parent.w().nz();m++){
-                // for(size_t k=0;k<l_env_z[parent.order()].nx();k++){
-                    // for(size_t m=0;m<u_env_z[parent.order()].nx();m++){
-                        b_subsystem_vec_sample_addends.push_back(l_env_sample[parent.order()][s].at(k)*u_env_sample[parent.order()][s].at(m)*parent.w().at(k,l,m));
-                    }
-                }
-                b_subsystem_vec_sample[s].at(l)=vec_add_float(b_subsystem_vec_sample_addends);
-            }
-        }
-    }
-    std::vector<double> z_addends;
-    for(size_t k=0;k<input_rank;k++){
-        z_addends.push_back(a_subsystem_vec_z.at(k)*b_subsystem_vec_z.at(k));
-    }
-    double z=log(vec_add_float(z_addends));
-    double s_a=0;
-    double s_b=0;
-    double s_ab=0;
-    #pragma omp parallel for reduction(-:s_a,s_b,s_ab)
-    for(size_t s=0;s<n_samples;s++){
-        std::vector<double> s_a_addends;
-        std::vector<double> s_b_addends;
-        std::vector<double> s_ab_addends;
-        for(size_t k=0;k<input_rank;k++){
-            s_a_addends.push_back(a_subsystem_vec_sample[s].at(k)*b_subsystem_vec_z.at(k));
-            s_b_addends.push_back(a_subsystem_vec_z.at(k)*b_subsystem_vec_sample[s].at(k));
-            s_ab_addends.push_back(a_subsystem_vec_sample[s].at(k)*b_subsystem_vec_sample[s].at(k));
-        }
-        s_a-=log(vec_add_float(s_a_addends));
-        s_b-=log(vec_add_float(s_b_addends));
-        s_ab-=log(vec_add_float(s_ab_addends));
-    }
-    double bmi=((s_a+s_b-s_ab)/(double) n_samples)+z;
-    // std::cout<<"z: "<<z<<"\n";
-    // std::cout<<"s_a: "<<s_a<<"\n";
-    // std::cout<<"s_b: "<<s_b<<"\n";
-    // std::cout<<"s_ab: "<<s_ab<<"\n";
-    // std::cout<<"("<<idx<<","<<parent.order()<<") bmi: "<<bmi<<"\n";
     return bmi;
 }
 
