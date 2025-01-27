@@ -250,7 +250,6 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
         {
@@ -308,7 +307,6 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
     key.order()=center;
     key.depth()=g.vs()[center].depth();
     key.bmi()=-1e50;
-    key.virt_count()=2;
     auto it2=g.es().lower_bound(key);
     bond center_bond=*it2;
     size_t top_idx=g.vs().size()-1;
@@ -341,7 +339,6 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
             key.order()=u_idx;
             key.depth()=g.vs()[u_idx].depth();
             key.bmi()=-1e50;
-            key.virt_count()=2;
             it2=g.es().lower_bound(key);
         }
     }
@@ -353,7 +350,6 @@ double update_cache_z(graph<cmp>& g,size_t center,std::vector<array1d<double> >&
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
         {
@@ -602,7 +598,6 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
         {
@@ -666,7 +661,6 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
     key.order()=center;
     key.depth()=g.vs()[center].depth();
     key.bmi()=-1e50;
-    key.virt_count()=2;
     auto it2=g.es().lower_bound(key);
     bond center_bond=*it2;
     size_t top_idx=g.vs().size()-1;
@@ -702,7 +696,6 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
             key.order()=u_idx;
             key.depth()=g.vs()[u_idx].depth();
             key.bmi()=-1e50;
-            key.virt_count()=2;
             it2=g.es().lower_bound(key);
         }
     }
@@ -714,7 +707,6 @@ std::vector<double> update_cache_w(graph<cmp>& g,size_t center,std::vector<std::
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
         {

@@ -22,7 +22,6 @@ public:
     size_t rank() const;
     size_t vol() const;
     size_t depth() const;
-    std::multiset<bond,vertices_comparator> adj() const;
     std::vector<size_t> coords() const;
     bool virt() const;
     std::pair<size_t,size_t> p() const;
@@ -34,7 +33,6 @@ public:
     size_t& rank();
     size_t& vol();
     size_t& depth();
-    std::multiset<bond,vertices_comparator>& adj();
     bool& virt();
     size_t& l_idx();
     size_t& r_idx();
@@ -50,7 +48,6 @@ private:
     size_t rank_;
     size_t vol_;
     size_t depth_;
-    std::multiset<bond,vertices_comparator> adj_;
     bool virt_;
     size_t l_idx_;
     size_t r_idx_;

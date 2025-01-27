@@ -21,7 +21,6 @@ std::ostream& operator<<(std::ostream& os,const site& v){
 size_t site::rank() const{return this->rank_;}
 size_t site::vol() const{return this->vol_;}
 size_t site::depth() const{return this->depth_;}
-std::multiset<bond,vertices_comparator> site::adj() const{return this->adj_;}
 bool site::virt() const{return this->virt_;}
 size_t site::l_idx() const{return this->l_idx_;}
 size_t site::r_idx() const{return this->r_idx_;}
@@ -31,7 +30,6 @@ double site::ee() const{return this->ee_;}
 size_t& site::rank(){return this->rank_;}
 size_t& site::vol(){return this->vol_;}
 size_t& site::depth(){return this->depth_;}
-std::multiset<bond,vertices_comparator>& site::adj(){return this->adj_;}
 bool& site::virt(){return this->virt_;}
 size_t& site::l_idx(){return this->l_idx_;}
 size_t& site::r_idx(){return this->r_idx_;}

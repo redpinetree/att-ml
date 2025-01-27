@@ -27,7 +27,6 @@ void canonicalize(graph<cmp>& g,size_t center_idx){
         key.order()=g.vs()[(*it).order()].u_idx();
         key.depth()=g.vs()[key.order()].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         auto it_parent=g.es().lower_bound(key);
         bond parent=*it_parent; //must be a dereferenced pointer to the actual object, not a copy!
         // std::cout<<(std::string) current<<"->"<<(std::string) parent<<"\n";
@@ -102,7 +101,6 @@ void canonicalize(graph<cmp>& g,size_t center_idx){
         key.order()=idx;
         key.depth()=g.vs()[key.order()].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         auto it_parent=g.es().lower_bound(key);
         bond parent=*it_parent;
         size_t next_idx=todo.back();
@@ -352,7 +350,6 @@ std::vector<double> update_cache_w_born(graph<cmp>& g,size_t center,std::vector<
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
         {
@@ -416,7 +413,6 @@ std::vector<double> update_cache_w_born(graph<cmp>& g,size_t center,std::vector<
     key.order()=center;
     key.depth()=g.vs()[center].depth();
     key.bmi()=-1e50;
-    key.virt_count()=2;
     auto it2=g.es().lower_bound(key);
     bond center_bond=*it2;
     size_t top_idx=g.vs().size()-1;
@@ -452,7 +448,6 @@ std::vector<double> update_cache_w_born(graph<cmp>& g,size_t center,std::vector<
             key.order()=u_idx;
             key.depth()=g.vs()[u_idx].depth();
             key.bmi()=-1e50;
-            key.virt_count()=2;
             it2=g.es().lower_bound(key);
         }
     }
@@ -464,7 +459,6 @@ std::vector<double> update_cache_w_born(graph<cmp>& g,size_t center,std::vector<
         key.order()=idx;
         key.depth()=g.vs()[idx].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         auto it=g.es().lower_bound(key);
         //each time, update the u_env of the left and right child
         {

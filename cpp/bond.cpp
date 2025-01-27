@@ -4,14 +4,13 @@
 #include "bond.hpp"
 
 bond::bond(){}
-bond::bond(size_t v1,size_t v2,size_t depth,array3d<double> w):w_(w),virt_count_(0),depth_(depth),order_(0),todo_(true){
+bond::bond(size_t v1,size_t v2,size_t depth,array3d<double> w):w_(w),depth_(depth),order_(0),todo_(true){
     this->v_=(v1<v2)?std::pair<size_t,size_t>(v1,v2):std::pair<size_t,size_t>(v2,v1);
-    this->v_orig_=this->v();
     this->bmi(w);
     this->ee()=this->bmi();
 }
 
-bond::bond(std::pair<size_t,size_t> v,size_t depth,array3d<double> w):v_(v),v_orig_(v),virt_count_(0),depth_(depth),w_(w),order_(0),todo_(true){
+bond::bond(std::pair<size_t,size_t> v,size_t depth,array3d<double> w):v_(v),depth_(depth),w_(w),order_(0),todo_(true){
     this->bmi(w);
     this->ee()=this->bmi();
 }
@@ -26,12 +25,8 @@ std::ostream& operator<<(std::ostream& os,const bond& e){
 }
 
 std::pair<size_t,size_t> bond::v() const{return this->v_;}
-std::pair<size_t,size_t> bond::v_orig() const{return this->v_orig_;}
 size_t bond::v1() const{return this->v_.first;}
 size_t bond::v2() const{return this->v_.second;}
-size_t bond::v1_orig() const{return this->v_orig_.first;}
-size_t bond::v2_orig() const{return this->v_orig_.second;}
-size_t bond::virt_count() const{return this->virt_count_;}
 size_t bond::depth() const{return this->depth_;}
 array3d<double> bond::w() const{return this->w_;}
 double bond::bmi() const{return this->bmi_;}
@@ -39,12 +34,8 @@ double bond::ee() const{return this->ee_;}
 size_t bond::order() const{return this->order_;}
 bool bond::todo() const{return this->todo_;}
 std::pair<size_t,size_t>& bond::v(){return this->v_;}
-std::pair<size_t,size_t>& bond::v_orig(){return this->v_orig_;}
 size_t& bond::v1(){return this->v_.first;}
 size_t& bond::v2(){return this->v_.second;}
-size_t& bond::v1_orig(){return this->v_orig_.first;}
-size_t& bond::v2_orig(){return this->v_orig_.second;}
-size_t& bond::virt_count(){return this->virt_count_;}
 size_t& bond::depth(){return this->depth_;}
 array3d<double>& bond::w(){return this->w_;}
 double& bond::bmi(){return this->bmi_;}

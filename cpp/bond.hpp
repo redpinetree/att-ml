@@ -15,12 +15,8 @@ public:
     operator std::string() const;
     friend std::ostream& operator<<(std::ostream&,const bond&);
     std::pair<size_t,size_t> v() const;
-    std::pair<size_t,size_t> v_orig() const;
     size_t v1() const;
     size_t v2() const;
-    size_t v1_orig() const;
-    size_t v2_orig() const;
-    size_t virt_count() const;
     size_t depth() const;
     array3d<double> w() const;
     double bmi() const;
@@ -28,12 +24,8 @@ public:
     size_t order() const;
     bool todo() const;
     std::pair<size_t,size_t>& v();
-    std::pair<size_t,size_t>& v_orig();
     size_t& v1();
     size_t& v2();
-    size_t& v1_orig();
-    size_t& v2_orig();
-    size_t& virt_count();
     size_t& depth();
     array3d<double>& w();
     double& bmi();
@@ -43,8 +35,6 @@ public:
     void bmi(array3d<double>&);
 private:
     std::pair<size_t,size_t> v_;
-    std::pair<size_t,size_t> v_orig_;
-    size_t virt_count_;
     size_t depth_;
     array3d<double> w_;
     double bmi_;

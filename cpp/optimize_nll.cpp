@@ -193,7 +193,6 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
                 }
                 key.depth()=g.vs()[key.order()].depth();
                 key.bmi()=-1e50;
-                key.virt_count()=2;
                 it=g.es().lower_bound(key);
                 continue;
             }
@@ -202,7 +201,6 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
             key.order()=g.vs()[(*it).order()].u_idx();
             key.depth()=g.vs()[key.order()].depth();
             key.bmi()=-1e50;
-            key.virt_count()=2;
             auto it_parent=g.es().lower_bound(key);
             // auto it_parent=g.es().find(g.vs()[g.vs()[(*it).order()].u_idx()].p_bond());
             bond parent=*it_parent; //must be a dereferenced pointer to the actual object, not a copy!
@@ -396,7 +394,6 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<sample_data>& train_sa
             }
             key.depth()=g.vs()[key.order()].depth();
             key.bmi()=-1e50;
-            key.virt_count()=2;
             it=g.es().lower_bound(key);
             
             if(iter==iter_max){break;}
@@ -1190,7 +1187,6 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
         key.order()=g.vs()[(*d_it).order()].u_idx();
         key.depth()=g.vs()[key.order()].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         d_it=g.es().lower_bound(key);
     }
     // std::cout<<(std::string) g<<"\n";
@@ -1325,7 +1321,6 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
         key.order()=g.vs()[(*d_it).order()].u_idx();
         key.depth()=g.vs()[key.order()].depth();
         key.bmi()=-1e50;
-        key.virt_count()=2;
         d_it=g.es().lower_bound(key);
     }
     // std::cout<<(std::string) g<<"\n";

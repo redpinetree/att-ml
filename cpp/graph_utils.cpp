@@ -89,7 +89,6 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
         }
         bond b(v1,v2,depth,w);
         b.order()=num_vs+t_idx;
-        b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
         b.ee()=std::numeric_limits<double>::quiet_NaN();
@@ -197,7 +196,6 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
         }
         bond b(v1,v2,depth,w);
         b.order()=num_vs+t_idx;
-        b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
         b.ee()=std::numeric_limits<double>::quiet_NaN();
@@ -326,7 +324,6 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
         }
         bond b(v1,v2,depth,w);
         b.order()=num_vs+t_idx;
-        b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
         b.ee()=std::numeric_limits<double>::quiet_NaN();
