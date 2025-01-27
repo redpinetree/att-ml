@@ -22,7 +22,6 @@ size_t site::rank() const{return this->rank_;}
 size_t site::vol() const{return this->vol_;}
 size_t site::depth() const{return this->depth_;}
 std::multiset<bond,vertices_comparator> site::adj() const{return this->adj_;}
-std::vector<size_t> site::coords() const{return this->coords_;}
 bool site::virt() const{return this->virt_;}
 size_t site::l_idx() const{return this->l_idx_;}
 size_t site::r_idx() const{return this->r_idx_;}
@@ -32,16 +31,13 @@ size_t& site::rank(){return this->rank_;}
 size_t& site::vol(){return this->vol_;}
 size_t& site::depth(){return this->depth_;}
 std::multiset<bond,vertices_comparator>& site::adj(){return this->adj_;}
-std::vector<size_t>& site::coords(){return this->coords_;}
 bool& site::virt(){return this->virt_;}
 size_t& site::l_idx(){return this->l_idx_;}
 size_t& site::r_idx(){return this->r_idx_;}
 size_t& site::u_idx(){return this->u_idx_;}
 double& site::bmi(){return this->bmi_;}
 bond& site::p_bond(){return this->p_bond_;}
-std::vector<size_t>& site::orig_ks_idxs(){return this->orig_ks_idxs_;}
 std::vector<double>& site::p_k(){return this->p_k_;}
 array3d<double>& site::p_ijk(){return this->p_ijk_;}
 array2d<double>& site::p_ik(){return this->p_ik_;}
 array2d<double>& site::p_jk(){return this->p_jk_;}
-std::vector<std::vector<double> >& site::m_vec(){return this->m_vec_;}

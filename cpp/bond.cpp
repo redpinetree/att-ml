@@ -42,9 +42,6 @@ size_t bond::v2_orig() const{return this->v_orig_.second;}
 size_t bond::virt_count() const{return this->virt_count_;}
 size_t bond::depth() const{return this->depth_;}
 array3d<double> bond::w() const{return this->w_;}
-#ifdef MODEL_CMD
-array2d<size_t> bond::f() const{return this->f_;}
-#endif
 double bond::bmi() const{return this->bmi_;}
 #ifdef MODEL_TREE_ML_BORN
 double bond::ee() const{return this->ee_;}
@@ -61,9 +58,6 @@ size_t& bond::v2_orig(){return this->v_orig_.second;}
 size_t& bond::virt_count(){return this->virt_count_;}
 size_t& bond::depth(){return this->depth_;}
 array3d<double>& bond::w(){return this->w_;}
-#ifdef MODEL_CMD
-array2d<size_t>& bond::f(){return this->f_;}
-#endif
 double& bond::bmi(){return this->bmi_;}
 #ifdef MODEL_TREE_ML_BORN
 double& bond::ee(){return this->ee_;}

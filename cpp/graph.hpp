@@ -16,10 +16,7 @@ public:
     graph(){
         this->n_phys_sites_=this->vs().size();
     }
-    graph(std::vector<site> vs,std::multiset<bond,cmp> es):vs_(vs),es_(es),beta_(1){
-        this->n_phys_sites_=this->vs().size();
-    };
-    graph(std::vector<site> vs,std::multiset<bond,cmp> es,double beta,std::vector<std::tuple<size_t,size_t,double> > orig_ks):vs_(vs),es_(es),beta_(beta),orig_ks_(orig_ks){
+    graph(std::vector<site> vs,std::multiset<bond,cmp> es):vs_(vs),es_(es){
         this->n_phys_sites_=this->vs().size();
     };
     operator std::string() const{
@@ -44,15 +41,9 @@ public:
     std::vector<site> vs() const{return this->vs_;};
     std::multiset<bond,cmp> es() const{return this->es_;};
     size_t n_phys_sites() const{return this->n_phys_sites_;};
-    std::vector<size_t> dims() const{return this->dims_;};
-    double beta() const{return this->beta_;}
-    std::vector<std::tuple<size_t,size_t,double> > orig_ks() const{return this->orig_ks_;};
     std::vector<site>& vs(){return this->vs_;};
     std::multiset<bond,cmp>& es(){return this->es_;};
     size_t& n_phys_sites(){return this->n_phys_sites_;};
-    std::vector<size_t>& dims(){return this->dims_;};
-    double& beta(){return this->beta_;}
-    std::vector<std::tuple<size_t,size_t,double> >& orig_ks(){return this->orig_ks_;};
 #ifdef MODEL_TREE_ML_BORN
     size_t center_idx() const{return this->center_idx_;};
     size_t& center_idx(){return this->center_idx_;};
@@ -61,11 +52,6 @@ private:
     std::vector<site> vs_;
     std::multiset<bond,cmp> es_;
     size_t n_phys_sites_;
-    //only nonempty if regular lattice
-    std::vector<size_t> dims_;
-    //original bond coupling data for energy calculation, if applicable (for potts models)
-    double beta_;
-    std::vector<std::tuple<size_t,size_t,double> > orig_ks_;
 #ifdef MODEL_TREE_ML_BORN
     size_t center_idx_;
 #endif

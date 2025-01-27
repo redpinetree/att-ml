@@ -582,60 +582,6 @@ array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>
     return x;
 }
 
-array3d<double> mu_kl_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x,size_t max_it){
-    if((aTa.nx()!=aTb.nx())||(aTa.ny()!=x.nx())||(x.ny()!=aTb.ny())){
-        std::cout<<"Incompatible matrix equation in MU-KL-LS with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
-        exit(1);
-    }
-    array3d<double> prev_x=x;
-    double eps=1e-16;
-    double delta_first=0;
-    std::vector<double> denom=aTa.sum_over_axis(1,2);
-    for(size_t it=0;it<max_it;it++){
-        array3d<double> aTax=matmul_xTy(aTa,x);
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
-                double num=0;
-                for(size_t k=0;k<aTa.nx();k++){
-                    num+=aTa.at(k,i,0)*aTb.at(k,j,0)/aTax.at(k,j,0);
-                }
-                x.at(i,j,0)*=num/denom[i];
-                x.at(i,j,0)=(x.at(i,j,0)>eps)?x.at(i,j,0):eps;
-            }
-        }
-        double delta=0;
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
-                delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
-            }
-        }
-        delta=sqrt(delta);
-        prev_x=x;
-        if(it==0){
-            delta_first=delta;
-            continue;
-        }
-        if(delta<=(eps*delta_first)){
-            // std::cout<<"MU-KL stopped early after "<<it<<" iterations.\n";
-            break;
-        }
-    }
-    // if(norm_flag){
-        // double sum=0;
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
-                // sum+=x.at(i,j,0);
-            // }
-        // }
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
-                // x.at(i,j,0)=x.at(i,j,0)/sum;
-            // }
-        // }
-    // }
-    return x;
-}
-
 array3d<double> mu_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,size_t max_it){
     if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
         std::cout<<"Incompatible matrix equation in MU-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";

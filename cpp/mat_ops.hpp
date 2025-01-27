@@ -24,7 +24,6 @@ array3d<double> nn_hals(array3d<double>&,array3d<double>&,array3d<double>&,size_
 array3d<double> nn_hals2(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 array3d<double> mu_ls(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 array3d<double> mu_ls2(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
-array3d<double> mu_kl_ls(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 array3d<double> mu_kl(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 array3d<double> mu_kl2(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
 

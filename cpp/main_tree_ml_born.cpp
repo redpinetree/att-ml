@@ -39,19 +39,19 @@ void print_usage(){
 }
 
 template<typename cmp>
-graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,std::string init_tree_type){ //transformations are done to counteract the transformations in gen_hypercubic
+graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,std::string init_tree_type){
     graph<cmp> g;
     if(init_tree_type=="mps"){
         std::normal_distribution<double> dist(0,0);
-        g=graph_utils::init_mps<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,dist,1);
+        g=graph_utils::init_mps<cmp>(idim,tdim,r_max,ls);
     }
     else if(init_tree_type=="pbttn"){
         std::normal_distribution<double> dist{0,0};
-        g=graph_utils::init_pbttn<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,dist,1);
+        g=graph_utils::init_pbttn<cmp>(idim,tdim,r_max,ls);
     }
     else if(init_tree_type=="rand"){
         std::normal_distribution<double> dist{0,0};
-        g=graph_utils::init_rand<std::normal_distribution<double>,cmp>(idim,tdim,r_max,ls,dist,1);
+        g=graph_utils::init_rand<cmp>(idim,tdim,r_max,ls);
     }
     return g;
 }

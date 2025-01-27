@@ -23,9 +23,6 @@ public:
     size_t virt_count() const;
     size_t depth() const;
     array3d<double> w() const;
-#ifdef MODEL_CMD
-    array2d<size_t> f() const;
-#endif
     double bmi() const;
 #ifdef MODEL_TREE_ML_BORN
     double ee() const;
@@ -42,9 +39,6 @@ public:
     size_t& virt_count();
     size_t& depth();
     array3d<double>& w();
-#ifdef MODEL_CMD
-    array2d<size_t>& f();
-#endif
     double& bmi();
 #ifdef MODEL_TREE_ML_BORN
     double& ee();
@@ -59,9 +53,6 @@ private:
     size_t virt_count_;
     size_t depth_;
     array3d<double> w_;
-#ifdef MODEL_CMD
-    array2d<size_t> f_;
-#endif
     double bmi_;
 #ifdef MODEL_TREE_ML_BORN
     double ee_;

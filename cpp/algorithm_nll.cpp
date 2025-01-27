@@ -33,7 +33,7 @@ std::vector<sample_data> algorithm::load_data_from_file(std::string& fn,size_t& 
             line>>val;
             s.push_back(val+1); //smallest value in sample_data is 1
         }
-        data.push_back(sample_data(data_total_length,s,0,0));
+        data.push_back(sample_data(data_total_length,s));
     }
     // for(size_t i=0;i<data.size();i++){
         // for(size_t j=0;j<data[i].n_phys_sites();j++){
@@ -69,22 +69,6 @@ std::vector<size_t> algorithm::load_data_labels_from_file(std::string& label_fn,
     // exit(1);
     return data_labels;
 }
-
-template<typename cmp>
-void algorithm::train_nll(graph<cmp>& g,size_t n_samples,size_t n_sweeps,size_t iter_max,double lr){
-    // std::vector<sample_data> samples=sampling::mh_sample(g,n_samples,0); //consider subtree rooted at n
-    // std::vector<sample_data> samples=sampling::local_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
-    std::vector<sample_data> samples=sampling::hybrid_mh_sample(g,n_samples,n_sweeps,0); //consider subtree rooted at n
-    //symmetrize samples
-    std::vector<sample_data> sym_samples=sampling::symmetrize_samples(samples);
-    std::vector<size_t> dummy_labels;
-    double nll=optimize::opt_nll(g,sym_samples,dummy_labels,iter_max,lr);
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        bond current=*it;
-        algorithm::calculate_site_probs(g,current);
-    }
-}
-template void algorithm::train_nll(graph<bmi_comparator>&,size_t,size_t,size_t,double);
 
 template<typename cmp>
 void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& train_samples,std::vector<size_t>& train_labels,std::vector<sample_data>& test_samples,std::vector<size_t>& test_labels,size_t iter_max,size_t r_max,bool compress_r,double lr,size_t batch_size,std::map<size_t,double>& train_nll_history,std::map<size_t,double>& test_nll_history,std::map<size_t,size_t>& sweep_history,bool struct_opt){
