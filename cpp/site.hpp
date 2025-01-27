@@ -30,6 +30,7 @@ public:
     size_t r_idx() const;
     size_t u_idx() const;
     double bmi() const;
+    double ee() const;
     size_t& rank();
     size_t& vol();
     size_t& depth();
@@ -39,6 +40,7 @@ public:
     size_t& r_idx();
     size_t& u_idx();
     double& bmi();
+    double& ee();
     bond& p_bond();
     std::vector<double>& p_k();
     array3d<double>& p_ijk();
@@ -49,12 +51,12 @@ private:
     size_t vol_;
     size_t depth_;
     std::multiset<bond,vertices_comparator> adj_;
-    //only used in observable computation
     bool virt_;
     size_t l_idx_;
     size_t r_idx_;
     size_t u_idx_;
     double bmi_;
+    double ee_;
     bond p_bond_;
     std::vector<double> p_k_;
     array3d<double> p_ijk_;

@@ -33,6 +33,8 @@ void print_usage(){
     std::cerr<<"\t-T,--init-tree-type: initial tree type: mps or pbttn or rand\n";
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
+    std::cerr<<"\t--born: use double-layer TTNBM instead of single-layer nnTTN\n";
+    std::cerr<<"\t--hybrid: pretrain with double-layer TTNBM then use single-layer nnTTN, with pretrained structure. Overrides --born.\n";
     std::cerr<<"\t--compress-r: enable rank compression\n";
     std::cerr<<"\t--struct-opt: enable structural optimization\n";
 }
@@ -59,6 +61,9 @@ int main(int argc,char **argv){
     //mpi init
     mpi_utils::init();
     //argument handling
+    int born_flag=0;
+    int hybrid_flag=0;
+    int train_type=0;
     int compress_r=0;
     int struct_opt=0;
     size_t verbose=0;
@@ -79,6 +84,8 @@ int main(int argc,char **argv){
     //option arguments
     while(1){
         static struct option long_opts[]={
+            {"born",no_argument,&born_flag,1},
+            {"hybrid",no_argument,&hybrid_flag,1},
             {"compress-r",no_argument,&compress_r,1},
             {"struct-opt",no_argument,&struct_opt,1},
             {"help",no_argument,0,'h'},
@@ -123,6 +130,21 @@ int main(int argc,char **argv){
             default:
             if(mpi_utils::root){std::cerr<<"Error parsing arguments. Aborting...\n";}
             exit(1);
+        }
+    }
+    //select training type
+    if(hybrid_flag){
+        train_type=2;
+        std::cout<<"Hybrid training type.\n";
+    }
+    else{
+        if(born_flag){
+            train_type=1;
+            std::cout<<"TTNBM training type.\n";
+        }
+        else{
+            train_type=0;
+            std::cout<<"nnTTN training type.\n";
         }
     }
     //positional arguments
@@ -219,9 +241,11 @@ int main(int argc,char **argv){
     stopwatch sw,sw_total;
     sw_total.start();
     
-    std::string output_fn=output;
+    std::string output_fn=output+"_born";
+    std::string output_fn2=output;
     std::string samples_fn=output+"_samples";
     output_fn+=".txt";
+    output_fn2+=".txt";
     samples_fn+=".txt";
     std::stringstream header1_ss,header1_vals_ss,header2_ss,header2_mc_ss;
     observables::output_lines.clear(); //flush output lines
@@ -244,121 +268,259 @@ int main(int argc,char **argv){
         train_data_labels=algorithm::load_data_labels_from_file(test_label_file,test_n_samples,tdim);
     }
     graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,init_tree_type);
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        bond current=*it;
-        algorithm::calculate_site_probs(g,current);
-    }
+    // for(auto it=g.es().begin();it!=g.es().end();++it){
+        // bond current=*it;
+        // algorithm::calculate_site_probs(g,current);
+    // }
     
-    if(g.n_phys_sites()!=train_data_total_length){
-        std::cout<<"Mismatch in input site count between training data ("<<train_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
-        exit(1);
-    }
-    if(idim!=train_data_idim){
-        std::cout<<"Mismatch in input dimension between training data ("<<train_data_idim<<") and model ("<<idim<<").\n";
-        exit(1);
-    }
-    if(test_set){
-        if(g.n_phys_sites()!=test_data_total_length){
-            std::cout<<"Mismatch in input site count between test data ("<<test_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
-            exit(1);
+    if((train_type==1)||(train_type==2)){
+        std::cout<<"Training details (BMTTN):\n\ttrain data: "<<input<<"\n";
+        std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
+        if(label_set){
+            std::cout<<"\ttrain labels: "<<label_file<<"\n";
         }
-        if(idim!=test_data_idim){
-            std::cout<<"Mismatch in input dimension between test data ("<<test_data_idim<<") and model ("<<idim<<").\n";
-            exit(1);
+        if(test_set){
+            std::cout<<"\ttest data: "<<test_file<<"\n";
+            std::cout<<"\ttest data size: "<<test_data.size()<<"\n";
         }
-    }
-    
-    std::cout<<"Training details:\n\ttrain data: "<<input<<"\n";
-    std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
-    if(label_set){
-        std::cout<<"\ttrain labels: "<<label_file<<"\n";
-    }
-    if(test_set){
-        std::cout<<"\ttest data: "<<test_file<<"\n";
-        std::cout<<"\ttest data size: "<<test_data.size()<<"\n";
-    }
-    if(test_label_set){
-        std::cout<<"\ttest labels: "<<test_label_file<<"\n";
-    }
-    std::cout<<"\tinit tree type: "<<init_tree_type<<"\n";
-    std::cout<<"\ttop dim: "<<tdim<<"\n";
-    std::cout<<"\tr max: "<<r_max<<"\n";
-    std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
-    std::cout<<"\tlearning rate: "<<lr<<"\n";
-    std::cout<<"\tbatch size: "<<batch_size<<"\n";
-    std::cout<<"\tstruct opt: "<<(struct_opt?"true":"false")<<"\n";
-    std::cout<<"\tcompress r: "<<(compress_r?"true":"false")<<"\n";
-    sw.start();
-    std::map<size_t,double> train_nll_history,test_nll_history;
-    std::map<size_t,size_t> sweep_history;
-    if(label_set&&test_set&&test_label_set){
-        algorithm::train_nll(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
-    }
-    else if(label_set&&(!test_set)){
-        algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,sweep_history,struct_opt); //nll training with labels
-    }
-    else if((!label_set)&&test_set){
-        algorithm::train_nll(g,train_data,test_data,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with test data
-    }
-    else{
-        algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,sweep_history,struct_opt); //nll training
-    }
-    sw.split();
-    if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
-    trial_time+=sw.elapsed();
-    sw.reset();
-    
-    observables::output_lines.push_back((std::string) g);
-    std::string train_nll_string="train nlls: [";
-    for(auto it=train_nll_history.begin();it!=train_nll_history.end();++it){
-        train_nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
-        if(it!=--train_nll_history.end()){
-            train_nll_string+=", ";
+        if(test_label_set){
+            std::cout<<"\ttest labels: "<<test_label_file<<"\n";
         }
-    }
-    train_nll_string+="]\n";
-    observables::output_lines.push_back(train_nll_string);
-    if(test_set){
-        std::string test_nll_string="test nlls: [";
-        for(auto it=test_nll_history.begin();it!=test_nll_history.end();++it){
-            test_nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
-            if(it!=--test_nll_history.end()){
-                test_nll_string+=", ";
+        std::cout<<"\tinit tree type: "<<init_tree_type<<"\n";
+        std::cout<<"\ttop dim: "<<tdim<<"\n";
+        std::cout<<"\tr max: "<<r_max<<"\n";
+        std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
+        std::cout<<"\tlearning rate: "<<lr<<"\n";
+        std::cout<<"\tbatch size: "<<batch_size<<"\n";
+        std::cout<<"\tstruct opt: "<<(struct_opt?"true":"false")<<"\n";
+        std::cout<<"\tcompress r: "<<(compress_r?"true":"false")<<"\n";
+        sw.start();
+        std::map<size_t,double> train_nll_history,test_nll_history;
+        std::map<size_t,size_t> sweep_history;
+        
+        // std::cout<<"center_idx: "<<g.center_idx()<<"\n";
+        // std::cout<<"dz: "<<(std::string)calc_dz_born(g)<<"\n";
+        // std::cout<<"z: "<<exp(calc_z_born(g))<<"\n";
+        
+        if(label_set&&test_set&&test_label_set){
+            algorithm::train_nll_born(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
+        }
+        else if(label_set&&(!test_set)){
+            algorithm::train_nll_born(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,sweep_history,struct_opt); //nll training with labels
+        }
+        else if((!label_set)&&test_set){
+            algorithm::train_nll_born(g,train_data,test_data,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with test data
+        }
+        else{
+            algorithm::train_nll_born(g,train_data,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,sweep_history,struct_opt); //nll training
+        }
+        sw.split();
+        if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
+        trial_time+=sw.elapsed();
+        sw.reset();
+        
+        observables::output_lines.push_back((std::string) g);
+        std::string train_nll_string="train nlls: [";
+        for(auto it=train_nll_history.begin();it!=train_nll_history.end();++it){
+            train_nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+            if(it!=--train_nll_history.end()){
+                train_nll_string+=", ";
             }
         }
-        test_nll_string+="]\n";
-        observables::output_lines.push_back(test_nll_string);
-    }
-    std::string sweep_string="sweeps: [";
-    for(auto it=sweep_history.begin();it!=sweep_history.end();++it){
-        sweep_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
-        if(it!=--sweep_history.end()){
-            sweep_string+=", ";
+        train_nll_string+="]\n";
+        observables::output_lines.push_back(train_nll_string);
+        if(test_set){
+            std::string test_nll_string="test nlls: [";
+            for(auto it=test_nll_history.begin();it!=test_nll_history.end();++it){
+                test_nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+                if(it!=--test_nll_history.end()){
+                    test_nll_string+=", ";
+                }
+            }
+            test_nll_string+="]\n";
+            observables::output_lines.push_back(test_nll_string);
+        }
+        std::string sweep_string="sweeps: [";
+        for(auto it=sweep_history.begin();it!=sweep_history.end();++it){
+            sweep_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+            if(it!=--sweep_history.end()){
+                sweep_string+=", ";
+            }
+        }
+        sweep_string+="]\n";
+        observables::output_lines.push_back(sweep_string);
+        
+        double total_mi=0;
+        double total_ee=0;
+        for(auto it=g.es().begin();it!=--g.es().end();++it){
+            total_mi+=(*it).bmi();
+            total_ee+=(*it).ee();
+        }
+        std::string total_mi_string="total mi: ";
+        total_mi_string+=std::to_string(total_mi);
+        total_mi_string+="\n";
+        observables::output_lines.push_back(total_mi_string);
+        std::string total_ee_string="total ee: ";
+        total_ee_string+=std::to_string(total_ee);
+        total_ee_string+="\n";
+        observables::output_lines.push_back(total_ee_string);
+        
+        // std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
+        // for(size_t i=0;i<generated_samples.size();i++){
+            // for(size_t j=0;j<generated_samples[i].n_phys_sites();j++){
+                // std::cout<<generated_samples[i].s()[j]<<" ";
+            // }
+            // std::cout<<"\n";
+        // }
+        //compute output quantities
+        // if(verbose>=4){std::cout<<std::string(g);}
+        
+        if(output_set){
+            observables::write_output(output_fn,observables::output_lines);
+            // observables::write_output(mc_output_fn,observables::mc_output_lines);
+        }
+        else{
+            observables::write_output(observables::output_lines);
+            // observables::write_output(observables::mc_output_lines);
         }
     }
-    sweep_string+="]\n";
-    observables::output_lines.push_back(sweep_string);
     
-    double total_mi=0;
-    for(auto it=g.es().begin();it!=--g.es().end();++it){
-        if(!std::isnan((*it).bmi())){
+    if(train_type==2){ //reset elements in network when doing hybrid training
+        observables::output_lines.clear();
+        std::uniform_real_distribution<> unif_dist(1e-10,1.0);
+        for(auto it=g.es().begin();it!=g.es().end();++it){
+            bond b=*it;
+            std::vector<double> sum_addends;
+            for(size_t i=0;i<b.w().nx();i++){
+                for(size_t j=0;j<b.w().ny();j++){
+                    for(size_t k=0;k<b.w().nz();k++){
+                        b.w().at(i,j,k)=unif_dist(mpi_utils::prng);
+                        sum_addends.push_back(b.w().at(i,j,k));
+                    }
+                }
+            }
+            double sum=vec_add_float(sum_addends);
+            for(size_t i=0;i<b.w().nx();i++){
+                for(size_t j=0;j<b.w().ny();j++){
+                    for(size_t k=0;k<b.w().nz();k++){
+                        b.w().at(i,j,k)/=sum;
+                    }
+                }
+            }
+            g.vs()[b.order()].p_bond()=b;
+            //use bmi of ttnbm, so no need to update bmi
+            g.es().erase(it);
+            it=g.es().insert(b);
+        }
+        init_tree_type="ttnbm";
+    }
+
+    if((train_type==0)||(train_type==1)){
+        std::cout<<"Training details (nnTTN):\n\ttrain data: "<<input<<"\n";
+        std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
+        if(label_set){
+            std::cout<<"\ttrain labels: "<<label_file<<"\n";
+        }
+        if(test_set){
+            std::cout<<"\ttest data: "<<test_file<<"\n";
+            std::cout<<"\ttest data size: "<<test_data.size()<<"\n";
+        }
+        if(test_label_set){
+            std::cout<<"\ttest labels: "<<test_label_file<<"\n";
+        }
+        std::cout<<"\tinit tree type: "<<init_tree_type<<"\n";
+        std::cout<<"\ttop dim: "<<tdim<<"\n";
+        std::cout<<"\tr max: "<<r_max<<"\n";
+        std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
+        std::cout<<"\tlearning rate: "<<lr<<"\n";
+        std::cout<<"\tbatch size: "<<batch_size<<"\n";
+        std::cout<<"\tstruct opt: "<<(struct_opt?"true":"false")<<"\n";
+        std::cout<<"\tcompress r: "<<(compress_r?"true":"false")<<"\n";
+        sw.start();
+        std::map<size_t,double> train_nll_history,test_nll_history;
+        std::map<size_t,size_t> sweep_history;
+        
+        // std::cout<<"center_idx: "<<g.center_idx()<<"\n";
+        // std::cout<<"dz: "<<(std::string)calc_dz_born(g)<<"\n";
+        // std::cout<<"z: "<<exp(calc_z_born(g))<<"\n";
+        
+        if(label_set&&test_set&&test_label_set){
+            algorithm::train_nll(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
+        }
+        else if(label_set&&(!test_set)){
+            algorithm::train_nll(g,train_data,train_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,sweep_history,struct_opt); //nll training with labels
+        }
+        else if((!label_set)&&test_set){
+            algorithm::train_nll(g,train_data,test_data,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with test data
+        }
+        else{
+            algorithm::train_nll(g,train_data,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,sweep_history,struct_opt); //nll training
+        }
+        sw.split();
+        if(verbose>=3){std::cout<<"nll training time: "<<(double) sw.elapsed()<<"ms\n";}
+        trial_time+=sw.elapsed();
+        sw.reset();
+        
+        observables::output_lines.push_back((std::string) g);
+        std::string train_nll_string="train nlls: [";
+        for(auto it=train_nll_history.begin();it!=train_nll_history.end();++it){
+            train_nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+            if(it!=--train_nll_history.end()){
+                train_nll_string+=", ";
+            }
+        }
+        train_nll_string+="]\n";
+        observables::output_lines.push_back(train_nll_string);
+        if(test_set){
+            std::string test_nll_string="test nlls: [";
+            for(auto it=test_nll_history.begin();it!=test_nll_history.end();++it){
+                test_nll_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+                if(it!=--test_nll_history.end()){
+                    test_nll_string+=", ";
+                }
+            }
+            test_nll_string+="]\n";
+            observables::output_lines.push_back(test_nll_string);
+        }
+        std::string sweep_string="sweeps: [";
+        for(auto it=sweep_history.begin();it!=sweep_history.end();++it){
+            sweep_string+="("+std::to_string((*it).first)+", "+std::to_string((*it).second)+")";
+            if(it!=--sweep_history.end()){
+                sweep_string+=", ";
+            }
+        }
+        sweep_string+="]\n";
+        observables::output_lines.push_back(sweep_string);
+        
+        double total_mi=0;
+        for(auto it=g.es().begin();it!=--g.es().end();++it){
             total_mi+=(*it).bmi();
         }
-    }
-    std::string total_mi_string="total mi: ";
-    total_mi_string+=std::to_string(total_mi);
-    total_mi_string+="\n";
-    observables::output_lines.push_back(total_mi_string);
-    
-    std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
-    for(size_t i=0;i<generated_samples.size();i++){
-        for(size_t j=0;j<generated_samples[i].n_phys_sites();j++){
-            std::cout<<generated_samples[i].s()[j]<<" ";
+        std::string total_mi_string="total mi: ";
+        total_mi_string+=std::to_string(total_mi);
+        total_mi_string+="\n";
+        observables::output_lines.push_back(total_mi_string);
+        
+        std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
+        for(size_t i=0;i<generated_samples.size();i++){
+            for(size_t j=0;j<generated_samples[i].n_phys_sites();j++){
+                std::cout<<generated_samples[i].s()[j]<<" ";
+            }
+            std::cout<<"\n";
         }
-        std::cout<<"\n";
+        //compute output quantities
+        // if(verbose>=4){std::cout<<std::string(g);}
+        
+        if(output_set){
+            observables::write_output(output_fn2,observables::output_lines);
+            // observables::write_output(mc_output_fn,observables::mc_output_lines);
+        }
+        else{
+            observables::write_output(observables::output_lines);
+            // observables::write_output(observables::mc_output_lines);
+        }
     }
-    //compute output quantities
-    // if(verbose>=4){std::cout<<std::string(g);}
+    
     if(verbose>=2){std::cout<<"Time elapsed: "<<trial_time<<"ms\n";}
     times.push_back(trial_time);
     

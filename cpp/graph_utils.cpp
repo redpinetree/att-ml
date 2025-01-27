@@ -92,22 +92,21 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
         b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
+        b.ee()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
         vs[vs.size()-1].p_bond()=b;
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
-        // std::cout<<(std::string) b<<"\n";g.vs()[current.v1()].p_k()
-        
         
         counter+=2;
     }
     vs[vs.size()-1].u_idx()=0;
     vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
+    vs[vs.size()-1].ee()=std::numeric_limits<double>::quiet_NaN();
     
     graph<cmp> g(vs,es);
     g.n_phys_sites()=num_vs;
     // std::cout<<(std::string) g<<"\n";
-    // exit(1);
     return g;
 }
 template graph<bmi_comparator> graph_utils::init_pbttn(size_t,size_t,size_t,std::vector<size_t>);
@@ -201,12 +200,11 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
         b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
+        b.ee()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
         vs[vs.size()-1].p_bond()=b;
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
-        // std::cout<<(std::string) b<<"\n";g.vs()[current.v1()].p_k()
-        
         
         phys_site_counter++;
         virt_site_counter++;
@@ -214,11 +212,11 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
     }
     vs[vs.size()-1].u_idx()=0;
     vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
+    vs[vs.size()-1].ee()=std::numeric_limits<double>::quiet_NaN();
     
     graph<cmp> g(vs,es);
     g.n_phys_sites()=num_vs;
     // std::cout<<(std::string) g<<"\n";
-    // exit(1);
     return g;
 }
 template graph<bmi_comparator> graph_utils::init_mps(size_t,size_t,size_t,std::vector<size_t>);
@@ -331,19 +329,19 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
         b.virt_count()=vs[v1].virt()+vs[v2].virt();
         b.todo()=0;
         b.bmi()=std::numeric_limits<double>::quiet_NaN();
+        b.ee()=std::numeric_limits<double>::quiet_NaN();
         es.insert(b);
         vs[vs.size()-1].p_bond()=b;
         vs[v1].u_idx()=vs.size()-1;
         vs[v2].u_idx()=vs.size()-1;
-        // std::cout<<(std::string) b<<"\n";g.vs()[current.v1()].p_k()
     }
     vs[vs.size()-1].u_idx()=0;
     vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
+    vs[vs.size()-1].ee()=std::numeric_limits<double>::quiet_NaN();
     
     graph<cmp> g(vs,es);
     g.n_phys_sites()=num_vs;
     // std::cout<<(std::string) g<<"\n";
-    // exit(1);
     return g;
 }
 template graph<bmi_comparator> graph_utils::init_rand(size_t,size_t,size_t,std::vector<size_t>);

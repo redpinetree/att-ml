@@ -64,19 +64,6 @@ void aux_update_u_cache_born(bond& current,bond& parent,std::vector<std::vector<
 }
 
 template<typename cmp>
-double inner_bmi_born(graph<cmp>& g,bond& current,bond& parent,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample){
-    //calculate bmi using improved tensors
-    // double bmi1=fabs(optimize::calc_bmi_born(g,current,w,l_env_sample,r_env_sample,u_env_sample)); //take abs
-    double bmi=optimize::calc_bmi_born(g,current,w,l_env_sample,r_env_sample,u_env_sample); //take abs
-    // double bmi=optimize::calc_ee_born(current,parent); //take abs
-    // if(bmi<-log(current.w().nz())){bmi=2*log(current.w().nz());}
-    // if(bmi<-1e-8){bmi=2*log(current.w().nz());}
-    if(bmi<-1e-4){bmi=std::numeric_limits<double>::quiet_NaN();}
-    return bmi;
-}
-template double inner_bmi_born(graph<bmi_comparator>&,bond&,bond&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
-
-template<typename cmp>
 double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& train_samples,std::vector<size_t>& train_labels,std::vector<sample_data>& test_samples,std::vector<size_t>& test_labels,size_t iter_max,size_t r_max,bool compress_r,double lr,size_t batch_size,std::map<size_t,double>& train_nll_history,std::map<size_t,double>& test_nll_history,std::map<size_t,size_t>& sweep_history,bool struct_opt){
     if(iter_max==0){return 0;}
     size_t single_site_update_count=10;
@@ -285,7 +272,6 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
             
             //calculate entanglement entropy
             current.ee()=optimize::calc_ee_born(current,parent);
-            // current.ee()=inner_bmi_born(g,current,parent,w,l_env_sample,r_env_sample,u_env_sample);
             
             done_idxs.insert(current.order());
             // std::cout<<(std::string)g<<"\n";
@@ -1108,6 +1094,19 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
     }
 }
 template void inner_updates_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<sample_data>&,std::vector<size_t>&,size_t,double,double,double,double);
+
+template<typename cmp>
+double inner_bmi_born(graph<cmp>& g,bond& current,bond& parent,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample){
+    //calculate bmi using improved tensors
+    // double bmi1=fabs(optimize::calc_bmi_born(g,current,w,l_env_sample,r_env_sample,u_env_sample)); //take abs
+    double bmi=optimize::calc_bmi_born(g,current,w,l_env_sample,r_env_sample,u_env_sample); //take abs
+    // double bmi=optimize::calc_ee_born(current,parent); //take abs
+    // if(bmi<-log(current.w().nz())){bmi=2*log(current.w().nz());}
+    // if(bmi<-1e-8){bmi=2*log(current.w().nz());}
+    if(bmi<-1e-4){bmi=std::numeric_limits<double>::quiet_NaN();}
+    return bmi;
+}
+template double inner_bmi_born(graph<bmi_comparator>&,bond&,bond&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 
 template<typename cmp>
 double way1_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,array4d<double>& fused,size_t r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<size_t>& labels,size_t single_site_update_count,double lr,double beta1,double beta2,double epsilon){

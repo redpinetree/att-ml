@@ -177,7 +177,6 @@ void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& train_samples,
 }
 template void algorithm::train_nll(graph<bmi_comparator>&,std::vector<sample_data>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
 
-#ifdef MODEL_TREE_ML_BORN
 template<typename cmp>
 void algorithm::train_nll_born(graph<cmp>& g,std::vector<sample_data>& train_samples,std::vector<size_t>& train_labels,std::vector<sample_data>& test_samples,std::vector<size_t>& test_labels,size_t iter_max,size_t r_max,bool compress_r,double lr,size_t batch_size,std::map<size_t,double>& train_nll_history,std::map<size_t,double>& test_nll_history,std::map<size_t,size_t>& sweep_history,bool struct_opt){
     double nll=optimize::opt_struct_nll_born(g,train_samples,train_labels,test_samples,test_labels,iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt);
@@ -268,7 +267,6 @@ void algorithm::train_nll_born(graph<cmp>& g,std::vector<sample_data>& train_sam
     // }
 }
 template void algorithm::train_nll_born(graph<bmi_comparator>&,std::vector<sample_data>&,size_t,size_t,bool,double,size_t,std::map<size_t,double>&,std::map<size_t,size_t>&,bool);
-#endif
 
 template<typename cmp>
 void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
@@ -283,11 +281,7 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     for(size_t i=0;i<r_i;i++){
         for(size_t j=0;j<r_j;j++){
             for(size_t k=0;k<r_k;k++){
-#if defined(MODEL_TREE_ML) || defined(MODEL_TREE_ML) || defined(MODEL_TREE_ML_BORN)
                 double e=current.w().at(i,j,k);
-#else
-                double e=exp(current.w().at(i,j,k));
-#endif
                 p_ijk.at(i,j,k)=e*g.vs()[current.v1()].p_k()[i]*g.vs()[current.v2()].p_k()[j];
                 p_ik.at(i,k)+=p_ijk.at(i,j,k); //compute marginals
                 p_jk.at(j,k)+=p_ijk.at(i,j,k); //compute marginals
@@ -358,10 +352,5 @@ void algorithm::calculate_site_probs(graph<cmp>& g,bond& current){
     g.vs()[current.order()].p_ijk()=p_ijk;
     g.vs()[current.order()].p_ik()=p_ik;
     g.vs()[current.order()].p_jk()=p_jk;
-    
-    // for(size_t k=0;k<p_k.size();k++){
-        // std::cout<<p_k[k]<<" ";
-    // }
-    // std::cout<<"\n";
 }
 template void algorithm::calculate_site_probs(graph<bmi_comparator>&,bond&);

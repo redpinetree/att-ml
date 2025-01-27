@@ -24,10 +24,7 @@ public:
     size_t depth() const;
     array3d<double> w() const;
     double bmi() const;
-#ifdef MODEL_TREE_ML_BORN
     double ee() const;
-#endif
-    double cost() const;
     size_t order() const;
     bool todo() const;
     std::pair<size_t,size_t>& v();
@@ -40,12 +37,9 @@ public:
     size_t& depth();
     array3d<double>& w();
     double& bmi();
-#ifdef MODEL_TREE_ML_BORN
     double& ee();
-#endif
-    double& cost();
     size_t& order();
-    bool& todo(); //if not yet processed, todo=1
+    bool& todo();
     void bmi(array3d<double>&);
 private:
     std::pair<size_t,size_t> v_;
@@ -54,12 +48,9 @@ private:
     size_t depth_;
     array3d<double> w_;
     double bmi_;
-#ifdef MODEL_TREE_ML_BORN
-    double ee_;
-#endif
-    double cost_;
+    double ee_; //for born machine, should be the same as bmi in single-layer scheme
     size_t order_; //in observable computation, this is the upstream site
-    bool todo_;
+    bool todo_; //if not yet processed, todo=1
 };
 
 #endif
