@@ -21,6 +21,7 @@ struct bmi_comparator{
     bool operator()(const bond& e1,const bond& e2) const{
         // return std::make_tuple(e1.todo(),e1.bmi(),e1.v())<std::make_tuple(e2.todo(),e2.bmi(),e2.v());
         return std::make_tuple(e1.todo(),e1.depth(),e1.order(),e1.bmi(),2-e1.virt_count(),e1.v_orig())<std::make_tuple(e2.todo(),e2.depth(),e2.order(),e2.bmi(),2-e2.virt_count(),e2.v_orig());
+        // return   std::make_tuple(e1.todo(),e1.depth(),e1.order(),2-e1.virt_count(),e1.bmi(),e1.v_orig())<std::make_tuple(e2.todo(),e2.depth(),e2.order(),2-e2.virt_count(),e2.bmi(),e2.v_orig());
     }
     
     size_t q;

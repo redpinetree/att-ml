@@ -15,7 +15,8 @@ void mpi_utils::init(){
     MPI_Comm_rank(MPI_COMM_WORLD,&mpi_utils::proc_rank);
     std::random_device device;
     std::seed_seq seq{device(),device(),device(),device()};
-    mpi_utils::prng.seed(seq);
-    // prng.seed((size_t) std::chrono::system_clock::now().time_since_epoch().count()+proc_rank);
+    // mpi_utils::prng.seed(seq);
+    // mpi_utils::prng.seed(0);
+    prng.seed((size_t) std::chrono::system_clock::now().time_since_epoch().count()+proc_rank);
     mpi_utils::root=(proc_rank==0);
 }

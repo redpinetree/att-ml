@@ -214,23 +214,6 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
     vs[vs.size()-1].u_idx()=0;
     vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
     
-    // for(size_t i=0;i<orig_ks.size();i++){
-        // size_t v1=std::get<0>(orig_ks[i]);
-        // size_t v2=std::get<1>(orig_ks[i]);
-        // size_t k=std::get<2>(orig_ks[i]);
-        // std::cout<<v1<<" "<<v2<<" "<<k<<"\n";
-    // }
-    
-    // for(size_t n=0;n<vs.size();n++){
-        // std::cout<<n<<":\n";
-        // for(size_t i=0;i<vs[n].orig_ks_idxs().size();i++){
-            // size_t v1=std::get<0>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // size_t v2=std::get<1>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // size_t k=std::get<2>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // std::cout<<"\t"<<v1<<" "<<v2<<" "<<k<<"\n";
-        // }
-    // }
-    
     graph<cmp> g(vs,es,beta,orig_ks);
     g.n_phys_sites()=num_vs;
     // std::cout<<(std::string) g<<"\n";
@@ -354,23 +337,6 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
     }
     vs[vs.size()-1].u_idx()=0;
     vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
-    
-    // for(size_t i=0;i<orig_ks.size();i++){
-        // size_t v1=std::get<0>(orig_ks[i]);
-        // size_t v2=std::get<1>(orig_ks[i]);
-        // size_t k=std::get<2>(orig_ks[i]);
-        // std::cout<<v1<<" "<<v2<<" "<<k<<"\n";
-    // }
-    
-    // for(size_t n=0;n<vs.size();n++){
-        // std::cout<<n<<":\n";
-        // for(size_t i=0;i<vs[n].orig_ks_idxs().size();i++){
-            // size_t v1=std::get<0>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // size_t v2=std::get<1>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // size_t k=std::get<2>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // std::cout<<"\t"<<v1<<" "<<v2<<" "<<k<<"\n";
-        // }
-    // }
     
     graph<cmp> g(vs,es,beta,orig_ks);
     g.n_phys_sites()=num_vs;
@@ -510,23 +476,6 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
     }
     vs[vs.size()-1].u_idx()=0;
     vs[vs.size()-1].bmi()=std::numeric_limits<double>::quiet_NaN();
-    
-    // for(size_t i=0;i<orig_ks.size();i++){
-        // size_t v1=std::get<0>(orig_ks[i]);
-        // size_t v2=std::get<1>(orig_ks[i]);
-        // double k=std::get<2>(orig_ks[i]);
-        // std::cout<<v1<<" "<<v2<<" "<<k<<"\n";
-    // }
-    
-    // for(size_t n=0;n<vs.size();n++){
-        // std::cout<<n<<":\n";
-        // for(size_t i=0;i<vs[n].orig_ks_idxs().size();i++){
-            // size_t v1=std::get<0>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // size_t v2=std::get<1>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // double k=std::get<2>(orig_ks[vs[n].orig_ks_idxs()[i]]);
-            // std::cout<<"\t"<<v1<<" "<<v2<<" "<<k<<"\n";
-        // }
-    // }
     
     graph<cmp> g(vs,es,beta,orig_ks);
     g.n_phys_sites()=num_vs;
