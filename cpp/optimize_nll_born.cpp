@@ -270,6 +270,7 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
             
             //calculate entanglement entropy
             current.ee()=optimize::calc_ee_born(current,parent);
+            g.vs()[current.order()].ee()=current.ee();
             
             done_idxs.insert(current.order());
             // std::cout<<(std::string)g<<"\n";

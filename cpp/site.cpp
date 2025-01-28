@@ -9,7 +9,7 @@ site::operator std::string() const{
         return "["+std::to_string(this->vol())+","+std::to_string(this->rank())+","+std::to_string(this->bmi())+","+std::to_string(this->ee())+","+std::to_string(this->depth())+",("+std::to_string(this->l_idx())+","+std::to_string(this->r_idx())+","+std::to_string(this->u_idx())+")]";
     }
     else{
-        return "["+std::to_string(this->vol())+","+std::to_string(this->rank())+","+std::to_string(this->bmi())+","+std::to_string(this->depth())+"]";
+        return "["+std::to_string(this->vol())+","+std::to_string(this->rank())+","+std::to_string(this->bmi())+","+std::to_string(this->ee())+","+std::to_string(this->depth())+"]";
     }
 }
 

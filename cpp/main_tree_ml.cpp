@@ -268,10 +268,6 @@ int main(int argc,char **argv){
         train_data_labels=algorithm::load_data_labels_from_file(test_label_file,test_n_samples,tdim);
     }
     graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,init_tree_type);
-    // for(auto it=g.es().begin();it!=g.es().end();++it){
-        // bond current=*it;
-        // algorithm::calculate_site_probs(g,current);
-    // }
     
     if(g.n_phys_sites()!=train_data_total_length){
         std::cout<<"Mismatch in input site count between training data ("<<train_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
@@ -288,7 +284,7 @@ int main(int argc,char **argv){
         }
     }
     if((train_type==1)||(train_type==2)){
-        std::cout<<"Training details (BMTTN):\n\ttrain data: "<<input<<"\n";
+        std::cout<<"Training details (TTNBM):\n\ttrain data: "<<input<<"\n";
         std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
         if(label_set){
             std::cout<<"\ttrain labels: "<<label_file<<"\n";
@@ -537,15 +533,6 @@ int main(int argc,char **argv){
     
     if(verbose>=2){std::cout<<"Time elapsed: "<<trial_time<<"ms\n";}
     times.push_back(trial_time);
-    
-    if(output_set){
-        observables::write_output(output_fn,observables::output_lines);
-        // observables::write_output(mc_output_fn,observables::mc_output_lines);
-    }
-    else{
-        observables::write_output(observables::output_lines);
-        // observables::write_output(observables::mc_output_lines);
-    }
     sw_total.split();
     //time statistics
     double timer_mean=0;
