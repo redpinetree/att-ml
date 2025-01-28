@@ -4,8 +4,8 @@
 #include "ndarray.hpp"
 
 array3d<double> transpose(array3d<double>&);
-array3d<double> matricize(array3d<double>&,size_t);
-array3d<double> tensorize(array3d<double>&,size_t,size_t,size_t);
+array3d<double> matricize(array3d<double>&,int);
+array3d<double> tensorize(array3d<double>&,int,int,int);
 array3d<double> matmul_xTy(array3d<double>&,array3d<double>&);
 
 //LAPACK function prototypes
@@ -16,19 +16,19 @@ extern "C" {
     extern void dorgqr_(int* m,int* n,int* k,double* a,int* lda,double* tau,double* work,int* lwork,int* info);
 }
 array3d<double> hadamard(array3d<double>&,array3d<double>&);
-void lstsq(array3d<double>&,array3d<double>&,array3d<double>&,size_t&);
-void svd(array3d<double>&,array3d<double>&,array1d<double>&,array3d<double>&,size_t&);
-void qr(array3d<double>&,array3d<double>&,array3d<double>&,size_t&);
+void lstsq(array3d<double>&,array3d<double>&,array3d<double>&,int&);
+void svd(array3d<double>&,array3d<double>&,array1d<double>&,array3d<double>&,int&);
+void qr(array3d<double>&,array3d<double>&,array3d<double>&,int&);
 
-array3d<double> nn_hals(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
-array3d<double> nn_hals2(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
-array3d<double> mu_ls(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
-array3d<double> mu_ls2(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
-array3d<double> mu_kl(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
-array3d<double> mu_kl2(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
+array3d<double> nn_hals(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> nn_hals2(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> mu_ls(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> mu_ls2(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> mu_kl(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> mu_kl2(array3d<double>&,array3d<double>&,array3d<double>&,int);
 
-void nndsvda(array3d<double>&,array3d<double>&,array3d<double>&,size_t,size_t);
-double nmf(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
-double truncated_svd(array3d<double>&,array3d<double>&,array3d<double>&,size_t);
+void nndsvda(array3d<double>&,array3d<double>&,array3d<double>&,int,int);
+double nmf(array3d<double>&,array3d<double>&,array3d<double>&,int);
+double truncated_svd(array3d<double>&,array3d<double>&,array3d<double>&,int);
 
 #endif

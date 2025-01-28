@@ -39,7 +39,7 @@ void print_usage(){
 }
 
 template<typename cmp>
-graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,size_t num_vs,std::string init_tree_type){
+graph<cmp> gen_graph(int idim,int tdim,int r_max,int num_vs,std::string init_tree_type){
     graph<cmp> g;
     if(init_tree_type=="mps"){
         std::normal_distribution<double> dist(0,0);
@@ -65,7 +65,7 @@ int main(int argc,char **argv){
     int train_type=0;
     int compress_r=0;
     int struct_opt=0;
-    size_t verbose=0;
+    int verbose=0;
     bool input_set=false;
     bool output_set=false;
     bool label_set=false;
@@ -74,11 +74,11 @@ int main(int argc,char **argv){
     bool tdim_set=false;
     std::string input,output,label_file,test_file,test_label_file;
     std::string init_tree_type="mps";
-    size_t r_max=0;
-    size_t n_config_samples=1000;
-    size_t n_nll_iter_max=10000;
+    int r_max=0;
+    int n_config_samples=1000;
+    int n_nll_iter_max=10000;
     double lr=0.001;
-    size_t batch_size=1000;
+    int batch_size=1000;
     //option arguments
     while(1){
         static struct option long_opts[]={
@@ -109,17 +109,17 @@ int main(int argc,char **argv){
             break;
             //handle standard options
             case 'h': print_usage(); exit(1);
-            case 'v': verbose=(size_t) atoi(optarg); break;
+            case 'v': verbose=(int) atoi(optarg); break;
             case 'i': input=std::string(optarg); input_set=true; break;
             case 'o': output=std::string(optarg); output_set=true; break;
             case 'L': label_file=std::string(optarg); label_set=true; break;
             case 'V': test_file=std::string(optarg); test_set=true; break;
             case 'B': test_label_file=std::string(optarg); test_label_set=true; break;
             case 'T': init_tree_type=std::string(optarg); break;
-            case 'r': r_max=(size_t) atoi(optarg); break;
-            case 'N': n_nll_iter_max=(size_t) atoi(optarg); break;
+            case 'r': r_max=(int) atoi(optarg); break;
+            case 'N': n_nll_iter_max=(int) atoi(optarg); break;
             case 'l': lr=atof(optarg); break;
-            case 'b': batch_size=(size_t) atoi(optarg); break;
+            case 'b': batch_size=(int) atoi(optarg); break;
             case '?':
             //error printed
             exit(1);
@@ -209,26 +209,26 @@ int main(int argc,char **argv){
     
     double trial_time=0; //not including init time
     
-    size_t train_data_idim,train_n_samples,train_data_total_length;
+    int train_data_idim,train_n_samples,train_data_total_length;
     std::vector<sample_data> train_data=algorithm::load_data_from_file(input,train_n_samples,train_data_total_length,train_data_idim);
-    size_t test_data_idim,test_n_samples,test_data_total_length;
+    int test_data_idim,test_n_samples,test_data_total_length;
     std::vector<sample_data> test_data;
     if(test_set){
         test_data=algorithm::load_data_from_file(test_file,test_n_samples,test_data_total_length,test_data_idim);
     }
-    size_t train_data_labels_tdim,train_labels_n_samples;
-    std::vector<size_t> train_data_labels;
+    int train_data_labels_tdim,train_labels_n_samples;
+    std::vector<int> train_data_labels;
     if(label_set){
         train_data_labels=algorithm::load_data_labels_from_file(label_file,train_labels_n_samples,train_data_labels_tdim);
     }
-    size_t test_data_labels_tdim,test_labels_n_samples;
-    std::vector<size_t> test_data_labels;
+    int test_data_labels_tdim,test_labels_n_samples;
+    std::vector<int> test_data_labels;
     if(test_label_set){
         test_data_labels=algorithm::load_data_labels_from_file(test_label_file,test_labels_n_samples,test_data_labels_tdim);
     }
-    size_t idim=train_data_idim;
-    size_t tdim=label_set?train_data_labels_tdim:1;
-    size_t num_vs=train_data_total_length;
+    int idim=train_data_idim;
+    int tdim=label_set?train_data_labels_tdim:1;
+    int num_vs=train_data_total_length;
     graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,num_vs,init_tree_type);
     
     if(r_max==0){
@@ -280,8 +280,8 @@ int main(int argc,char **argv){
         std::cout<<"\tstruct opt: "<<(struct_opt?"true":"false")<<"\n";
         std::cout<<"\tcompress r: "<<(compress_r?"true":"false")<<"\n";
         sw.start();
-        std::map<size_t,double> train_nll_history,test_nll_history;
-        std::map<size_t,size_t> sweep_history;
+        std::map<int,double> train_nll_history,test_nll_history;
+        std::map<int,int> sweep_history;
         
         // std::cout<<"center_idx: "<<g.center_idx()<<"\n";
         // std::cout<<"dz: "<<(std::string)calc_dz_born(g)<<"\n";
@@ -351,8 +351,8 @@ int main(int argc,char **argv){
         observables::output_lines.push_back(total_ee_string);
         
         // std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
-        // for(size_t i=0;i<generated_samples.size();i++){
-            // for(size_t j=0;j<generated_samples[i].n_phys_sites();j++){
+        // for(int i=0;i<generated_samples.size();i++){
+            // for(int j=0;j<generated_samples[i].n_phys_sites();j++){
                 // std::cout<<generated_samples[i].s()[j]<<" ";
             // }
             // std::cout<<"\n";
@@ -376,18 +376,18 @@ int main(int argc,char **argv){
         for(auto it=g.es().begin();it!=g.es().end();++it){
             bond b=*it;
             std::vector<double> sum_addends;
-            for(size_t i=0;i<b.w().nx();i++){
-                for(size_t j=0;j<b.w().ny();j++){
-                    for(size_t k=0;k<b.w().nz();k++){
+            for(int i=0;i<b.w().nx();i++){
+                for(int j=0;j<b.w().ny();j++){
+                    for(int k=0;k<b.w().nz();k++){
                         b.w().at(i,j,k)=unif_dist(mpi_utils::prng);
                         sum_addends.push_back(b.w().at(i,j,k));
                     }
                 }
             }
             double sum=vec_add_float(sum_addends);
-            for(size_t i=0;i<b.w().nx();i++){
-                for(size_t j=0;j<b.w().ny();j++){
-                    for(size_t k=0;k<b.w().nz();k++){
+            for(int i=0;i<b.w().nx();i++){
+                for(int j=0;j<b.w().ny();j++){
+                    for(int k=0;k<b.w().nz();k++){
                         b.w().at(i,j,k)/=sum;
                     }
                 }
@@ -423,8 +423,8 @@ int main(int argc,char **argv){
         std::cout<<"\tstruct opt: "<<(struct_opt?"true":"false")<<"\n";
         std::cout<<"\tcompress r: "<<(compress_r?"true":"false")<<"\n";
         sw.start();
-        std::map<size_t,double> train_nll_history,test_nll_history;
-        std::map<size_t,size_t> sweep_history;
+        std::map<int,double> train_nll_history,test_nll_history;
+        std::map<int,int> sweep_history;
         
         // std::cout<<"center_idx: "<<g.center_idx()<<"\n";
         // std::cout<<"dz: "<<(std::string)calc_dz_born(g)<<"\n";
@@ -488,8 +488,8 @@ int main(int argc,char **argv){
         observables::output_lines.push_back(total_mi_string);
         
         std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
-        for(size_t i=0;i<generated_samples.size();i++){
-            for(size_t j=0;j<generated_samples[i].n_phys_sites();j++){
+        for(int i=0;i<generated_samples.size();i++){
+            for(int j=0;j<generated_samples[i].n_phys_sites();j++){
                 std::cout<<generated_samples[i].s()[j]<<" ";
             }
             std::cout<<"\n";
@@ -513,11 +513,11 @@ int main(int argc,char **argv){
     //time statistics
     double timer_mean=0;
     double timer_std=0;
-    for(size_t i=0;i<times.size();i++){
+    for(int i=0;i<times.size();i++){
         timer_mean+=times[i];
     }
     timer_mean/=times.size();
-    for(size_t i=0;i<times.size();i++){
+    for(int i=0;i<times.size();i++){
         timer_std+=pow(times[i]-timer_mean,2);
     }
     timer_std/=(times.size()-1);

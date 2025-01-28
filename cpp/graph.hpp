@@ -23,13 +23,13 @@ public:
     };
     operator std::string() const{
         std::ostringstream vs_ss,es_ss;
-        for(size_t i=0;i<this->vs().size();i++){
+        for(int i=0;i<this->vs().size();i++){
             vs_ss << std::string(this->vs()[i]);
             if(i!=this->vs().size()-1){
                 vs_ss << ", ";
             }
         }
-        size_t i=0;
+        int i=0;
         std::multiset<bond,cmp> es=this->es();
         for(auto it=es.begin();it!=es.end();++it){
             es_ss << std::string(*it);
@@ -42,17 +42,17 @@ public:
     }
     std::vector<site> vs() const{return this->vs_;};
     std::multiset<bond,cmp> es() const{return this->es_;};
-    size_t n_phys_sites() const{return this->n_phys_sites_;};
+    int n_phys_sites() const{return this->n_phys_sites_;};
     std::vector<site>& vs(){return this->vs_;};
     std::multiset<bond,cmp>& es(){return this->es_;};
-    size_t& n_phys_sites(){return this->n_phys_sites_;};
-    size_t center_idx() const{return this->center_idx_;};
-    size_t& center_idx(){return this->center_idx_;};
+    int& n_phys_sites(){return this->n_phys_sites_;};
+    int center_idx() const{return this->center_idx_;};
+    int& center_idx(){return this->center_idx_;};
 private:
     std::vector<site> vs_;
     std::multiset<bond,cmp> es_;
-    size_t n_phys_sites_;
-    size_t center_idx_; //for born machine, should be top idx in single-layer scheme
+    int n_phys_sites_;
+    int center_idx_; //for born machine, should be top idx in single-layer scheme
 };
 
 #endif

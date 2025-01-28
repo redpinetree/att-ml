@@ -10,8 +10,8 @@ array3d<double> transpose(array3d<double>& x){
         exit(1);
     }
     array3d<double> res(x.ny(),x.nx(),1);
-    for(size_t i=0;i<res.nx();i++){
-        for(size_t j=0;j<res.ny();j++){
+    for(int i=0;i<res.nx();i++){
+        for(int j=0;j<res.ny();j++){
             res.at(i,j,0)=x.at(j,i,0);
         }
     }
@@ -19,16 +19,16 @@ array3d<double> transpose(array3d<double>& x){
 }
 
 //matricize by fusing two axes and leaving one axis untouched
-array3d<double> matricize(array3d<double>& x,size_t sep_ax){ //mttkrp order
+array3d<double> matricize(array3d<double>& x,int sep_ax){ //mttkrp order
     // if(((sep_ax==0)&&(x.nx()==1))&&((sep_ax==1)&&(x.ny()==1))&&((sep_ax==2)&&(x.nz()==1))){ //already a matrix
         // return x;
     // }
     array3d<double> res;
     if(sep_ax==0){
         res=array3d<double>(x.ny()*x.nz(),x.nx(),1);
-        for(size_t i=0;i<x.nx();i++){ //can this be accelerated?
-            for(size_t j=0;j<x.ny();j++){
-                for(size_t k=0;k<x.nz();k++){
+        for(int i=0;i<x.nx();i++){ //can this be accelerated?
+            for(int j=0;j<x.ny();j++){
+                for(int k=0;k<x.nz();k++){
                     res.at((x.nz()*j)+k,i,0)=x.at(i,j,k);
                 }
             }
@@ -36,9 +36,9 @@ array3d<double> matricize(array3d<double>& x,size_t sep_ax){ //mttkrp order
     }
     else if(sep_ax==1){
         res=array3d<double>(x.nx()*x.nz(),x.ny(),1);
-        for(size_t i=0;i<x.nx();i++){ //can this be accelerated?
-            for(size_t j=0;j<x.ny();j++){
-                for(size_t k=0;k<x.nz();k++){
+        for(int i=0;i<x.nx();i++){ //can this be accelerated?
+            for(int j=0;j<x.ny();j++){
+                for(int k=0;k<x.nz();k++){
                     res.at((x.nz()*i)+k,j,0)=x.at(i,j,k);
                 }
             }
@@ -46,9 +46,9 @@ array3d<double> matricize(array3d<double>& x,size_t sep_ax){ //mttkrp order
     }
     else if(sep_ax==2){
         res=array3d<double>(x.nx()*x.ny(),x.nz(),1);
-        for(size_t i=0;i<x.nx();i++){ //can this be accelerated?
-            for(size_t j=0;j<x.ny();j++){
-                for(size_t k=0;k<x.nz();k++){
+        for(int i=0;i<x.nx();i++){ //can this be accelerated?
+            for(int j=0;j<x.ny();j++){
+                for(int k=0;k<x.nz();k++){
                     res.at((x.ny()*i)+j,k,0)=x.at(i,j,k);
                     // res.at((x.nx()*j)+i,k,0)=x.at(i,j,k);
                 }
@@ -63,7 +63,7 @@ array3d<double> matricize(array3d<double>& x,size_t sep_ax){ //mttkrp order
 }
 
 //tensorize by breaking up first two axes, and leaving last axis untouched
-array3d<double> tensorize(array3d<double>& x,size_t r_1,size_t r_2,size_t sep_ax){ //mttkrp order
+array3d<double> tensorize(array3d<double>& x,int r_1,int r_2,int sep_ax){ //mttkrp order
     if(x.nx()!=r_1*r_2){ //cannot reshape
         std::cerr<<"Sizes of first two axes to be broken up do not match the size of the matrix axis.\n";
         exit(1);
@@ -71,24 +71,24 @@ array3d<double> tensorize(array3d<double>& x,size_t r_1,size_t r_2,size_t sep_ax
     array3d<double> res;
     if(sep_ax==0){
         res=array3d<double>(x.ny(),r_1,r_2);
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){
+            for(int j=0;j<x.ny();j++){
                 res.at(j,i/r_2,i%r_2)=x.at(i,j,0);
             }
         }
     }
     else if(sep_ax==1){
         res=array3d<double>(r_1,x.ny(),r_2);
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){
+            for(int j=0;j<x.ny();j++){
                 res.at(i/r_2,j,i%r_2)=x.at(i,j,0);
             }
         }
     }
     else if(sep_ax==2){
         res=array3d<double>(r_1,r_2,x.ny());
-        for(size_t i=0;i<x.nx();i++){ //can this be accelerated?
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){ //can this be accelerated?
+            for(int j=0;j<x.ny();j++){
                 res.at(i/r_2,i%r_2,j)=x.at(i,j,0);
                 // res.at(i%r_1,i/r_1,j)=x.at(i,j,0);
             }
@@ -112,9 +112,9 @@ array3d<double> matmul_xTy(array3d<double>& x,array3d<double>& y){
         exit(1);
     }
     array3d<double> res(x.ny(),y.ny(),1);
-    for(size_t i=0;i<res.nx();i++){ //can this be accelerated?
-        for(size_t j=0;j<res.ny();j++){
-            for(size_t k=0;k<x.nx();k++){
+    for(int i=0;i<res.nx();i++){ //can this be accelerated?
+        for(int j=0;j<res.ny();j++){
+            for(int k=0;k<x.nx();k++){
                 res.at(i,j,0)+=x.at(k,i,0)*y.at(k,j,0);
             }
         }
@@ -129,9 +129,9 @@ array3d<double> hadamard(array3d<double>& x,array3d<double>& y){
         exit(1);
     }
     array3d<double> res(x.nx(),x.ny(),x.nz());
-    for(size_t i=0;i<res.nx();i++){ //can this be accelerated?
-        for(size_t j=0;j<res.ny();j++){
-            for(size_t k=0;k<res.nz();k++){
+    for(int i=0;i<res.nx();i++){ //can this be accelerated?
+        for(int j=0;j<res.ny();j++){
+            for(int k=0;k<res.nz();k++){
                 res.at(i,j,k)=x.at(i,j,k)*y.at(i,j,0);
             }
         }
@@ -140,7 +140,7 @@ array3d<double> hadamard(array3d<double>& x,array3d<double>& y){
 }
 
 //solve the least squares problem ax=b
-void lstsq(array3d<double>& a_mat,array3d<double>& b_mat,array3d<double>& x_mat,size_t& status){
+void lstsq(array3d<double>& a_mat,array3d<double>& b_mat,array3d<double>& x_mat,int& status){
     //input variables
     a_mat=transpose(a_mat); //row major to column major order
     b_mat=transpose(b_mat); //row major to column major order
@@ -194,7 +194,7 @@ void lstsq(array3d<double>& a_mat,array3d<double>& b_mat,array3d<double>& x_mat,
 }
 
 //calculate the svd
-void svd(array3d<double>& a_mat,array3d<double>& u_mat,array1d<double>& s_vec,array3d<double>& vt_mat,size_t& status){
+void svd(array3d<double>& a_mat,array3d<double>& u_mat,array1d<double>& s_vec,array3d<double>& vt_mat,int& status){
     //input variables
     char jobu='S'; //thin svd
     char jobvt='S'; //thin svd
@@ -250,7 +250,7 @@ void svd(array3d<double>& a_mat,array3d<double>& u_mat,array1d<double>& s_vec,ar
 }
 
 //calculate the qr factorization
-void qr(array3d<double>& a_mat,array3d<double>& q_mat,array3d<double>& r_mat,size_t& status){
+void qr(array3d<double>& a_mat,array3d<double>& q_mat,array3d<double>& r_mat,int& status){
     //input variables
     // a_mat=transpose(a_mat); //row major to column major order
     int m=a_mat.nx(); //rows of a
@@ -292,8 +292,8 @@ void qr(array3d<double>& a_mat,array3d<double>& q_mat,array3d<double>& r_mat,siz
     std::copy(&a[0],&a[m*n],h_mat.e().begin());
     //prepare r matrix from h
     r_mat=array3d<double>(r,n,1);
-    for(size_t i=0;i<r_mat.nx();i++){
-        for(size_t j=i;j<r_mat.ny();j++){
+    for(int i=0;i<r_mat.nx();i++){
+        for(int j=i;j<r_mat.ny();j++){
             r_mat.at(i,j,0)=h_mat.at(i,j,0); //implicit transpose
         }
     }
@@ -319,7 +319,7 @@ void qr(array3d<double>& a_mat,array3d<double>& q_mat,array3d<double>& r_mat,siz
     // std::cout<<"r:\n"<<(std::string) r_mat<<"\n";
 }
 
-array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x,size_t max_it){
+array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x,int max_it){
     if((aTa.nx()!=aTb.nx())||(aTa.ny()!=x.nx())||(x.ny()!=aTb.ny())){
         std::cout<<"Incompatible matrix equation in NN-HALS with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
         exit(1);
@@ -327,22 +327,22 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
     array3d<double> prev_x=x;
     double eps=1e-16;
     double delta_first=0;
-    for(size_t it=0;it<max_it;it++){
-        for(size_t k=0;k<aTb.nx();k++){
+    for(int it=0;it<max_it;it++){
+        for(int k=0;k<aTb.nx();k++){
             if(aTa.at(k,k,0)!=0){
                 double zero_check=0;
                 std::vector<double> c;
-                for(size_t col=0;col<x.ny();col++){
+                for(int col=0;col<x.ny();col++){
                     double c_sum=0;
-                    for(size_t l=0;l<x.nx();l++){
+                    for(int l=0;l<x.nx();l++){
                         c_sum+=aTa.at(k,l,0)*x.at(l,col,0);
                     }
                     c.push_back(c_sum);
                 }
-                for(size_t col=0;col<x.ny();col++){
+                for(int col=0;col<x.ny();col++){
                     c[col]-=x.at(k,col,0)*aTa.at(k,k,0); //this term in c removes current k column information
                 }
-                for(size_t col=0;col<x.ny();col++){
+                for(int col=0;col<x.ny();col++){
                     x.at(k,col,0)=(aTb.at(k,col,0)-c[col])/aTa.at(k,k,0);
                     // if(x.at(k,col,0)>1e3){
                         // std::cout<<aTb.at(k,col,0)<<" "<<c[col]<<" "<<aTa.at(k,k,0)<<"\n";
@@ -358,7 +358,7 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
                 //columns should not be zero
                 // if(zero_check<eps){
                     // double x_max_val=*std::max_element(x.e().begin(),x.e().end());
-                    // for(size_t col=0;col<x.ny();col++){
+                    // for(int col=0;col<x.ny();col++){
                         // x.at(k,col,0)=eps*x_max_val;
                     // }
                 // }
@@ -367,8 +367,8 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
             
         }
         double delta=0;
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){
+            for(int j=0;j<x.ny();j++){
                 delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
             }
         }
@@ -385,13 +385,13 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
     }
     // if(norm_flag){
         // double sum=0;
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
+        // for(int i=0;i<x.nx();i++){
+            // for(int j=0;j<x.ny();j++){
                 // sum+=x.at(i,j,0);
             // }
         // }
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
+        // for(int i=0;i<x.nx();i++){
+            // for(int j=0;j<x.ny();j++){
                 // x.at(i,j,0)=x.at(i,j,0)/sum;
             // }
         // }
@@ -400,7 +400,7 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
 }
 
 
-array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<double>& x,size_t max_it){
+array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<double>& x,int max_it){
     if((x.nx()!=baT.nx())||(x.ny()!=aaT.nx())||(aaT.ny()!=baT.ny())){
         std::cout<<"Incompatible matrix equation in NN-HALS with dimensions ("<<x.nx()<<","<<x.ny()<<") ("<<aaT.nx()<<","<<aaT.ny()<<")=("<<baT.nx()<<","<<baT.ny()<<")\n";
         exit(1);
@@ -408,22 +408,22 @@ array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<doubl
     array3d<double> prev_x=x;
     double eps=1e-16;
     double delta_first=0;
-    for(size_t it=0;it<max_it;it++){
-        for(size_t k=0;k<baT.ny();k++){
+    for(int it=0;it<max_it;it++){
+        for(int k=0;k<baT.ny();k++){
             if(aaT.at(k,k,0)!=0){
                 double zero_check=0;
                 std::vector<double> c;
-                for(size_t col=0;col<x.nx();col++){
+                for(int col=0;col<x.nx();col++){
                     double c_sum=0;
-                    for(size_t l=0;l<x.ny();l++){
+                    for(int l=0;l<x.ny();l++){
                         c_sum+=x.at(col,l,0)*aaT.at(l,k,0);
                     }
                     c.push_back(c_sum);
                 }
-                for(size_t col=0;col<x.nx();col++){
+                for(int col=0;col<x.nx();col++){
                     c[col]-=x.at(col,k,0)*aaT.at(k,k,0); //this term in c removes current k column information
                 }
-                for(size_t col=0;col<x.nx();col++){
+                for(int col=0;col<x.nx();col++){
                     x.at(col,k,0)=(baT.at(col,k,0)-c[col])/aaT.at(k,k,0);
                     // if(x.at(col,k,0)>1e3){
                         // std::cout<<baT.at(col,k,0)<<" "<<c[col]<<" "<<aaT.at(k,k,0)<<"\n";
@@ -439,15 +439,15 @@ array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<doubl
                 //columns should not be zero
                 // if(zero_check<eps){
                     // double x_max_val=*std::max_element(x.e().begin(),x.e().end());
-                    // for(size_t col=0;col<x.nx();col++){
+                    // for(int col=0;col<x.nx();col++){
                         // x.at(col,k,0)=eps*x_max_val;
                     // }
                 // }
             }
         }
         double delta=0;
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){
+            for(int j=0;j<x.ny();j++){
                 delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
             }
         }
@@ -464,13 +464,13 @@ array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<doubl
     }
     // if(norm_flag){
         // double sum=0;
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
+        // for(int i=0;i<x.nx();i++){
+            // for(int j=0;j<x.ny();j++){
                 // sum+=x.at(i,j,0);
             // }
         // }
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
+        // for(int i=0;i<x.nx();i++){
+            // for(int j=0;j<x.ny();j++){
                 // x.at(i,j,0)=x.at(i,j,0)/sum;
             // }
         // }
@@ -478,7 +478,7 @@ array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<doubl
     return x;
 }
 
-array3d<double> mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x,size_t max_it){
+array3d<double> mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>& x,int max_it){
     if((aTa.nx()!=aTb.nx())||(aTa.ny()!=x.nx())||(x.ny()!=aTb.ny())){
         std::cout<<"Incompatible matrix equation in MU-LS with dimensions ("<<aTa.nx()<<","<<aTa.ny()<<") ("<<x.nx()<<","<<x.ny()<<")=("<<aTb.nx()<<","<<aTb.ny()<<")\n";
         exit(1);
@@ -486,10 +486,10 @@ array3d<double> mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>&
     array3d<double> prev_x=x;
     double eps=1e-16;
     double delta_first=0;
-    for(size_t it=0;it<max_it;it++){
+    for(int it=0;it<max_it;it++){
         array3d<double> aTax=matmul_xTy(aTa,x);
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){
+            for(int j=0;j<x.ny();j++){
                 double num=aTb.at(i,j,0);
                 double denom=aTax.at(i,j,0);
                 x.at(i,j,0)*=num/denom;
@@ -497,8 +497,8 @@ array3d<double> mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>&
             }
         }
         double delta=0;
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){
+            for(int j=0;j<x.ny();j++){
                 delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
             }
         }
@@ -515,13 +515,13 @@ array3d<double> mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>&
     }
     // if(norm_flag){
         // double sum=0;
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
+        // for(int i=0;i<x.nx();i++){
+            // for(int j=0;j<x.ny();j++){
                 // sum+=x.at(i,j,0);
             // }
         // }
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
+        // for(int i=0;i<x.nx();i++){
+            // for(int j=0;j<x.ny();j++){
                 // x.at(i,j,0)=x.at(i,j,0)/sum;
             // }
         // }
@@ -529,7 +529,7 @@ array3d<double> mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>&
     return x;
 }
 
-array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>& x,size_t max_it){
+array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>& x,int max_it){
     if((x.nx()!=baT.nx())||(x.ny()!=aaT.nx())||(aaT.ny()!=baT.ny())){
         std::cout<<"Incompatible matrix equation in MU-LS with dimensions ("<<x.nx()<<","<<x.ny()<<") ("<<aaT.nx()<<","<<aaT.ny()<<")=("<<baT.nx()<<","<<baT.ny()<<")\n";
         exit(1);
@@ -537,12 +537,12 @@ array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>
     array3d<double> prev_x=x;
     double eps=1e-16;
     double delta_first=0;
-    for(size_t it=0;it<max_it;it++){
+    for(int it=0;it<max_it;it++){
         x=transpose(x);
         array3d<double> xaaT=matmul_xTy(x,aaT);
         x=transpose(x);
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){
+            for(int j=0;j<x.ny();j++){
                 double num=baT.at(i,j,0);
                 double denom=xaaT.at(i,j,0);
                 x.at(i,j,0)*=num/denom;
@@ -550,8 +550,8 @@ array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>
             }
         }
         double delta=0;
-        for(size_t i=0;i<x.nx();i++){
-            for(size_t j=0;j<x.ny();j++){
+        for(int i=0;i<x.nx();i++){
+            for(int j=0;j<x.ny();j++){
                 delta+=(x.at(i,j,0)-prev_x.at(i,j,0))*(x.at(i,j,0)-prev_x.at(i,j,0));
             }
         }
@@ -568,13 +568,13 @@ array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>
     }
     // if(norm_flag){
         // double sum=0;
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
+        // for(int i=0;i<x.nx();i++){
+            // for(int j=0;j<x.ny();j++){
                 // sum+=x.at(i,j,0);
             // }
         // }
-        // for(size_t i=0;i<x.nx();i++){
-            // for(size_t j=0;j<x.ny();j++){
+        // for(int i=0;i<x.nx();i++){
+            // for(int j=0;j<x.ny();j++){
                 // x.at(i,j,0)=x.at(i,j,0)/sum;
             // }
         // }
@@ -582,7 +582,7 @@ array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>
     return x;
 }
 
-array3d<double> mu_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,size_t max_it){
+array3d<double> mu_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,int max_it){
     if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
         std::cout<<"Incompatible matrix equation in MU-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";
         exit(1);
@@ -591,14 +591,14 @@ array3d<double> mu_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,s
     double eps=1e-16;
     double delta_first=0;
     std::vector<double> denom=w.sum_over_axis(0,2);
-    for(size_t it=0;it<max_it;it++){
+    for(int it=0;it<max_it;it++){
         w=transpose(w);
         array3d<double> wh=matmul_xTy(w,h);
         w=transpose(w);
-        for(size_t i=0;i<h.nx();i++){
-            for(size_t j=0;j<h.ny();j++){
+        for(int i=0;i<h.nx();i++){
+            for(int j=0;j<h.ny();j++){
                 double num=0;
-                for(size_t k=0;k<m.nx();k++){
+                for(int k=0;k<m.nx();k++){
                     num+=w.at(k,i,0)*m.at(k,j,0)/wh.at(k,j,0);
                 }
                 h.at(i,j,0)*=num/denom[i];
@@ -606,8 +606,8 @@ array3d<double> mu_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,s
             }
         }
         double delta=0;
-        for(size_t i=0;i<h.nx();i++){
-            for(size_t j=0;j<h.ny();j++){
+        for(int i=0;i<h.nx();i++){
+            for(int j=0;j<h.ny();j++){
                 delta+=(h.at(i,j,0)-prev_h.at(i,j,0))*(h.at(i,j,0)-prev_h.at(i,j,0));
             }
         }
@@ -625,7 +625,7 @@ array3d<double> mu_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,s
     return h;
 }
 
-array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,size_t max_it){
+array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,int max_it){
     if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
         std::cout<<"Incompatible matrix equation in MU-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";
         exit(1);
@@ -634,14 +634,14 @@ array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,
     double eps=1e-16;
     double delta_first=0;
     std::vector<double> denom=h.sum_over_axis(1,2);
-    for(size_t it=0;it<max_it;it++){
+    for(int it=0;it<max_it;it++){
         w=transpose(w);
         array3d<double> wh=matmul_xTy(w,h);
         w=transpose(w);
-        for(size_t i=0;i<w.nx();i++){
-            for(size_t j=0;j<w.ny();j++){
+        for(int i=0;i<w.nx();i++){
+            for(int j=0;j<w.ny();j++){
                 double num=0;
-                for(size_t k=0;k<m.ny();k++){
+                for(int k=0;k<m.ny();k++){
                     num+=h.at(j,k,0)*m.at(i,k,0)/wh.at(i,k,0);
                 }
                 w.at(i,j,0)*=num/denom[j];
@@ -649,8 +649,8 @@ array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,
             }
         }
         double delta=0;
-        for(size_t i=0;i<w.nx();i++){
-            for(size_t j=0;j<w.ny();j++){
+        for(int i=0;i<w.nx();i++){
+            for(int j=0;j<w.ny();j++){
                 delta+=(w.at(i,j,0)-prev_w.at(i,j,0))*(w.at(i,j,0)-prev_w.at(i,j,0));
             }
         }
@@ -668,7 +668,7 @@ array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,
     return w;
 }
 
-void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t r,size_t status){
+void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,int r,int status){
     //compute svd
     array3d<double> u;
     array1d<double> s;
@@ -682,19 +682,19 @@ void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_
     h=array3d<double>(r,vt.ny(),vt.nz());
     
     //nonnegative leading singular triplet can be used right away
-    for(size_t i=0;i<w.nx();i++){
+    for(int i=0;i<w.nx();i++){
         w.at(i,0,0)=sqrt(s.at(0))*fabs(u.at(i,0,0));
     }
-    for(size_t j=0;j<h.ny();j++){
+    for(int j=0;j<h.ny();j++){
         h.at(0,j,0)=sqrt(s.at(0))*fabs(vt.at(0,j,0));
     }
     
-    for(size_t k=1;k<r;k++){ //only consider largest r singular triplets
+    for(int k=1;k<r;k++){ //only consider largest r singular triplets
         array1d<double> x_p(u.nx());
         array1d<double> x_n(u.nx());
         double x_p_norm=0;
         double x_n_norm=0;
-        for(size_t i=0;i<u.nx();i++){
+        for(int i=0;i<u.nx();i++){
             if(u.at(i,k,0)>0){
                 x_p.at(i)=u.at(i,k,0);
                 x_p_norm+=u.at(i,k,0)*u.at(i,k,0);
@@ -708,7 +708,7 @@ void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_
         array1d<double> y_n(vt.ny());
         double y_p_norm=0;
         double y_n_norm=0;
-        for(size_t j=0;j<vt.ny();j++){
+        for(int j=0;j<vt.ny();j++){
             if(vt.at(k,j,0)>0){
                 y_p.at(j)=vt.at(k,j,0);
                 y_p_norm+=vt.at(k,j,0)*vt.at(k,j,0);
@@ -724,41 +724,41 @@ void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_
         double mult;
         if((x_p_norm*y_p_norm)>(x_n_norm*y_n_norm)){
             mult=x_p_norm*y_p_norm;
-            for(size_t i=0;i<u.nx();i++){
+            for(int i=0;i<u.nx();i++){
                 x.at(i)=x_p.at(i)/x_p_norm;
             }
-            for(size_t j=0;j<vt.ny();j++){
+            for(int j=0;j<vt.ny();j++){
                 y.at(j)=y_p.at(j)/y_p_norm;
             }
         }
         else{
             mult=x_n_norm*y_n_norm;
-            for(size_t i=0;i<u.nx();i++){
+            for(int i=0;i<u.nx();i++){
                 x.at(i)=x_n.at(i)/x_n_norm;
             }
-            for(size_t j=0;j<vt.ny();j++){
+            for(int j=0;j<vt.ny();j++){
                 y.at(j)=y_n.at(j)/y_n_norm;
             }
         }
         
-        for(size_t i=0;i<w.nx();i++){
+        for(int i=0;i<w.nx();i++){
             w.at(i,k,0)=sqrt(s.at(k)*mult)*fabs(x.at(i));
         }
-        for(size_t j=0;j<h.ny();j++){
+        for(int j=0;j<h.ny();j++){
             h.at(k,j,0)=sqrt(s.at(k)*mult)*fabs(y.at(j));
         }
     }
     
     double mean=target.sum_over_all()/(double) (target.nx()*target.ny()*target.nz());
-    for(size_t i=0;i<w.nx();i++){
-        for(size_t j=0;j<w.ny();j++){
+    for(int i=0;i<w.nx();i++){
+        for(int j=0;j<w.ny();j++){
             if(w.at(i,j,0)<1e-6){
                 w.at(i,j,0)=mean;
             }
         }
     }
-    for(size_t i=0;i<h.nx();i++){
-        for(size_t j=0;j<h.ny();j++){
+    for(int i=0;i<h.nx();i++){
+        for(int j=0;j<h.ny();j++){
             if(h.at(i,j,0)<1e-6){
                 h.at(i,j,0)=mean;
             }
@@ -779,8 +779,8 @@ void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_
     // exit(1);
 }
 
-double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t r){
-    size_t status=0;
+double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,int r){
+    int status=0;
     nndsvda(target,w,h,r,status);
     // std::cout<<"w:\n"<<(std::string) w;
     // std::cout<<"h:\n"<<(std::string) h;
@@ -798,7 +798,7 @@ double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t 
     array3d<double> old_h=h;
     double old_recon_err=1e50;
     double recon_err;
-    for(size_t opt_iter=0;opt_iter<10000;opt_iter++){
+    for(int opt_iter=0;opt_iter<10000;opt_iter++){
         // array3d<double> aTa=matmul_xTy(w,w);
         // array3d<double> aTb=matmul_xTy(w,target);
         // h=nn_hals(aTa,aTb,h,1);
@@ -818,9 +818,9 @@ double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t 
         w=mu_kl2(target,w,h,1);
         
         array3d<double> recon_mat(target.nx(),target.ny(),target.nz());
-        for(size_t i=0;i<recon_mat.nx();i++){
-            for(size_t j=0;j<recon_mat.ny();j++){
-                for(size_t k=0;k<w.ny();k++){
+        for(int i=0;i<recon_mat.nx();i++){
+            for(int j=0;j<recon_mat.ny();j++){
+                for(int k=0;k<w.ny();k++){
                     recon_mat.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
                 }
             }
@@ -828,8 +828,8 @@ double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t 
         double tr_mTm=0;
         double tr_whTwh=0;
         double tr_mTwh=0;
-        for(size_t i=0;i<recon_mat.nx();i++){
-            for(size_t j=0;j<recon_mat.ny();j++){
+        for(int i=0;i<recon_mat.nx();i++){
+            for(int j=0;j<recon_mat.ny();j++){
                 tr_mTm+=target.at(i,j,0)*target.at(i,j,0);
                 tr_whTwh+=recon_mat.at(i,j,0)*recon_mat.at(i,j,0);
                 tr_mTwh+=target.at(i,j,0)*recon_mat.at(i,j,0);
@@ -858,13 +858,13 @@ double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t 
         // exit(1);
         
         double diff=0;
-        for(size_t i=0;i<w.nx();i++){
-            for(size_t j=0;j<w.ny();j++){
+        for(int i=0;i<w.nx();i++){
+            for(int j=0;j<w.ny();j++){
                 diff+=(old_w.at(i,j,0)-w.at(i,j,0))*(old_w.at(i,j,0)-w.at(i,j,0));
             }
         }
-        for(size_t i=0;i<h.nx();i++){
-            for(size_t j=0;j<h.ny();j++){
+        for(int i=0;i<h.nx();i++){
+            for(int j=0;j<h.ny();j++){
                 diff+=(old_h.at(i,j,0)-h.at(i,j,0))*(old_h.at(i,j,0)-h.at(i,j,0));
             }
         }
@@ -879,44 +879,44 @@ double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,size_t 
     }
     // std::cout<<(*std::max_element(w.e().begin(),w.e().end()))<<" "<<(*std::max_element(h.e().begin(),h.e().end()))<<"\n";
     double sum2=h.sum_over_all();
-    for(size_t i=0;i<h.nx();i++){
-        for(size_t j=0;j<h.ny();j++){
+    for(int i=0;i<h.nx();i++){
+        for(int j=0;j<h.ny();j++){
             h.at(i,j,0)/=sum2;
         }
     }
     double sum1=w.sum_over_all();
-    for(size_t i=0;i<w.nx();i++){
-        for(size_t j=0;j<w.ny();j++){
+    for(int i=0;i<w.nx();i++){
+        for(int j=0;j<w.ny();j++){
             w.at(i,j,0)/=sum1;
         }
     }
     return recon_err;
 }
 
-double truncated_svd(array3d<double>& target,array3d<double>& truncated_us,array3d<double>& truncated_vt,size_t r){
-    size_t status=0;
+double truncated_svd(array3d<double>& target,array3d<double>& truncated_us,array3d<double>& truncated_vt,int r){
+    int status=0;
     array3d<double> u;
     array1d<double> s;
     array3d<double> vt;
     svd(target,u,s,vt,status);
     
     truncated_us=array3d<double>(u.nx(),r,1);
-    for(size_t i=0;i<truncated_us.nx();i++){
-        for(size_t j=0;j<truncated_us.ny();j++){
+    for(int i=0;i<truncated_us.nx();i++){
+        for(int j=0;j<truncated_us.ny();j++){
             truncated_us.at(i,j,0)=u.at(i,j,0)*s.at(j);
         }
     }
     truncated_vt=array3d<double>(r,vt.ny(),1);
-    for(size_t i=0;i<truncated_vt.nx();i++){
-        for(size_t j=0;j<truncated_vt.ny();j++){
+    for(int i=0;i<truncated_vt.nx();i++){
+        for(int j=0;j<truncated_vt.ny();j++){
             truncated_vt.at(i,j,0)=vt.at(i,j,0);
         }
     }
     
     array3d<double> recon_mat(truncated_us.nx(),truncated_vt.ny(),1);
-    for(size_t i=0;i<recon_mat.nx();i++){
-        for(size_t j=0;j<recon_mat.ny();j++){
-            for(size_t k=0;k<r;k++){
+    for(int i=0;i<recon_mat.nx();i++){
+        for(int j=0;j<recon_mat.ny();j++){
+            for(int k=0;k<r;k++){
                 recon_mat.at(i,j,0)+=truncated_us.at(i,k,0)*truncated_vt.at(k,j,0);
             }
         }
@@ -924,8 +924,8 @@ double truncated_svd(array3d<double>& target,array3d<double>& truncated_us,array
     double tr_mTm=0;
     double tr_whTwh=0;
     double tr_mTwh=0;
-    for(size_t i=0;i<recon_mat.nx();i++){
-        for(size_t j=0;j<recon_mat.ny();j++){
+    for(int i=0;i<recon_mat.nx();i++){
+        for(int j=0;j<recon_mat.ny();j++){
             tr_mTm+=target.at(i,j,0)*target.at(i,j,0);
             tr_whTwh+=recon_mat.at(i,j,0)*recon_mat.at(i,j,0);
             tr_mTwh+=target.at(i,j,0)*recon_mat.at(i,j,0);

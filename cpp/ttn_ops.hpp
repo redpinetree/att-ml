@@ -20,16 +20,16 @@ template<typename cmp>
 double calc_z(graph<cmp>&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
 std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 template<typename cmp>
-double update_cache_z(graph<cmp>&,size_t,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
+double update_cache_z(graph<cmp>&,int,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
 std::vector<std::vector<array3d<double> > > calc_dw(std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 template<typename cmp>
-std::vector<double > calc_w(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+std::vector<double > calc_w(graph<cmp>&,std::vector<sample_data>&,std::vector<int>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 template<typename cmp>
-std::vector<double> update_cache_w(graph<cmp>&,size_t,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+std::vector<double> update_cache_w(graph<cmp>&,int,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 
 //TTNBM functions
 template<typename cmp>
-void canonicalize(graph<cmp>&,size_t);
+void canonicalize(graph<cmp>&,int);
 template<typename cmp>
 void canonicalize(graph<cmp>&);
 // template<typename cmp>
@@ -38,8 +38,8 @@ void canonicalize(graph<cmp>&);
 template<typename cmp>
 double calc_z_born(graph<cmp>&);
 template<typename cmp>
-std::vector<double > calc_w_born(graph<cmp>&,std::vector<sample_data>&,std::vector<size_t>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+std::vector<double > calc_w_born(graph<cmp>&,std::vector<sample_data>&,std::vector<int>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 template<typename cmp>
-std::vector<double> update_cache_w_born(graph<cmp>&,size_t,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+std::vector<double> update_cache_w_born(graph<cmp>&,int,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 
 #endif

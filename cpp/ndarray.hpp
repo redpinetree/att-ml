@@ -14,7 +14,7 @@ inline double ksum(std::vector<T> v){
     if(v.size()==0){return 0;}
     T c=0; //compensation term
     T sum=v[0];
-    for(size_t i=0;i<v.size()-1;i++){
+    for(int i=0;i<v.size()-1;i++){
         T y=v[i+1]-c; //corrected addend
         T t=sum+y; //corrected addend added to current sum
         c=(t-sum)-y; //next compensation
@@ -29,13 +29,13 @@ public:
     array1d():nx_(0){
         this->e_=std::vector<T>();
     }
-    array1d(size_t nx):nx_(nx){
+    array1d(int nx):nx_(nx){
         this->e_=std::vector<T>(nx,0);
     }
     operator std::string() const{
         std::stringstream str;
         str<<"[";
-        for(size_t i=0;i<this->nx();i++){
+        for(int i=0;i<this->nx();i++){
             str<<this->at(i);
             str<<((i==(this->nx()-1))?"]":",");
         }
@@ -50,7 +50,7 @@ public:
         T res=0;
         std::vector<T> v=this->e();
         double max=*(std::max_element(v.begin(),v.end()));
-        for(size_t n=0;n<v.size();n++){
+        for(int n=0;n<v.size();n++){
             res+=exp(v[n]-max);
         }
         res=max+log(e);
@@ -59,18 +59,18 @@ public:
     //exp for array1d
     array1d<T> exp_form(){
         array1d<double> a=*this;
-        for(size_t i=0;i<a.nx();i++){
+        for(int i=0;i<a.nx();i++){
             a.at(i)=exp(this->at(i));
         }
         return a;
     }
-    size_t nx() const{return this->nx_;}
+    int nx() const{return this->nx_;}
     std::vector<T> e() const{return this->e_;}
     std::vector<T>& e(){return this->e_;}
-    T at(size_t x) const{return this->e_[x];}
-    T& at(size_t x){return this->e_[x];}
+    T at(int x) const{return this->e_[x];}
+    T& at(int x){return this->e_[x];}
 private:
-    size_t nx_;
+    int nx_;
     std::vector<T> e_;
 };
 
@@ -80,15 +80,15 @@ public:
     array2d(){
         this->e_=std::vector<T>(1,0);
     }
-    array2d(size_t nx,size_t ny):nx_(nx),ny_(ny){
+    array2d(int nx,int ny):nx_(nx),ny_(ny){
         this->e_=std::vector<T>(ny*nx,0);
     }
     operator std::string() const{
         std::stringstream str;
         str<<"[";
-        for(size_t j=0;j<this->ny();j++){
+        for(int j=0;j<this->ny();j++){
             str<<"[";
-            for(size_t i=0;i<this->nx();i++){
+            for(int i=0;i<this->nx();i++){
                 str<<this->at(i,j);
                 str<<((i==(this->nx()-1))?"]":",");
             }
@@ -96,25 +96,25 @@ public:
         }
         return str.str();
     }
-    std::vector<T> sum_over_axis(size_t ax){
+    std::vector<T> sum_over_axis(int ax){
         if(ax>1){
             std::cerr<<"Attempted to sum over non-existent axis "<<ax<<" in array2d. Aborting...\n";
             exit(1);
         }
         std::vector<T> res;
         if(ax==0){
-            for(size_t j=0;j<this->ny();j++){
+            for(int j=0;j<this->ny();j++){
                 std::vector<T> v;
-                for(size_t i=0;i<this->nx();i++){
+                for(int i=0;i<this->nx();i++){
                     v.push_back(this->at(i,j));
                 }
                 res.push_back(ksum(v));
             }
         }
         else if(ax==1){
-            for(size_t i=0;i<this->nx();i++){
+            for(int i=0;i<this->nx();i++){
                 std::vector<T> v;
-                for(size_t j=0;j<this->ny();j++){
+                for(int j=0;j<this->ny();j++){
                     v.push_back(this->at(i,j));
                 }
                 res.push_back(ksum(v));
@@ -122,22 +122,22 @@ public:
         }
         return res;
     }
-    std::vector<T> lse_over_axis(size_t ax){
+    std::vector<T> lse_over_axis(int ax){
         if(ax>1){
             std::cerr<<"Attempted to sum over non-existent axis "<<ax<<" in array2d. Aborting...\n";
             exit(1);
         }
         std::vector<T> res;
         if(ax==0){
-            for(size_t j=0;j<this->ny();j++){
+            for(int j=0;j<this->ny();j++){
                 T e=0;
                 std::vector<T> v;
-                for(size_t i=0;i<this->nx();i++){
+                for(int i=0;i<this->nx();i++){
                     v.push_back(this->at(i,j));
                 }
                 std::sort(v.begin(),v.end());
                 double max=*(std::max_element(v.begin(),v.end()));
-                for(size_t n=0;n<v.size();n++){
+                for(int n=0;n<v.size();n++){
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
@@ -145,15 +145,15 @@ public:
             }
         }
         else if(ax==1){
-            for(size_t i=0;i<this->nx();i++){
+            for(int i=0;i<this->nx();i++){
                 T e=0;
                 std::vector<T> v;
-                for(size_t j=0;j<this->ny();j++){
+                for(int j=0;j<this->ny();j++){
                     v.push_back(this->at(i,j));
                 }
                 std::sort(v.begin(),v.end());
                 double max=*(std::max_element(v.begin(),v.end()));
-                for(size_t n=0;n<v.size();n++){
+                for(int n=0;n<v.size();n++){
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
@@ -168,22 +168,22 @@ public:
     //exp for array2d
     array2d<T> exp_form(){
         array2d<double> a=*this;
-        for(size_t i=0;i<a.nx();i++){
-            for(size_t j=0;j<a.ny();j++){
+        for(int i=0;i<a.nx();i++){
+            for(int j=0;j<a.ny();j++){
                 a.at(i,j)=exp(this->at(i,j));
             }
         }
         return a;
     }
-    size_t nx() const{return this->nx_;}
-    size_t ny() const{return this->ny_;}
+    int nx() const{return this->nx_;}
+    int ny() const{return this->ny_;}
     std::vector<T> e() const{return this->e_;}
     std::vector<T>& e(){return this->e_;}
-    T at(size_t x,size_t y) const{return this->e_[(this->nx()*y)+x];}
-    T& at(size_t x,size_t y){return this->e_[(this->nx()*y)+x];}
+    T at(int x,int y) const{return this->e_[(this->nx()*y)+x];}
+    T& at(int x,int y){return this->e_[(this->nx()*y)+x];}
 private:
-    size_t nx_;
-    size_t ny_;
+    int nx_;
+    int ny_;
     std::vector<T> e_;
 };
 
@@ -191,17 +191,17 @@ template<typename T>
 class array3d{
 public:
     array3d(){}
-    array3d(size_t nx,size_t ny,size_t nz):nx_(nx),ny_(ny),nz_(nz){
+    array3d(int nx,int ny,int nz):nx_(nx),ny_(ny),nz_(nz){
         this->e_=std::vector<T>(nz*ny*nx,0);
     }
     operator std::string() const{
         std::stringstream str;
         str<<"[";
-        for(size_t k=0;k<this->nz();k++){
+        for(int k=0;k<this->nz();k++){
             str<<"[";
-            for(size_t j=0;j<this->ny();j++){
+            for(int j=0;j<this->ny();j++){
                 str<<"[";
-                for(size_t i=0;i<this->nx();i++){
+                for(int i=0;i<this->nx();i++){
                     str<<this->at(i,j,k);
                     str<<((i==(this->nx()-1))?"]":",");
                 }
@@ -211,7 +211,7 @@ public:
         }
         return str.str();
     }
-    std::vector<T> sum_over_axis(size_t ax0,size_t ax1){
+    std::vector<T> sum_over_axis(int ax0,int ax1){
         if(ax0>2){
             std::cerr<<"Attempted to sum over non-existent axes "<<ax0<<" in array3d. Aborting...\n";
             exit(1);
@@ -222,10 +222,10 @@ public:
         }
         std::vector<T> res;
         if(((ax0==0)&&(ax1==2))||((ax0==2)&&(ax1==0))){
-            for(size_t j=0;j<this->ny();j++){
+            for(int j=0;j<this->ny();j++){
                 std::vector<T> v;
-                for(size_t i=0;i<this->nx();i++){
-                    for(size_t k=0;k<this->nz();k++){
+                for(int i=0;i<this->nx();i++){
+                    for(int k=0;k<this->nz();k++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
@@ -233,10 +233,10 @@ public:
             }
         }
         else if(((ax0==1)&&(ax1==2))||((ax0==2)&&(ax1==1))){
-            for(size_t i=0;i<this->nx();i++){
+            for(int i=0;i<this->nx();i++){
                 std::vector<T> v;
-                for(size_t j=0;j<this->ny();j++){
-                    for(size_t k=0;k<this->nz();k++){
+                for(int j=0;j<this->ny();j++){
+                    for(int k=0;k<this->nz();k++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
@@ -244,10 +244,10 @@ public:
             }
         }
         else if(((ax0==0)&&(ax1==1))||((ax0==1)&&(ax1==0))){
-            for(size_t k=0;k<this->nz();k++){
+            for(int k=0;k<this->nz();k++){
                 std::vector<T> v;
-                for(size_t i=0;i<this->nx();i++){
-                    for(size_t j=0;j<this->ny();j++){
+                for(int i=0;i<this->nx();i++){
+                    for(int j=0;j<this->ny();j++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
@@ -256,7 +256,7 @@ public:
         }
         return res;
     }
-    std::vector<T> lse_over_axis(size_t ax0,size_t ax1){
+    std::vector<T> lse_over_axis(int ax0,int ax1){
         if(ax0>2){
             std::cerr<<"Attempted to sum over non-existent axes "<<ax0<<" in array3d. Aborting...\n";
             exit(1);
@@ -267,17 +267,17 @@ public:
         }
         std::vector<T> res;
         if(((ax0==0)&&(ax1==2))||((ax0==2)&&(ax1==0))){
-            for(size_t j=0;j<this->ny();j++){
+            for(int j=0;j<this->ny();j++){
                 T e=0;
                 std::vector<T> v;
-                for(size_t i=0;i<this->nx();i++){
-                    for(size_t k=0;k<this->nz();k++){
+                for(int i=0;i<this->nx();i++){
+                    for(int k=0;k<this->nz();k++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
                 std::sort(v.begin(),v.end());
                 double max=*(std::max_element(v.begin(),v.end()));
-                for(size_t n=0;n<v.size();n++){
+                for(int n=0;n<v.size();n++){
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
@@ -285,17 +285,17 @@ public:
             }
         }
         else if(((ax0==1)&&(ax1==2))||((ax0==2)&&(ax1==1))){
-            for(size_t i=0;i<this->nx();i++){
+            for(int i=0;i<this->nx();i++){
                 T e=0;
                 std::vector<T> v;
-                for(size_t j=0;j<this->ny();j++){
-                    for(size_t k=0;k<this->nz();k++){
+                for(int j=0;j<this->ny();j++){
+                    for(int k=0;k<this->nz();k++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
                 std::sort(v.begin(),v.end());
                 double max=*(std::max_element(v.begin(),v.end()));
-                for(size_t n=0;n<v.size();n++){
+                for(int n=0;n<v.size();n++){
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
@@ -303,17 +303,17 @@ public:
             }
         }
         else if(((ax0==0)&&(ax1==1))||((ax0==1)&&(ax1==0))){
-            for(size_t k=0;k<this->nz();k++){
+            for(int k=0;k<this->nz();k++){
                 T e=0;
                 std::vector<T> v;
-                for(size_t i=0;i<this->nx();i++){
-                    for(size_t j=0;j<this->ny();j++){
+                for(int i=0;i<this->nx();i++){
+                    for(int j=0;j<this->ny();j++){
                         v.push_back(this->at(i,j,k));
                     }
                 }
                 std::sort(v.begin(),v.end());
                 double max=*(std::max_element(v.begin(),v.end()));
-                for(size_t n=0;n<v.size();n++){
+                for(int n=0;n<v.size();n++){
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
@@ -328,26 +328,26 @@ public:
     //exp for array3d
     array3d<T> exp_form(){
         array3d<double> a=*this;
-        for(size_t i=0;i<a.nx();i++){
-            for(size_t j=0;j<a.ny();j++){
-                for(size_t k=0;k<a.nz();k++){
+        for(int i=0;i<a.nx();i++){
+            for(int j=0;j<a.ny();j++){
+                for(int k=0;k<a.nz();k++){
                     a.at(i,j,k)=exp(this->at(i,j,k));
                 }
             }
         }
         return a;
     }
-    size_t nx() const{return this->nx_;}
-    size_t ny() const{return this->ny_;}
-    size_t nz() const{return this->nz_;}
+    int nx() const{return this->nx_;}
+    int ny() const{return this->ny_;}
+    int nz() const{return this->nz_;}
     std::vector<T> e() const{return this->e_;}
     std::vector<T>& e(){return this->e_;}
-    T at(size_t x,size_t y,size_t z) const{return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
-    T& at(size_t x,size_t y,size_t z){return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    T at(int x,int y,int z) const{return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    T& at(int x,int y,int z){return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
 private:
-    size_t nx_;
-    size_t ny_;
-    size_t nz_;
+    int nx_;
+    int ny_;
+    int nz_;
     std::vector<T> e_;
 };
 
@@ -355,19 +355,19 @@ template<typename T>
 class array4d{
 public:
     array4d(){}
-    array4d(size_t nx,size_t ny,size_t nz,size_t nw):nx_(nx),ny_(ny),nz_(nz),nw_(nw){
+    array4d(int nx,int ny,int nz,int nw):nx_(nx),ny_(ny),nz_(nz),nw_(nw){
         this->e_=std::vector<T>(nw*nz*ny*nx,0);
     }
     operator std::string() const{
         std::stringstream str;
         str<<"[";
-        for(size_t l=0;l<this->nw();l++){
+        for(int l=0;l<this->nw();l++){
             str<<"[";
-            for(size_t k=0;k<this->nz();k++){
+            for(int k=0;k<this->nz();k++){
                 str<<"[";
-                for(size_t j=0;j<this->ny();j++){
+                for(int j=0;j<this->ny();j++){
                     str<<"[";
-                    for(size_t i=0;i<this->nx();i++){
+                    for(int i=0;i<this->nx();i++){
                         str<<this->at(i,j,k,l);
                         str<<((i==(this->nx()-1))?"]":",");
                     }
@@ -385,10 +385,10 @@ public:
     //exp for array3d
     array4d<T> exp_form(){
         array4d<double> a=*this;
-        for(size_t i=0;i<a.nx();i++){
-            for(size_t j=0;j<a.ny();j++){
-                for(size_t k=0;k<a.nz();k++){
-                    for(size_t l=0;l<a.nw();l++){
+        for(int i=0;i<a.nx();i++){
+            for(int j=0;j<a.ny();j++){
+                for(int k=0;k<a.nz();k++){
+                    for(int l=0;l<a.nw();l++){
                         a.at(i,j,k,l)=exp(this->at(i,j,k,l));
                     }
                 }
@@ -396,19 +396,19 @@ public:
         }
         return a;
     }
-    size_t nx() const{return this->nx_;}
-    size_t ny() const{return this->ny_;}
-    size_t nz() const{return this->nz_;}
-    size_t nw() const{return this->nw_;}
+    int nx() const{return this->nx_;}
+    int ny() const{return this->ny_;}
+    int nz() const{return this->nz_;}
+    int nw() const{return this->nw_;}
     std::vector<T> e() const{return this->e_;}
     std::vector<T>& e(){return this->e_;}
-    T at(size_t x,size_t y,size_t z,size_t w) const{return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
-    T& at(size_t x,size_t y,size_t z,size_t w){return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    T at(int x,int y,int z,int w) const{return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    T& at(int x,int y,int z,int w){return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
 private:
-    size_t nx_;
-    size_t ny_;
-    size_t nz_;
-    size_t nw_;
+    int nx_;
+    int ny_;
+    int nz_;
+    int nw_;
     std::vector<T> e_;
 };
 
