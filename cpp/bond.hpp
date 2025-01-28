@@ -33,14 +33,16 @@ public:
     int& order();
     bool& todo();
     void bmi(array3d<double>&);
+    void save(std::ostream& os);
+    static bond load(std::istream& is);
 private:
+    bool todo_; //if not yet processed, todo=1
     std::pair<int,int> v_;
     int depth_;
-    array3d<double> w_;
+    int order_; //in observable computation, this is the upstream site
     double bmi_;
     double ee_; //for born machine, should be the same as bmi in single-layer scheme
-    int order_; //in observable computation, this is the upstream site
-    bool todo_; //if not yet processed, todo=1
+    array3d<double> w_;
 };
 
 #endif

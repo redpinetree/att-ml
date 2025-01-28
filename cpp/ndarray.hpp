@@ -69,6 +69,34 @@ public:
     std::vector<T>& e(){return this->e_;}
     T at(int x) const{return this->e_[x];}
     T& at(int x){return this->e_[x];}
+    
+    //ver. 1 2025/01/29 - initial
+    void save(std::ostream& os){
+        int ver=1;
+        os.write(reinterpret_cast<const char*>(&ver),sizeof(ver)); //version
+        int nx=this->nx();
+        os.write(reinterpret_cast<const char*>(&nx),sizeof(nx));
+        for(int i=0;i<this->nx();i++){
+            os.write(reinterpret_cast<const char*>(&(this->at(i))),sizeof(this->at(i))); //version
+        }
+    }
+
+    static array1d<T> load(std::istream& is){
+        int ver,nx;
+        is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
+        if(ver!=1){
+            std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
+            exit(1);
+        }
+        is.read(reinterpret_cast<char*>(&nx),sizeof(nx));
+        array1d<double> w(nx);
+        for(int i=0;i<nx;i++){
+            T e;
+            is.read(reinterpret_cast<char*>(&e),sizeof(e));
+            w.at(i)=e;
+        }
+        return w;
+    }
 private:
     int nx_;
     std::vector<T> e_;
@@ -77,7 +105,7 @@ private:
 template<typename T>
 class array2d{
 public:
-    array2d(){
+    array2d():nx_(0),ny_(0){
         this->e_=std::vector<T>(1,0);
     }
     array2d(int nx,int ny):nx_(nx),ny_(ny){
@@ -181,6 +209,41 @@ public:
     std::vector<T>& e(){return this->e_;}
     T at(int x,int y) const{return this->e_[(this->nx()*y)+x];}
     T& at(int x,int y){return this->e_[(this->nx()*y)+x];}
+    
+    //ver. 1 2025/01/29 - initial
+    void save(std::ostream& os){
+        int ver=1;
+        os.write(reinterpret_cast<const char*>(&ver),sizeof(ver)); //version
+        int nx=this->nx();
+        os.write(reinterpret_cast<const char*>(&nx),sizeof(nx));
+        int ny=this->ny();
+        os.write(reinterpret_cast<const char*>(&ny),sizeof(ny));
+        for(int i=0;i<this->nx();i++){
+            for(int j=0;j<this->ny();j++){
+                os.write(reinterpret_cast<const char*>(&(this->at(i,j))),sizeof(this->at(i,j))); //version
+            }
+        }
+    }
+
+    static array2d<T> load(std::istream& is){
+        int ver,nx,ny;
+        is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
+        if(ver!=1){
+            std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
+            exit(1);
+        }
+        is.read(reinterpret_cast<char*>(&nx),sizeof(nx));
+        is.read(reinterpret_cast<char*>(&ny),sizeof(ny));
+        array2d<double> w(nx,ny);
+        for(int i=0;i<nx;i++){
+            for(int j=0;j<ny;j++){
+                T e;
+                is.read(reinterpret_cast<char*>(&e),sizeof(e));
+                w.at(i,j)=e;
+            }
+        }
+        return w;
+    }
 private:
     int nx_;
     int ny_;
@@ -190,7 +253,9 @@ private:
 template<typename T>
 class array3d{
 public:
-    array3d(){}
+    array3d():nx_(0),ny_(0),nz_(0){
+        this->e_=std::vector<T>(1,0);
+    }
     array3d(int nx,int ny,int nz):nx_(nx),ny_(ny),nz_(nz){
         this->e_=std::vector<T>(nz*ny*nx,0);
     }
@@ -344,6 +409,48 @@ public:
     std::vector<T>& e(){return this->e_;}
     T at(int x,int y,int z) const{return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
     T& at(int x,int y,int z){return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    
+    //ver. 1 2025/01/29 - initial
+    void save(std::ostream& os){
+        int ver=1;
+        os.write(reinterpret_cast<const char*>(&ver),sizeof(ver)); //version
+        int nx=this->nx();
+        os.write(reinterpret_cast<const char*>(&nx),sizeof(nx));
+        int ny=this->ny();
+        os.write(reinterpret_cast<const char*>(&ny),sizeof(ny));
+        int nz=this->nz();
+        os.write(reinterpret_cast<const char*>(&nz),sizeof(nz));
+        for(int i=0;i<this->nx();i++){
+            for(int j=0;j<this->ny();j++){
+                for(int k=0;k<this->nz();k++){
+                    os.write(reinterpret_cast<const char*>(&(this->at(i,j,k))),sizeof(this->at(i,j,k)));
+                }
+            }
+        }
+    }
+
+    static array3d<T> load(std::istream& is){
+        int ver,nx,ny,nz;
+        is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
+        if(ver!=1){
+            std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
+            exit(1);
+        }
+        is.read(reinterpret_cast<char*>(&nx),sizeof(nx));
+        is.read(reinterpret_cast<char*>(&ny),sizeof(ny));
+        is.read(reinterpret_cast<char*>(&nz),sizeof(nz));
+        array3d<double> w(nx,ny,nz);
+        for(int i=0;i<nx;i++){
+            for(int j=0;j<ny;j++){
+                for(int k=0;k<nz;k++){
+                    T e;
+                    is.read(reinterpret_cast<char*>(&e),sizeof(e));
+                    w.at(i,j,k)=e;
+                }
+            }
+        }
+        return w;
+    }
 private:
     int nx_;
     int ny_;
@@ -354,7 +461,9 @@ private:
 template<typename T>
 class array4d{
 public:
-    array4d(){}
+    array4d():nx_(0),ny_(0),nz_(0),nw_(0){
+        this->e_=std::vector<T>(1,0);
+    }
     array4d(int nx,int ny,int nz,int nw):nx_(nx),ny_(ny),nz_(nz),nw_(nw){
         this->e_=std::vector<T>(nw*nz*ny*nx,0);
     }
@@ -404,6 +513,55 @@ public:
     std::vector<T>& e(){return this->e_;}
     T at(int x,int y,int z,int w) const{return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
     T& at(int x,int y,int z,int w){return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    
+    //ver. 1 2025/01/29 - initial
+    void save(std::ostream& os){
+        int ver=1;
+        os.write(reinterpret_cast<const char*>(&ver),sizeof(ver)); //version
+        int nx=this->nx();
+        os.write(reinterpret_cast<const char*>(&nx),sizeof(nx));
+        int ny=this->ny();
+        os.write(reinterpret_cast<const char*>(&ny),sizeof(ny));
+        int nz=this->nz();
+        os.write(reinterpret_cast<const char*>(&nz),sizeof(nz));
+        int nw=this->nw();
+        os.write(reinterpret_cast<const char*>(&nw),sizeof(nw));
+        for(int i=0;i<this->nx();i++){
+            for(int j=0;j<this->ny();j++){
+                for(int k=0;k<this->nz();k++){
+                    for(int l=0;l<this->nw();l++){
+                        os.write(reinterpret_cast<const char*>(&(this->at(i,j,k,l))),sizeof(this->at(i,j,k,l))); //version
+                    }
+                }
+            }
+        }
+    }
+
+    static array4d<T> load(std::istream& is){
+        int ver,nx,ny,nz,nw;
+        is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
+        if(ver!=1){
+            std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
+            exit(1);
+        }
+        is.read(reinterpret_cast<char*>(&nx),sizeof(nx));
+        is.read(reinterpret_cast<char*>(&ny),sizeof(ny));
+        is.read(reinterpret_cast<char*>(&nz),sizeof(nz));
+        is.read(reinterpret_cast<char*>(&nw),sizeof(nw));
+        array4d<double> w(nx,ny,nz,nw);
+        for(int i=0;i<nx;i++){
+            for(int j=0;j<ny;j++){
+                for(int k=0;k<nz;k++){
+                    for(int l=0;l<nw;l++){
+                        T e;
+                        is.read(reinterpret_cast<char*>(&e),sizeof(e));
+                        w.at(i,j,k,l)=e;
+                    }
+                }
+            }
+        }
+        return w;
+    }
 private:
     int nx_;
     int ny_;

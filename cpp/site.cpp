@@ -36,8 +36,74 @@ int& site::r_idx(){return this->r_idx_;}
 int& site::u_idx(){return this->u_idx_;}
 double& site::bmi(){return this->bmi_;}
 double& site::ee(){return this->ee_;}
-bond& site::p_bond(){return this->p_bond_;}
 std::vector<double>& site::p_k(){return this->p_k_;}
 array3d<double>& site::p_ijk(){return this->p_ijk_;}
 array2d<double>& site::p_ik(){return this->p_ik_;}
 array2d<double>& site::p_jk(){return this->p_jk_;}
+bond& site::p_bond(){return this->p_bond_;}
+
+//ver. 1 2025/01/29 - initial
+void site::save(std::ostream& os){
+    int ver=1;
+    os.write(reinterpret_cast<const char*>(&ver),sizeof(ver)); //version
+    os.write(reinterpret_cast<const char*>(&(this->virt())),sizeof(this->virt()));
+    os.write(reinterpret_cast<const char*>(&(this->rank())),sizeof(this->rank()));
+    os.write(reinterpret_cast<const char*>(&(this->vol())),sizeof(this->vol()));
+    os.write(reinterpret_cast<const char*>(&(this->depth())),sizeof(this->depth()));
+    os.write(reinterpret_cast<const char*>(&(this->l_idx())),sizeof(this->l_idx()));
+    os.write(reinterpret_cast<const char*>(&(this->r_idx())),sizeof(this->r_idx()));
+    os.write(reinterpret_cast<const char*>(&(this->u_idx())),sizeof(this->u_idx()));
+    os.write(reinterpret_cast<const char*>(&(this->bmi())),sizeof(this->bmi()));
+    os.write(reinterpret_cast<const char*>(&(this->ee())),sizeof(this->ee()));
+    int p_k_size=this->p_k().size();
+    os.write(reinterpret_cast<const char*>(&p_k_size),sizeof(p_k_size));
+    for(int i=0;i<this->p_k().size();i++){
+        double e=this->p_k()[i];
+        os.write(reinterpret_cast<const char*>(&e),sizeof(e));
+    }
+    this->p_ijk().save(os);
+    this->p_ik().save(os);
+    this->p_jk().save(os);
+    this->p_bond().save(os);
+}
+
+site site::load(std::istream& is){
+    bool virt;
+    int ver,rank,vol,depth,l_idx,r_idx,u_idx,p_k_size;
+    double bmi,ee;
+    is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
+    if(ver!=1){
+        std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
+        exit(1);
+    }
+    is.read(reinterpret_cast<char*>(&virt),sizeof(virt));
+    is.read(reinterpret_cast<char*>(&rank),sizeof(rank));
+    is.read(reinterpret_cast<char*>(&vol),sizeof(vol));
+    is.read(reinterpret_cast<char*>(&depth),sizeof(depth));
+    is.read(reinterpret_cast<char*>(&l_idx),sizeof(l_idx));
+    is.read(reinterpret_cast<char*>(&r_idx),sizeof(r_idx));
+    is.read(reinterpret_cast<char*>(&u_idx),sizeof(u_idx));
+    is.read(reinterpret_cast<char*>(&bmi),sizeof(bmi));
+    is.read(reinterpret_cast<char*>(&ee),sizeof(ee));
+    is.read(reinterpret_cast<char*>(&p_k_size),sizeof(p_k_size));
+    std::vector<double> p_k(p_k_size);
+    for(int i=0;i<p_k_size;i++){
+        double e;
+        is.read(reinterpret_cast<char*>(&e),sizeof(e));
+        p_k[i]=e;
+    }
+    site s(rank,vol);
+    s.virt()=virt;
+    s.depth()=depth;
+    s.l_idx()=l_idx;
+    s.r_idx()=r_idx;
+    s.u_idx()=u_idx;
+    s.bmi()=bmi;
+    s.ee()=ee;
+    s.p_k()=p_k;
+    s.p_ijk()=array3d<double>::load(is);
+    s.p_ik()=array2d<double>::load(is);
+    s.p_jk()=array2d<double>::load(is);
+    s.p_bond()=bond::load(is);
+    return s;
+}

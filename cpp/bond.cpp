@@ -28,20 +28,20 @@ std::pair<int,int> bond::v() const{return this->v_;}
 int bond::v1() const{return this->v_.first;}
 int bond::v2() const{return this->v_.second;}
 int bond::depth() const{return this->depth_;}
-array3d<double> bond::w() const{return this->w_;}
+int bond::order() const{return this->order_;}
 double bond::bmi() const{return this->bmi_;}
 double bond::ee() const{return this->ee_;}
-int bond::order() const{return this->order_;}
 bool bond::todo() const{return this->todo_;}
+array3d<double> bond::w() const{return this->w_;}
 std::pair<int,int>& bond::v(){return this->v_;}
 int& bond::v1(){return this->v_.first;}
 int& bond::v2(){return this->v_.second;}
 int& bond::depth(){return this->depth_;}
-array3d<double>& bond::w(){return this->w_;}
-double& bond::bmi(){return this->bmi_;}
-double& bond::ee(){return this->ee_;}
 int& bond::order(){return this->order_;}
 bool& bond::todo(){return this->todo_;}
+double& bond::bmi(){return this->bmi_;}
+double& bond::ee(){return this->ee_;}
+array3d<double>& bond::w(){return this->w_;}
 
 void bond::bmi(array3d<double>& w){
     int max_it=100;
@@ -186,4 +186,47 @@ void bond::bmi(array3d<double>& w){
         S_j-=(p_j[j]==0)?0:(p_j[j]*log(p_j[j]));
     }
     this->bmi_=S_i+S_j-S_ij;
+}
+
+//ver. 1 2025/01/29 - initial
+void bond::save(std::ostream& os){
+    int ver=1;
+    os.write(reinterpret_cast<const char*>(&ver),sizeof(ver)); //version
+    os.write(reinterpret_cast<const char*>(&(this->todo())),sizeof(this->todo()));
+    os.write(reinterpret_cast<const char*>(&(this->v1())),sizeof(this->v1()));
+    os.write(reinterpret_cast<const char*>(&(this->v2())),sizeof(this->v2()));
+    os.write(reinterpret_cast<const char*>(&(this->depth())),sizeof(this->depth()));
+    os.write(reinterpret_cast<const char*>(&(this->order())),sizeof(this->order()));
+    os.write(reinterpret_cast<const char*>(&(this->bmi())),sizeof(this->bmi()));
+    os.write(reinterpret_cast<const char*>(&(this->ee())),sizeof(this->ee()));
+    this->w().save(os);
+}
+
+bond bond::load(std::istream& is){
+    bool todo;
+    int ver,v1,v2,depth,order;
+    double bmi,ee;
+    is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
+    if(ver!=1){
+        std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
+        exit(1);
+    }
+    is.read(reinterpret_cast<char*>(&todo),sizeof(todo));
+    is.read(reinterpret_cast<char*>(&v1),sizeof(v1));
+    is.read(reinterpret_cast<char*>(&v2),sizeof(v2));
+    is.read(reinterpret_cast<char*>(&depth),sizeof(depth));
+    is.read(reinterpret_cast<char*>(&order),sizeof(order));
+    is.read(reinterpret_cast<char*>(&bmi),sizeof(bmi));
+    is.read(reinterpret_cast<char*>(&ee),sizeof(ee));
+    array3d<double> w=array3d<double>::load(is);
+    bond b; //manually load to preserve v order
+    b.v1()=v1;
+    b.v2()=v2;
+    b.todo()=todo;
+    b.depth()=depth;
+    b.order()=order;
+    b.bmi()=bmi;
+    b.ee()=ee;
+    b.w()=w;
+    return b;
 }

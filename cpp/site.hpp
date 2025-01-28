@@ -44,21 +44,23 @@ public:
     array3d<double>& p_ijk();
     array2d<double>& p_ik();
     array2d<double>& p_jk();
+    void save(std::ostream& os);
+    static site load(std::istream& is);
 private:
+    bool virt_;
     int rank_;
     int vol_;
     int depth_;
-    bool virt_;
     int l_idx_;
     int r_idx_;
     int u_idx_;
     double bmi_;
     double ee_;
-    bond p_bond_;
     std::vector<double> p_k_;
     array3d<double> p_ijk_;
     array2d<double> p_ik_;
     array2d<double> p_jk_;
+    bond p_bond_;
 };
 
 #endif

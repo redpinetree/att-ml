@@ -48,6 +48,56 @@ public:
     int& n_phys_sites(){return this->n_phys_sites_;};
     int center_idx() const{return this->center_idx_;};
     int& center_idx(){return this->center_idx_;};
+
+    //ver. 1 2025/01/29 - initial
+    void save(std::ostream& os){
+        int ver=1;
+        os.write(reinterpret_cast<const char*>(&ver),sizeof(ver)); //version
+        os.write(reinterpret_cast<const char*>(&(this->n_phys_sites())),sizeof(this->n_phys_sites()));
+        os.write(reinterpret_cast<const char*>(&(this->center_idx())),sizeof(this->center_idx()));
+        //write es
+        int es_size=this->es().size();
+        os.write(reinterpret_cast<const char*>(&es_size),sizeof(es_size)); //version
+        for(auto it=this->es().begin();it!=this->es().end();++it){
+            bond b=*it;
+            b.save(os);
+        }
+        //write vs
+        int vs_size=this->vs().size();
+        os.write(reinterpret_cast<const char*>(&vs_size),sizeof(vs_size)); //version
+        for(auto it=this->vs().begin();it!=this->vs().end();++it){
+            site s=*it;
+            s.save(os);
+        }
+    }
+    
+    static graph<cmp> load(std::istream& is){
+        graph<cmp> g;
+        int ver,n_phys_sites,center_idx,es_size,vs_size;
+        std::multiset<bond,cmp> es;
+        std::vector<site> vs;
+        is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
+        if(ver!=1){
+            std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
+            exit(1);
+        }
+        is.read(reinterpret_cast<char*>(&n_phys_sites),sizeof(n_phys_sites));
+        is.read(reinterpret_cast<char*>(&center_idx),sizeof(center_idx));
+        g.n_phys_sites()=n_phys_sites;
+        g.center_idx()=center_idx;
+        is.read(reinterpret_cast<char*>(&es_size),sizeof(es_size));
+        for(int i=0;i<es_size;i++){
+            es.insert(bond::load(is));
+        }
+        g.es()=es;
+        is.read(reinterpret_cast<char*>(&vs_size),sizeof(vs_size));
+        for(int i=0;i<vs_size;i++){
+            vs.push_back(site::load(is));
+        }
+        g.vs()=vs;
+        return g;
+    }
+
 private:
     std::vector<site> vs_;
     std::multiset<bond,cmp> es_;
