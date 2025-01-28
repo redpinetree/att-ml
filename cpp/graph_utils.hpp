@@ -7,17 +7,17 @@
 
 namespace graph_utils{
     template<typename cmp>
-    graph<cmp> init_pbttn(size_t,size_t,size_t,std::vector<size_t>);
+    graph<cmp> init_pbttn(size_t,size_t,size_t,size_t);
     template<typename cmp>
-    graph<cmp> init_pbttn(size_t,size_t,std::vector<size_t>);
+    graph<cmp> init_pbttn(size_t,size_t,size_t);
     template<typename cmp>
-    graph<cmp> init_mps(size_t,size_t,size_t,std::vector<size_t>);
+    graph<cmp> init_mps(size_t,size_t,size_t,size_t);
     template<typename cmp>
-    graph<cmp> init_mps(size_t,size_t,std::vector<size_t>);
+    graph<cmp> init_mps(size_t,size_t,size_t);
     template<typename cmp>
-    graph<cmp> init_rand(size_t,size_t,size_t,std::vector<size_t>);
+    graph<cmp> init_rand(size_t,size_t,size_t,size_t);
     template<typename cmp>
-    graph<cmp> init_rand(size_t,size_t,std::vector<size_t>);
+    graph<cmp> init_rand(size_t,size_t,size_t);
 }
 
 #endif

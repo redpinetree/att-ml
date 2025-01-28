@@ -11,42 +11,13 @@
 #include "site.hpp"
 
 template<typename cmp>
-graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls){
+graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,size_t num_vs){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
-    size_t d=ls.size();
     std::vector<site> vs;
     std::multiset<bond,cmp> es{cmp(idim)};
-    size_t num_vs=1;
-    for(size_t i=0;i<ls.size();i++){
-        num_vs*=ls[i];
-    }
     for(size_t v1=0;v1<num_vs;v1++){
         vs.push_back(site(idim,1));
         vs[v1].p_k()=std::vector<double>(idim,1/(double) idim);
-    }
-    //generate couplings
-    for(size_t v1=0;v1<num_vs;v1++){
-        size_t v1_idx=v1;
-        //identify position of site v1 on hypercubic lattice
-        std::vector<size_t> base_coords;
-        for(size_t d_idx=0;d_idx<d;d_idx++){
-            base_coords.push_back(v1_idx%ls[d_idx]);
-            v1_idx/=ls[d_idx];
-        }
-        //add offset (+1 for nearest neighbor)
-        for(size_t d_idx=0;d_idx<d;d_idx++){
-            //boundary condition
-            if((base_coords[d_idx]+1)>=ls[d_idx]){
-                continue;
-            }
-            std::vector<size_t> offsets=base_coords;
-            offsets[d_idx]=(offsets[d_idx]+1)%ls[d_idx];
-            //compute idx of v2
-            size_t v2=0;
-            for(size_t d_idx2=d;d_idx2>0;d_idx2--){
-                v2=(v2*ls[d_idx2-1])+offsets[d_idx2-1];
-            }
-        }
     }
     
     size_t num_tensors=num_vs-1;
@@ -108,51 +79,22 @@ graph<cmp> graph_utils::init_pbttn(size_t idim,size_t tdim,size_t r_max,std::vec
     // std::cout<<(std::string) g<<"\n";
     return g;
 }
-template graph<bmi_comparator> graph_utils::init_pbttn(size_t,size_t,size_t,std::vector<size_t>);
+template graph<bmi_comparator> graph_utils::init_pbttn(size_t,size_t,size_t,size_t);
 
 template<typename cmp>
-graph<cmp> graph_utils::init_pbttn(size_t idim,size_t r_max,std::vector<size_t> ls){
-    return graph_utils::init_pbttn<cmp>(idim,0,r_max,ls);
+graph<cmp> graph_utils::init_pbttn(size_t idim,size_t r_max,size_t l){
+    return graph_utils::init_pbttn<cmp>(idim,0,r_max,l);
 }
-template graph<bmi_comparator> graph_utils::init_pbttn(size_t,size_t,std::vector<size_t>);
+template graph<bmi_comparator> graph_utils::init_pbttn(size_t,size_t,size_t);
 
 template<typename cmp>
-graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls){
+graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,size_t num_vs){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
-    size_t d=ls.size();
     std::vector<site> vs;
     std::multiset<bond,cmp> es{cmp(idim)};
-    size_t num_vs=1;
-    for(size_t i=0;i<ls.size();i++){
-        num_vs*=ls[i];
-    }
     for(size_t v1=0;v1<num_vs;v1++){
         vs.push_back(site(idim,1));
         vs[v1].p_k()=std::vector<double>(idim,1/(double) idim);
-    }
-    //generate couplings
-    for(size_t v1=0;v1<num_vs;v1++){
-        size_t v1_idx=v1;
-        //identify position of site v1 on hypercubic lattice
-        std::vector<size_t> base_coords;
-        for(size_t d_idx=0;d_idx<d;d_idx++){
-            base_coords.push_back(v1_idx%ls[d_idx]);
-            v1_idx/=ls[d_idx];
-        }
-        //add offset (+1 for nearest neighbor)
-        for(size_t d_idx=0;d_idx<d;d_idx++){
-            //boundary condition
-            if((base_coords[d_idx]+1)>=ls[d_idx]){
-                continue;
-            }
-            std::vector<size_t> offsets=base_coords;
-            offsets[d_idx]=(offsets[d_idx]+1)%ls[d_idx];
-            //compute idx of v2
-            size_t v2=0;
-            for(size_t d_idx2=d;d_idx2>0;d_idx2--){
-                v2=(v2*ls[d_idx2-1])+offsets[d_idx2-1];
-            }
-        }
     }
     
     size_t num_tensors=num_vs-1;
@@ -217,52 +159,23 @@ graph<cmp> graph_utils::init_mps(size_t idim,size_t tdim,size_t r_max,std::vecto
     // std::cout<<(std::string) g<<"\n";
     return g;
 }
-template graph<bmi_comparator> graph_utils::init_mps(size_t,size_t,size_t,std::vector<size_t>);
+template graph<bmi_comparator> graph_utils::init_mps(size_t,size_t,size_t,size_t);
 
 template<typename cmp>
-graph<cmp> graph_utils::init_mps(size_t idim,size_t r_max,std::vector<size_t> ls){
-    return graph_utils::init_mps<cmp>(idim,0,r_max,ls);
+graph<cmp> graph_utils::init_mps(size_t idim,size_t r_max,size_t l){
+    return graph_utils::init_mps<cmp>(idim,0,r_max,l);
 }
-template graph<bmi_comparator> graph_utils::init_mps(size_t,size_t,std::vector<size_t>);
+template graph<bmi_comparator> graph_utils::init_mps(size_t,size_t,size_t);
 
 template<typename cmp>
-graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls){
+graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,size_t num_vs){
     std::uniform_real_distribution<> unif_dist(1e-10,1.0);
-    size_t d=ls.size();
     std::vector<site> vs;
     std::multiset<bond,cmp> es{cmp(idim)};
-    size_t num_vs=1;
-    for(size_t i=0;i<ls.size();i++){
-        num_vs*=ls[i];
-    }
     for(size_t v1=0;v1<num_vs;v1++){
         vs.push_back(site(idim,1));
         vs[v1].p_k()=std::vector<double>(idim,1/(double) idim);
         vs[v1].depth()=0;
-    }
-    //generate couplings
-    for(size_t v1=0;v1<num_vs;v1++){
-        size_t v1_idx=v1;
-        //identify position of site v1 on hypercubic lattice
-        std::vector<size_t> base_coords;
-        for(size_t d_idx=0;d_idx<d;d_idx++){
-            base_coords.push_back(v1_idx%ls[d_idx]);
-            v1_idx/=ls[d_idx];
-        }
-        //add offset (+1 for nearest neighbor)
-        for(size_t d_idx=0;d_idx<d;d_idx++){
-            //boundary condition
-            if((base_coords[d_idx]+1)>=ls[d_idx]){
-                continue;
-            }
-            std::vector<size_t> offsets=base_coords;
-            offsets[d_idx]=(offsets[d_idx]+1)%ls[d_idx];
-            //compute idx of v2
-            size_t v2=0;
-            for(size_t d_idx2=d;d_idx2>0;d_idx2--){
-                v2=(v2*ls[d_idx2-1])+offsets[d_idx2-1];
-            }
-        }
     }
     
     size_t num_tensors=num_vs-1;
@@ -341,10 +254,10 @@ graph<cmp> graph_utils::init_rand(size_t idim,size_t tdim,size_t r_max,std::vect
     // std::cout<<(std::string) g<<"\n";
     return g;
 }
-template graph<bmi_comparator> graph_utils::init_rand(size_t,size_t,size_t,std::vector<size_t>);
+template graph<bmi_comparator> graph_utils::init_rand(size_t,size_t,size_t,size_t);
 
 template<typename cmp>
-graph<cmp> graph_utils::init_rand(size_t idim,size_t r_max,std::vector<size_t> ls){
-    return graph_utils::init_rand<cmp>(idim,0,r_max,ls);
+graph<cmp> graph_utils::init_rand(size_t idim,size_t r_max,size_t l){
+    return graph_utils::init_rand<cmp>(idim,0,r_max,l);
 }
-template graph<bmi_comparator> graph_utils::init_rand(size_t,size_t,std::vector<size_t>);
+template graph<bmi_comparator> graph_utils::init_rand(size_t,size_t,size_t);

@@ -20,13 +20,12 @@
 #include "observables.hpp"
 
 void print_usage(){
-    std::cerr<<"usage: tree_ml [--options] <input_dim> <d> <{l|l0,l1,...}>\n";
+    std::cerr<<"usage: tree_ml [--options]\n";
     std::cerr<<"options:\n";
     std::cerr<<"\t-h,--help: display this message\n";
     std::cerr<<"\t-v,--verbose:\n\t\t0->nothing printed to stdout (forced for MPI)\n\t\t1->sample number and aggregate timing data\n\t\t2->per-instance timing\n\t\t3->more detailed timing breakdown\n\t\t4->graph contents, debug observable data\n";
-    std::cerr<<"\t-i,--input: input file containing training data.\n";
+    std::cerr<<"\t-i,--input: REQUIRED -- input file containing training data.\n";
     std::cerr<<"\t-o,--output: prefix for output files. please omit the file extension.\n";
-    std::cerr<<"\t-t,--top-dim: top dimension\n";
     std::cerr<<"\t-L,--label-file: input file containing training labels\n";
     std::cerr<<"\t-V,--test-file: input file containing test data\n";
     std::cerr<<"\t-B,--test-label-file: input file containing test labels\n";
@@ -40,19 +39,19 @@ void print_usage(){
 }
 
 template<typename cmp>
-graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,std::vector<size_t> ls,std::string init_tree_type){
+graph<cmp> gen_graph(size_t idim,size_t tdim,size_t r_max,size_t num_vs,std::string init_tree_type){
     graph<cmp> g;
     if(init_tree_type=="mps"){
         std::normal_distribution<double> dist(0,0);
-        g=graph_utils::init_mps<cmp>(idim,tdim,r_max,ls);
+        g=graph_utils::init_mps<cmp>(idim,tdim,r_max,num_vs);
     }
     else if(init_tree_type=="pbttn"){
         std::normal_distribution<double> dist{0,0};
-        g=graph_utils::init_pbttn<cmp>(idim,tdim,r_max,ls);
+        g=graph_utils::init_pbttn<cmp>(idim,tdim,r_max,num_vs);
     }
     else if(init_tree_type=="rand"){
         std::normal_distribution<double> dist{0,0};
-        g=graph_utils::init_rand<cmp>(idim,tdim,r_max,ls);
+        g=graph_utils::init_rand<cmp>(idim,tdim,r_max,num_vs);
     }
     return g;
 }
@@ -76,7 +75,6 @@ int main(int argc,char **argv){
     std::string input,output,label_file,test_file,test_label_file;
     std::string init_tree_type="mps";
     size_t r_max=0;
-    size_t tdim=1;
     size_t n_config_samples=1000;
     size_t n_nll_iter_max=10000;
     double lr=0.001;
@@ -92,7 +90,6 @@ int main(int argc,char **argv){
             {"verbose",required_argument,0,'v'},
             {"input",required_argument,0,'i'},
             {"output",required_argument,0,'o'},
-            {"top-dim",required_argument,0,'t'},
             {"label-file",required_argument,0,'L'},
             {"test-file",required_argument,0,'V'},
             {"test-label-file",required_argument,0,'B'},
@@ -104,7 +101,7 @@ int main(int argc,char **argv){
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:t:L:V:B:T:r:N:l:b:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:L:V:B:T:r:N:l:b:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -115,7 +112,6 @@ int main(int argc,char **argv){
             case 'v': verbose=(size_t) atoi(optarg); break;
             case 'i': input=std::string(optarg); input_set=true; break;
             case 'o': output=std::string(optarg); output_set=true; break;
-            case 't': tdim=(size_t) atoi(optarg); tdim_set=true; break;
             case 'L': label_file=std::string(optarg); label_set=true; break;
             case 'V': test_file=std::string(optarg); test_set=true; break;
             case 'B': test_label_file=std::string(optarg); test_label_set=true; break;
@@ -148,42 +144,7 @@ int main(int argc,char **argv){
         }
     }
     //positional arguments
-    if((argc-optind)<2){
-        if(mpi_utils::root){print_usage();}
-        exit(1);
-    }
-    size_t idim=(size_t) atoi(argv[optind++]);
-    std::vector<size_t> ls;
-    //check pos arg counts
-    size_t d;
-    if((argc-optind)>0){
-        d=(size_t) atoi(argv[optind++]);
-    }
-    else{
-        if(mpi_utils::root){print_usage();}
-        exit(1);
-    }
-    if((argc-optind)==1){
-        size_t l=(size_t) atoi(argv[optind++]);
-        if((init_tree_type=="pbttn")&&(!(((l&(l-1))==0)&&(l!=0)))){
-            std::cout<<"Dimensions must be a power of 2.\n";
-            exit(1);
-        }
-        for(size_t i=0;i<d;i++){
-            ls.push_back(l);
-        }
-    }
-    else if((argc-optind)==d){
-        for(size_t i=0;i<d;i++){
-            size_t l=(size_t) atoi(argv[optind++]);
-            if((init_tree_type=="pbttn")&&(!(((l&(l-1))==0)&&(l!=0)))){
-                std::cout<<"Dimensions must be a power of 2.\n";
-                exit(1);
-            }
-            ls.push_back(l);
-        }
-    }
-    else{
+    if(((argc-optind)>0)||!input_set){
         if(mpi_utils::root){print_usage();}
         exit(1);
     }
@@ -233,10 +194,6 @@ int main(int argc,char **argv){
         }
         exit(1);
     }
-    if(r_max==0){
-        std::cout<<"Maximum rank not specified/is zero. Will default to r_max=input_dim.\n";
-        r_max=idim;
-    }
     std::vector<double> times;
     stopwatch sw,sw_total;
     sw_total.start();
@@ -259,16 +216,27 @@ int main(int argc,char **argv){
     if(test_set){
         test_data=algorithm::load_data_from_file(test_file,test_n_samples,test_data_total_length,test_data_idim);
     }
+    size_t train_data_labels_tdim,train_labels_n_samples;
     std::vector<size_t> train_data_labels;
     if(label_set){
-        train_data_labels=algorithm::load_data_labels_from_file(label_file,train_n_samples,tdim);
+        train_data_labels=algorithm::load_data_labels_from_file(label_file,train_labels_n_samples,train_data_labels_tdim);
     }
+    size_t test_data_labels_tdim,test_labels_n_samples;
     std::vector<size_t> test_data_labels;
     if(test_label_set){
-        train_data_labels=algorithm::load_data_labels_from_file(test_label_file,test_n_samples,tdim);
+        test_data_labels=algorithm::load_data_labels_from_file(test_label_file,test_labels_n_samples,test_data_labels_tdim);
     }
-    graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,ls,init_tree_type);
+    size_t idim=train_data_idim;
+    size_t tdim=label_set?train_data_labels_tdim:1;
+    size_t num_vs=train_data_total_length;
+    graph<bmi_comparator> g=gen_graph<bmi_comparator>(idim,tdim,r_max,num_vs,init_tree_type);
     
+    if(r_max==0){
+        std::cout<<"Maximum rank not specified/is zero. Will default to r_max=input_dim.\n";
+        r_max=idim;
+    }
+    
+    //should be impossible to trigger since these values are based on input file
     if(g.n_phys_sites()!=train_data_total_length){
         std::cout<<"Mismatch in input site count between training data ("<<train_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
         exit(1);
@@ -277,12 +245,18 @@ int main(int argc,char **argv){
         std::cout<<"Mismatch in input dimension between training data ("<<train_data_idim<<") and model ("<<idim<<").\n";
         exit(1);
     }
+    //may trigger when test file is incorrectly specified
     if(test_set){
         if(g.n_phys_sites()!=test_data_total_length){
             std::cout<<"Mismatch in input site count between test data ("<<test_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
             exit(1);
         }
+        if(idim!=train_data_idim){
+            std::cout<<"Mismatch in input dimension between test data ("<<test_data_idim<<") and model ("<<idim<<").\n";
+            exit(1);
+        }
     }
+    
     if((train_type==1)||(train_type==2)){
         std::cout<<"Training details (TTNBM):\n\ttrain data: "<<input<<"\n";
         std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
@@ -299,6 +273,7 @@ int main(int argc,char **argv){
         std::cout<<"\tinit tree type: "<<init_tree_type<<"\n";
         std::cout<<"\ttop dim: "<<tdim<<"\n";
         std::cout<<"\tr max: "<<r_max<<"\n";
+        std::cout<<"\tinput length: "<<num_vs<<"\n";
         std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
         std::cout<<"\tlearning rate: "<<lr<<"\n";
         std::cout<<"\tbatch size: "<<batch_size<<"\n";
@@ -441,6 +416,7 @@ int main(int argc,char **argv){
         std::cout<<"\tinit tree type: "<<init_tree_type<<"\n";
         std::cout<<"\ttop dim: "<<tdim<<"\n";
         std::cout<<"\tr max: "<<r_max<<"\n";
+        std::cout<<"\tinput length: "<<num_vs<<"\n";
         std::cout<<"\tnll iter max: "<<n_nll_iter_max<<"\n";
         std::cout<<"\tlearning rate: "<<lr<<"\n";
         std::cout<<"\tbatch size: "<<batch_size<<"\n";

@@ -45,18 +45,14 @@ std::vector<sample_data> algorithm::load_data_from_file(std::string& fn,size_t& 
     return data;
 }
 
-std::vector<size_t> algorithm::load_data_labels_from_file(std::string& label_fn,size_t n_samples,size_t& data_labels_tdim){
+std::vector<size_t> algorithm::load_data_labels_from_file(std::string& label_fn,size_t& n_samples,size_t& data_labels_tdim){
     size_t n_samples_in_file;
     std::vector<size_t> data_labels;
     std::ifstream ifs(label_fn);
     std::string input_line;
     std::getline(ifs,input_line);
     std::istringstream header(input_line);
-    header>>n_samples_in_file>>data_labels_tdim;
-    if(n_samples_in_file!=n_samples){
-        std::cout<<"Number of samples in the label file does not match the number of samples in the training data file.\n";
-        exit(1);
-    }
+    header>>n_samples>>data_labels_tdim;
     while(std::getline(ifs,input_line)){
         std::istringstream line(input_line);
         size_t val;
