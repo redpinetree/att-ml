@@ -273,6 +273,20 @@ int main(int argc,char **argv){
         // algorithm::calculate_site_probs(g,current);
     // }
     
+    if(g.n_phys_sites()!=train_data_total_length){
+        std::cout<<"Mismatch in input site count between training data ("<<train_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
+        exit(1);
+    }
+    if(idim!=train_data_idim){
+        std::cout<<"Mismatch in input dimension between training data ("<<train_data_idim<<") and model ("<<idim<<").\n";
+        exit(1);
+    }
+    if(test_set){
+        if(g.n_phys_sites()!=test_data_total_length){
+            std::cout<<"Mismatch in input site count between test data ("<<test_data_total_length<<") and model ("<<g.n_phys_sites()<<").\n";
+            exit(1);
+        }
+    }
     if((train_type==1)||(train_type==2)){
         std::cout<<"Training details (BMTTN):\n\ttrain data: "<<input<<"\n";
         std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
@@ -415,7 +429,7 @@ int main(int argc,char **argv){
         init_tree_type="ttnbm";
     }
 
-    if((train_type==0)||(train_type==1)){
+    if((train_type==0)||(train_type==2)){
         std::cout<<"Training details (nnTTN):\n\ttrain data: "<<input<<"\n";
         std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
         if(label_set){
