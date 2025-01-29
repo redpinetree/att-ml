@@ -198,12 +198,15 @@ int main(int argc,char **argv){
     stopwatch sw,sw_total;
     sw_total.start();
     
-    std::string output_fn=output+"_born";
-    std::string output_fn2=output;
-    std::string samples_fn=output+"_samples";
-    output_fn+=".txt";
-    output_fn2+=".txt";
-    samples_fn+=".txt";
+    std::string output_fn=output+".txt";
+    std::string output_fn_born=output+"_born.txt";
+    std::string output_fn_hybrid=output+"_hybrid.txt";
+    std::string data_fn=output+".dat";
+    std::string data_fn_born=output+"_born.dat";
+    std::string data_fn_hybrid=output+"_hybrid.dat";
+    std::string samples_fn=output+".smp";
+    std::string samples_fn_hybrid=output+"_hybrid.smp";
+    
     std::stringstream header1_ss,header1_vals_ss,header2_ss,header2_mc_ss;
     observables::output_lines.clear(); //flush output lines
     
@@ -361,12 +364,13 @@ int main(int argc,char **argv){
         // if(verbose>=4){std::cout<<std::string(g);}
         
         if(output_set){
-            observables::write_output(output_fn,observables::output_lines);
-            // observables::write_output(mc_output_fn,observables::mc_output_lines);
+            observables::write_output(output_fn_born,observables::output_lines);
+            std::ofstream ofs(data_fn_born,std::ios::binary);
+            g.save(ofs);
+            ofs.close();
         }
         else{
             observables::write_output(observables::output_lines);
-            // observables::write_output(observables::mc_output_lines);
         }
     }
     
@@ -498,12 +502,21 @@ int main(int argc,char **argv){
         // if(verbose>=4){std::cout<<std::string(g);}
         
         if(output_set){
-            observables::write_output(output_fn2,observables::output_lines);
-            // observables::write_output(mc_output_fn,observables::mc_output_lines);
+            if(train_type==0){
+                observables::write_output(output_fn,observables::output_lines);
+                std::ofstream ofs(data_fn,std::ios::binary);
+                g.save(ofs);
+                ofs.close();
+            }
+            else if(train_type==2){
+                observables::write_output(output_fn_hybrid,observables::output_lines);
+                std::ofstream ofs(data_fn_hybrid,std::ios::binary);
+                g.save(ofs);
+                ofs.close();
+            }
         }
         else{
             observables::write_output(observables::output_lines);
-            // observables::write_output(observables::mc_output_lines);
         }
     }
     
