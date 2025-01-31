@@ -32,7 +32,7 @@ int bond::order() const{return this->order_;}
 double bond::bmi() const{return this->bmi_;}
 double bond::ee() const{return this->ee_;}
 bool bond::todo() const{return this->todo_;}
-array3d<double> bond::w() const{return this->w_;}
+const array3d<double>& bond::w() const{return this->w_;}
 std::pair<int,int>& bond::v(){return this->v_;}
 int& bond::v1(){return this->v_.first;}
 int& bond::v2(){return this->v_.second;}

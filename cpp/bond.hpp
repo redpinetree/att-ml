@@ -18,7 +18,7 @@ public:
     int v1() const;
     int v2() const;
     int depth() const;
-    array3d<double> w() const;
+    const array3d<double>& w() const;
     double bmi() const;
     double ee() const;
     int order() const;
