@@ -26,6 +26,10 @@ array3d<double> mu_ls(array3d<double>&,array3d<double>&,array3d<double>&,int);
 array3d<double> mu_ls2(array3d<double>&,array3d<double>&,array3d<double>&,int);
 array3d<double> mu_kl(array3d<double>&,array3d<double>&,array3d<double>&,int);
 array3d<double> mu_kl2(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> ccd_kl(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> ccd_kl2(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> sn_kl(array3d<double>&,array3d<double>&,array3d<double>&,int);
+array3d<double> sn_kl2(array3d<double>&,array3d<double>&,array3d<double>&,int);
 
 void nndsvda(array3d<double>&,array3d<double>&,array3d<double>&,int,int);
 double nmf(array3d<double>&,array3d<double>&,array3d<double>&,int);

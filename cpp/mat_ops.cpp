@@ -112,9 +112,9 @@ array3d<double> matmul_xTy(array3d<double>& x,array3d<double>& y){
         exit(1);
     }
     array3d<double> res(x.ny(),y.ny(),1);
-    for(int i=0;i<res.nx();i++){ //can this be accelerated?
-        for(int j=0;j<res.ny();j++){
-            for(int k=0;k<x.nx();k++){
+    for(int k=0;k<x.nx();k++){ //outer loop to minimize cache misses
+        for(int i=0;i<res.nx();i++){
+            for(int j=0;j<res.ny();j++){
                 res.at(i,j,0)+=x.at(k,i,0)*y.at(k,j,0);
             }
         }
@@ -383,19 +383,6 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
             break;
         }
     }
-    // if(norm_flag){
-        // double sum=0;
-        // for(int i=0;i<x.nx();i++){
-            // for(int j=0;j<x.ny();j++){
-                // sum+=x.at(i,j,0);
-            // }
-        // }
-        // for(int i=0;i<x.nx();i++){
-            // for(int j=0;j<x.ny();j++){
-                // x.at(i,j,0)=x.at(i,j,0)/sum;
-            // }
-        // }
-    // }
     return x;
 }
 
@@ -462,19 +449,6 @@ array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<doubl
             break;
         }
     }
-    // if(norm_flag){
-        // double sum=0;
-        // for(int i=0;i<x.nx();i++){
-            // for(int j=0;j<x.ny();j++){
-                // sum+=x.at(i,j,0);
-            // }
-        // }
-        // for(int i=0;i<x.nx();i++){
-            // for(int j=0;j<x.ny();j++){
-                // x.at(i,j,0)=x.at(i,j,0)/sum;
-            // }
-        // }
-    // }
     return x;
 }
 
@@ -513,19 +487,6 @@ array3d<double> mu_ls(array3d<double>& aTa,array3d<double>& aTb,array3d<double>&
             break;
         }
     }
-    // if(norm_flag){
-        // double sum=0;
-        // for(int i=0;i<x.nx();i++){
-            // for(int j=0;j<x.ny();j++){
-                // sum+=x.at(i,j,0);
-            // }
-        // }
-        // for(int i=0;i<x.nx();i++){
-            // for(int j=0;j<x.ny();j++){
-                // x.at(i,j,0)=x.at(i,j,0)/sum;
-            // }
-        // }
-    // }
     return x;
 }
 
@@ -566,19 +527,6 @@ array3d<double> mu_ls2(array3d<double>& aaT,array3d<double>& baT,array3d<double>
             break;
         }
     }
-    // if(norm_flag){
-        // double sum=0;
-        // for(int i=0;i<x.nx();i++){
-            // for(int j=0;j<x.ny();j++){
-                // sum+=x.at(i,j,0);
-            // }
-        // }
-        // for(int i=0;i<x.nx();i++){
-            // for(int j=0;j<x.ny();j++){
-                // x.at(i,j,0)=x.at(i,j,0)/sum;
-            // }
-        // }
-    // }
     return x;
 }
 
@@ -592,9 +540,14 @@ array3d<double> mu_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,i
     double delta_first=0;
     std::vector<double> denom=w.sum_over_axis(0,2);
     for(int it=0;it<max_it;it++){
-        w=transpose(w);
-        array3d<double> wh=matmul_xTy(w,h);
-        w=transpose(w);
+        array3d<double> wh(w.nx(),h.ny(),1);
+        for(int i=0;i<wh.nx();i++){
+            for(int k=0;k<w.ny();k++){ //outer loop to minimize cache misses
+                for(int j=0;j<wh.ny();j++){
+                    wh.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
+                }
+            }
+        }
         for(int i=0;i<h.nx();i++){
             for(int j=0;j<h.ny();j++){
                 double num=0;
@@ -635,9 +588,14 @@ array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,
     double delta_first=0;
     std::vector<double> denom=h.sum_over_axis(1,2);
     for(int it=0;it<max_it;it++){
-        w=transpose(w);
-        array3d<double> wh=matmul_xTy(w,h);
-        w=transpose(w);
+        array3d<double> wh(w.nx(),h.ny(),1);
+        for(int i=0;i<wh.nx();i++){
+            for(int k=0;k<w.ny();k++){ //outer loop to minimize cache misses
+                for(int j=0;j<wh.ny();j++){
+                    wh.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
+                }
+            }
+        }
         for(int i=0;i<w.nx();i++){
             for(int j=0;j<w.ny();j++){
                 double num=0;
@@ -663,6 +621,214 @@ array3d<double> mu_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,
         if(delta<=(eps*delta_first)){
             // std::cout<<"MU-KL stopped early after "<<it<<" iterations.\n";
             break;
+        }
+    }
+    return w;
+}
+
+array3d<double> ccd_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,int max_it){
+    if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
+        std::cout<<"Incompatible matrix equation in CCD-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";
+        exit(1);
+    }
+    double eps=1e-16;
+    array3d<double> wh(w.nx(),h.ny(),1);
+    for(int i=0;i<wh.nx();i++){
+        for(int k=0;k<w.ny();k++){ //outer loop to minimize cache misses
+            for(int j=0;j<wh.ny();j++){
+                wh.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
+            }
+        }
+    }
+    for(int k=0;k<w.ny();k++){
+        for(int j=0;j<h.ny();j++){
+            for(int it=0;it<max_it;it++){
+                double s=0;
+                double h_prime=0;
+                double h_prime2=0;
+                for(int i=0;i<w.nx();i++){
+                    double denom=wh.at(i,j,0)+(s*w.at(i,k,0))+eps;
+                    h_prime+=w.at(i,k,0)*(1-(m.at(i,j,0)/denom));
+                    h_prime2+=(w.at(i,k,0)*w.at(i,k,0)*m.at(i,j,0))/(denom*denom);
+                }
+                // s-=h_prime/h_prime2;
+                s-=h_prime/(h_prime2+eps);
+                // s=(s>0)?0:s;
+                double old_element=h.at(k,j,0);
+                h.at(k,j,0)+=s;
+                h.at(k,j,0)=(h.at(k,j,0)>eps)?h.at(k,j,0):eps;
+                double delta=h.at(k,j,0)-old_element; //in case h element was clipped, not always s
+                for(int i=0;i<w.nx();i++){
+                    wh.at(i,j,0)+=delta*w.at(i,k,0);
+                }
+                if(fabs(delta)<=(0.5*old_element)){
+                    break;
+                }
+            }
+        }
+    }
+    return h;
+}
+
+array3d<double> ccd_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,int max_it){
+    if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
+        std::cout<<"Incompatible matrix equation in CCD-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";
+        exit(1);
+    }
+    double eps=1e-16;
+    array3d<double> wh(w.nx(),h.ny(),1);
+    for(int i=0;i<wh.nx();i++){
+        for(int k=0;k<w.ny();k++){ //outer loop to minimize cache misses
+            for(int j=0;j<wh.ny();j++){
+                wh.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
+            }
+        }
+    }
+    for(int i=0;i<w.nx();i++){
+        for(int k=0;k<w.ny();k++){
+            for(int it=0;it<max_it;it++){
+                double s=0;
+                double h_prime=0;
+                double h_prime2=0;
+                for(int j=0;j<h.ny();j++){
+                    double denom=wh.at(i,j,0)+(s*h.at(k,j,0))+eps;
+                    h_prime+=h.at(k,j,0)*(1-(m.at(i,j,0)/denom));
+                    h_prime2+=(h.at(k,j,0)*h.at(k,j,0)*m.at(i,j,0))/(denom*denom);
+                }
+                // s-=h_prime/h_prime2;
+                s-=h_prime/(h_prime2+eps);
+                // s=(s>0)?0:s;
+                double old_element=w.at(i,k,0);
+                w.at(i,k,0)+=s;
+                w.at(i,k,0)=(w.at(i,k,0)>eps)?w.at(i,k,0):eps;
+                double delta=w.at(i,k,0)-old_element; //in case w element was clipped, not always s
+                for(int j=0;j<h.ny();j++){
+                    wh.at(i,j,0)+=delta*h.at(k,j,0);
+                }
+                if(fabs(delta)<=fabs(0.5*old_element)){
+                    break;
+                }
+            }
+        }
+    }
+    return w;
+}
+
+array3d<double> sn_kl(array3d<double>& m,array3d<double>& w,array3d<double>& h,int max_it){
+    if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
+        std::cout<<"Incompatible matrix equation in CCD-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";
+        exit(1);
+    }
+    double eps=1e-16;
+    //compute self-concordant constants
+    array2d<double> c(h.nx(),h.ny());
+    for(int k=0;k<h.nx();k++){
+        for(int j=0;j<h.ny();j++){
+            double max_e=0;
+            for(int i=0;i<h.nx();i++){
+                max_e=(max_e>m.at(i,j,0))?max_e:m.at(i,j,0);
+            }
+            c.at(k,j)=1/sqrt(max_e);
+        }
+    }
+    array3d<double> wh(w.nx(),h.ny(),1);
+    for(int i=0;i<wh.nx();i++){
+        for(int k=0;k<w.ny();k++){ //outer loop to minimize cache misses
+            for(int j=0;j<wh.ny();j++){
+                wh.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
+            }
+        }
+    }
+    for(int k=0;k<w.ny();k++){
+        for(int j=0;j<h.ny();j++){
+            for(int it=0;it<max_it;it++){
+                double h_prime=0;
+                double h_prime2=0;
+                for(int i=0;i<w.nx();i++){
+                    double var=w.at(i,k,0)/wh.at(i,j,0);
+                    h_prime+=w.at(i,k,0)-(m.at(i,j,0)*var);
+                    h_prime2+=m.at(i,j,0)*var*var;
+                }
+                double s=h.at(k,j,0)-(h_prime/h_prime2);
+                s=s>0?s:0;
+                double old_element=h.at(k,j,0);
+                double d=s-old_element;
+                double lambda=c.at(k,j)*sqrt(h_prime2)*fabs(d);
+                if((h_prime<=0)||(lambda<=0.683802)){
+                    h.at(k,j,0)=s;
+                }
+                else{
+                    h.at(k,j,0)+=d*(1/(1+lambda));
+                }
+                h.at(k,j,0)=(h.at(k,j,0)>eps)?h.at(k,j,0):eps;
+                double delta=h.at(k,j,0)-old_element; //in case h element was clipped, not always s
+                for(int i=0;i<w.nx();i++){
+                    wh.at(i,j,0)+=delta*w.at(i,k,0);
+                }
+                if(fabs(delta)<=fabs(0.5*old_element)){
+                    break;
+                }
+            }
+        }
+    }
+    return h;
+}
+
+array3d<double> sn_kl2(array3d<double>& m,array3d<double>& w,array3d<double>& h,int max_it){
+    if((w.nx()!=m.nx())||(w.ny()!=h.nx())||(h.ny()!=m.ny())){
+        std::cout<<"Incompatible matrix equation in CCD-KL with dimensions ("<<w.nx()<<","<<w.ny()<<") ("<<h.nx()<<","<<h.ny()<<")=("<<m.nx()<<","<<m.ny()<<")\n";
+        exit(1);
+    }
+    double eps=1e-16;
+    //compute self-concordant constants
+    array2d<double> c(w.nx(),w.ny());
+    for(int i=0;i<w.nx();i++){
+        for(int k=0;k<w.ny();k++){
+            double max_e=0;
+            for(int j=0;j<h.ny();j++){
+                max_e=(max_e>m.at(i,j,0))?max_e:m.at(i,j,0);
+            }
+            c.at(i,k)=1/sqrt(max_e);
+        }
+    }
+    array3d<double> wh(w.nx(),h.ny(),1);
+    for(int i=0;i<wh.nx();i++){
+        for(int k=0;k<w.ny();k++){ //outer loop to minimize cache misses
+            for(int j=0;j<wh.ny();j++){
+                wh.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
+            }
+        }
+    }
+    for(int i=0;i<w.nx();i++){
+        for(int k=0;k<w.ny();k++){
+            for(int it=0;it<max_it;it++){
+                double h_prime=0;
+                double h_prime2=0;
+                for(int j=0;j<h.ny();j++){
+                    double var=h.at(k,j,0)/wh.at(i,j,0);
+                    h_prime+=h.at(k,j,0)-(m.at(i,j,0)*var);
+                    h_prime2+=m.at(i,j,0)*var*var;
+                }
+                double s=w.at(i,k,0)-(h_prime/h_prime2);
+                s=s>0?s:0;
+                double old_element=w.at(i,k,0);
+                double d=s-old_element;
+                double lambda=c.at(i,k)*sqrt(h_prime2)*fabs(d);
+                if((h_prime<=0)||(lambda<=0.683802)){
+                    w.at(i,k,0)=s;
+                }
+                else{
+                    w.at(i,k,0)+=d*(1/(1+lambda));
+                }
+                w.at(i,k,0)=(w.at(i,k,0)>eps)?w.at(i,k,0):eps;
+                double delta=w.at(i,k,0)-old_element; //in case h element was clipped, not always s
+                for(int j=0;j<h.ny();j++){
+                    wh.at(i,j,0)+=delta*h.at(k,j,0);
+                }
+                if(fabs(delta)<=fabs(0.5*old_element)){
+                    break;
+                }
+            }
         }
     }
     return w;
@@ -782,102 +948,80 @@ void nndsvda(array3d<double>& target,array3d<double>& w,array3d<double>& h,int r
 double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,int r){
     int status=0;
     nndsvda(target,w,h,r,status);
+    // std::cout<<"target:\n"<<(std::string) target;
     // std::cout<<"w:\n"<<(std::string) w;
     // std::cout<<"h:\n"<<(std::string) h;
     // std::cout<<"w: "<<w.nx()<<" "<<w.ny()<<" "<<w.nz()<<"\n";
     // std::cout<<"h: "<<h.nx()<<" "<<h.ny()<<" "<<h.nz()<<"\n";
     
-    //use NN-HALS to alternately optimize w and h against target
-    // target=target.exp_form();
-    // w=w.exp_form();
-    // h=h.exp_form();
-    // std::cout<<(std::string) target<<"\n";
-    // std::cout<<(std::string) w<<"\n";
-    // std::cout<<(std::string) h<<"\n";
+    //use MU-KL to alternately optimize w and h against target
     array3d<double> old_w=w;
     array3d<double> old_h=h;
-    double old_recon_err=1e50;
-    double recon_err;
+    double old_kl=1e50;
+    double kl;
     for(int opt_iter=0;opt_iter<10000;opt_iter++){
-        // array3d<double> aTa=matmul_xTy(w,w);
-        // array3d<double> aTb=matmul_xTy(w,target);
-        // h=nn_hals(aTa,aTb,h,1);
-        // h=mu_ls(aTa,aTb,h,1);
-        h=mu_kl(target,w,h,1);
+        // if(opt_iter%10==0){
+            // h=mu_kl(target,w,h,1);
+            // w=mu_kl2(target,w,h,1);
+        // }
+        // else{
+            // h=mu_kl(target,w,h,1);
+            // w=mu_kl2(target,w,h,1);
+
+            // h=ccd_kl(target,w,h,1);
+            // w=ccd_kl2(target,w,h,1);
+            
+            // h=sn_kl(target,w,h,1);
+            // w=sn_kl2(target,w,h,1);
+        // }
         
-        // h=transpose(h);
-        // target=transpose(target);
-        // array3d<double> aaT=matmul_xTy(h,h);
-        // array3d<double> baT=matmul_xTy(target,h);
-        // h=transpose(h);
-        // target=transpose(target);
-        // w=transpose(w);
-        // w=nn_hals2(aaT,baT,w,1);
-        // w=transpose(w);
-        // w=mu_ls2(aaT,baT,w,1);
+        h=mu_kl(target,w,h,1);
         w=mu_kl2(target,w,h,1);
+        
+        // h=ccd_kl(target,w,h,1);
+        // w=ccd_kl2(target,w,h,1);
+        
+        // h=sn_kl(target,w,h,1);
+        // w=sn_kl2(target,w,h,1);
         
         array3d<double> recon_mat(target.nx(),target.ny(),target.nz());
         for(int i=0;i<recon_mat.nx();i++){
-            for(int j=0;j<recon_mat.ny();j++){
-                for(int k=0;k<w.ny();k++){
+            for(int k=0;k<w.ny();k++){ //outer loop to minimize cache misses
+                for(int j=0;j<recon_mat.ny();j++){
                     recon_mat.at(i,j,0)+=w.at(i,k,0)*h.at(k,j,0);
                 }
             }
         }
-        double tr_mTm=0;
-        double tr_whTwh=0;
-        double tr_mTwh=0;
+        
+        kl=0;
         for(int i=0;i<recon_mat.nx();i++){
             for(int j=0;j<recon_mat.ny();j++){
-                tr_mTm+=target.at(i,j,0)*target.at(i,j,0);
-                tr_whTwh+=recon_mat.at(i,j,0)*recon_mat.at(i,j,0);
-                tr_mTwh+=target.at(i,j,0)*recon_mat.at(i,j,0);
+                double a=target.at(i,j,0)*log(recon_mat.at(i,j,0));
+                double b=target.at(i,j,0)*log(target.at(i,j,0));
+                if(target.at(i,j,0)==0){
+                    a=0;
+                    b=0;
+                }
+                if((recon_mat.at(i,j,0)==0)&&(target.at(i,j,0)!=0)){
+                    b=-1e50;
+                }
+                kl+=recon_mat.at(i,j,0)-a+b-target.at(i,j,0);
             }
         }
-        recon_err=(tr_mTm+tr_whTwh-(2*tr_mTwh))/tr_mTm;
-        if(recon_err<1e-12){
-            // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (recon err).\n";
-            // if(opt_iter==0){
-                // std::cout<<tr_mTm<<" "<<tr_whTwh<<" "<<tr_mTwh<<"\n";
-                // std::cout<<(std::string) w<<"\n";
-                // std::cout<<(std::string) h<<"\n";
-                // std::cout<<(std::string) target<<"\n";
-                // std::cout<<(std::string) recon_mat<<"\n";
-                // exit(1);
-            // }
-            // std::cout<<"Final reconstruction err: "<<recon_err<<".\n";
+        
+        if(kl<1e-6){ //when near-exact reconstruction is possible
+            // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (kl).\n";
             break;
         }
-        // else if(fabs(recon_err-old_recon_err)<1e-6){
-            // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (recon err diff).\n";
-            // std::cout<<"Final reconstruction err: "<<recon_err<<".\n";
-            // break;
-        // }
-        old_recon_err=recon_err;
-        // exit(1);
-        
-        double diff=0;
-        for(int i=0;i<w.nx();i++){
-            for(int j=0;j<w.ny();j++){
-                diff+=(old_w.at(i,j,0)-w.at(i,j,0))*(old_w.at(i,j,0)-w.at(i,j,0));
-            }
+        else if((fabs(kl-old_kl)/kl)<1e-6){ //when near-exact reconstruction is not possible
+            // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (kl diff).\n";
+            break;
         }
-        for(int i=0;i<h.nx();i++){
-            for(int j=0;j<h.ny();j++){
-                diff+=(old_h.at(i,j,0)-h.at(i,j,0))*(old_h.at(i,j,0)-h.at(i,j,0));
-            }
-        }
-        if(diff<1e-12){
-            // std::cout<<"Optimization converged after "<<(opt_iter+1)<<" iterations (diff).\n";
-            // std::cout<<"Final diff: "<<diff<<".\n";
-            // std::cout<<"Final reconstruction err: "<<recon_err<<".\n";
-            // break;
-        }
+        old_kl=kl;
         old_w=w;
         old_h=h;
     }
-    // std::cout<<(*std::max_element(w.e().begin(),w.e().end()))<<" "<<(*std::max_element(h.e().begin(),h.e().end()))<<"\n";
+    // std::cout<<"Final KL divergence: "<<kl<<".\n";
     double sum2=h.sum_over_all();
     for(int i=0;i<h.nx();i++){
         for(int j=0;j<h.ny();j++){
@@ -890,7 +1034,7 @@ double nmf(array3d<double>& target,array3d<double>& w,array3d<double>& h,int r){
             w.at(i,j,0)/=sum1;
         }
     }
-    return recon_err;
+    return kl;
 }
 
 double truncated_svd(array3d<double>& target,array3d<double>& truncated_us,array3d<double>& truncated_vt,int r){
