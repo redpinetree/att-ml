@@ -64,11 +64,11 @@ public:
         }
         return a;
     }
-    int nx() const{return this->nx_;}
-    std::vector<T> e() const{return this->e_;}
-    std::vector<T>& e(){return this->e_;}
-    T at(int x) const{return this->e_[x];}
-    T& at(int x){return this->e_[x];}
+    inline int nx() const{return this->nx_;}
+    inline std::vector<T> e() const{return this->e_;}
+    inline std::vector<T>& e(){return this->e_;}
+    inline T at(int x) const{return this->e_[x];}
+    inline T& at(int x){return this->e_[x];}
     
     //ver. 1 2025/01/29 - initial
     void save(std::ostream& os){
@@ -203,12 +203,12 @@ public:
         }
         return a;
     }
-    int nx() const{return this->nx_;}
-    int ny() const{return this->ny_;}
-    std::vector<T> e() const{return this->e_;}
-    std::vector<T>& e(){return this->e_;}
-    T at(int x,int y) const{return this->e_[(this->nx()*y)+x];}
-    T& at(int x,int y){return this->e_[(this->nx()*y)+x];}
+    inline int nx() const{return this->nx_;}
+    inline int ny() const{return this->ny_;}
+    inline std::vector<T> e() const{return this->e_;}
+    inline std::vector<T>& e(){return this->e_;}
+    inline T at(int x,int y) const{return this->e_[(this->nx()*y)+x];}
+    inline T& at(int x,int y){return this->e_[(this->nx()*y)+x];}
     
     //ver. 1 2025/01/29 - initial
     void save(std::ostream& os){
@@ -402,13 +402,13 @@ public:
         }
         return a;
     }
-    int nx() const{return this->nx_;}
-    int ny() const{return this->ny_;}
-    int nz() const{return this->nz_;}
-    std::vector<T> e() const{return this->e_;}
-    std::vector<T>& e(){return this->e_;}
-    T at(int x,int y,int z) const{return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
-    T& at(int x,int y,int z){return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    inline int nx() const{return this->nx_;}
+    inline int ny() const{return this->ny_;}
+    inline int nz() const{return this->nz_;}
+    inline std::vector<T> e() const{return this->e_;}
+    inline std::vector<T>& e(){return this->e_;}
+    inline T at(int x,int y,int z) const{return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    inline T& at(int x,int y,int z){return this->e_[(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
     
     //ver. 1 2025/01/29 - initial
     void save(std::ostream& os){
@@ -505,14 +505,14 @@ public:
         }
         return a;
     }
-    int nx() const{return this->nx_;}
-    int ny() const{return this->ny_;}
-    int nz() const{return this->nz_;}
-    int nw() const{return this->nw_;}
-    std::vector<T> e() const{return this->e_;}
-    std::vector<T>& e(){return this->e_;}
-    T at(int x,int y,int z,int w) const{return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
-    T& at(int x,int y,int z,int w){return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    inline int nx() const{return this->nx_;}
+    inline int ny() const{return this->ny_;}
+    inline int nz() const{return this->nz_;}
+    inline int nw() const{return this->nw_;}
+    inline std::vector<T> e() const{return this->e_;}
+    inline std::vector<T>& e(){return this->e_;}
+    inline T at(int x,int y,int z,int w) const{return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
+    inline T& at(int x,int y,int z,int w){return this->e_[(this->nz()*this->ny()*this->nx()*w)+(this->ny()*this->nx()*z)+(this->nx()*y)+x];}
     
     //ver. 1 2025/01/29 - initial
     void save(std::ostream& os){
