@@ -896,9 +896,9 @@ int inner_nmf(array3d<double>& fused_mat,array3d<double>& mat1,array3d<double>& 
         while(r<=((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){
             mat1=array3d<double>(fused_mat.nx(),r,1);
             mat2=array3d<double>(r,fused_mat.ny(),1);
-            double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
-            // std::cout<<r<<" "<<recon_err<<"\n";
-            if(recon_err<1e-12){break;}
+            double kl=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+            // std::cout<<r<<" "<<kl<<"\n";
+            if(kl<1e-12){break;}
             if(r==((upper_bound_r_max<r_max)?upper_bound_r_max:r_max)){break;}
             r++;
         }
@@ -908,7 +908,7 @@ int inner_nmf(array3d<double>& fused_mat,array3d<double>& mat1,array3d<double>& 
         r=(r<r_max)?r:r_max;
         mat1=array3d<double>(fused_mat.nx(),r,1);
         mat2=array3d<double>(r,fused_mat.ny(),1);
-        double recon_err=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
+        double kl=nmf(fused_mat,mat1,mat2,r); //nmf factors stored in mat1,mat2
     }
     return r;
 }
