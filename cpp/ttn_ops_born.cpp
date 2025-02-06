@@ -280,7 +280,7 @@ std::vector<double> calc_w_born(graph<cmp>& g,std::vector<sample_data>& samples,
         }
     }
     
-    if(labels.size()==0){ //top tensor's u_env is the product of samples and contracted other half (with samples as inputs)
+    if(labels.size()==0){ //top tensor's u_env is all ones
         u_env[g.vs().size()-1]=std::vector<array1d<double> >(n_samples);
         for(int s=0;s<n_samples;s++){
             array1d<double> v(g.vs()[g.vs().size()-1].rank());

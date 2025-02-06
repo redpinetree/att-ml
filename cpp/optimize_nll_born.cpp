@@ -419,10 +419,10 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
         //calculate train nll
         nll=0;
         #pragma omp parallel for reduction(-:nll)
-        for(int s=0;s<train_samples.size();s++){
+        for(int s=0;s<train_samples_batch.size();s++){
             nll-=log(w[s]);
         }
-        nll/=(double) train_samples.size();
+        nll/=(double) train_samples_batch.size();
         nll+=log(z);
         train_nll_history.insert(std::pair<int,double>(iter,nll));
             
@@ -498,7 +498,7 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
                 }
             }
         }
-        w=calc_w(g,train_samples_batch,train_labels_batch,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
+        w=calc_w_born(g,train_samples_batch,train_labels_batch,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
         t++;
     }
     //calculate final train nll
@@ -932,6 +932,7 @@ double optimize::calc_ee_born(bond& current,bond& parent){
             ee-=(s.at(i)*s.at(i))*log(s.at(i)*s.at(i));
         }
     }
+    // std::cout<<"("<<current.order()<<","<<parent.order()<<") ee: "<<ee<<"\n";
     return ee;
 }
 
