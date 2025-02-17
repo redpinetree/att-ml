@@ -59,6 +59,8 @@ graph<cmp> gen_graph(int idim,int tdim,int r_max,int num_vs,std::string init_tre
 int main(int argc,char **argv){
     //mpi init
     mpi_utils::init();
+    //omp init
+    // omp_set_num_threads(1);
     //argument handling
     int born_flag=0;
     int hybrid_flag=0;
@@ -379,12 +381,14 @@ int main(int argc,char **argv){
         std::uniform_real_distribution<> unif_dist(1e-10,1.0);
         for(auto it=g.es().begin();it!=g.es().end();++it){
             bond b=*it;
-            std::vector<double> sum_addends;
+            std::vector<double> sum_addends(b.w().nx()*b.w().ny()*b.w().nz());
+            size_t pos=0;
             for(int i=0;i<b.w().nx();i++){
                 for(int j=0;j<b.w().ny();j++){
                     for(int k=0;k<b.w().nz();k++){
                         b.w().at(i,j,k)=unif_dist(mpi_utils::prng);
-                        sum_addends.push_back(b.w().at(i,j,k));
+                        sum_addends[pos]=b.w().at(i,j,k);
+                        pos++;
                     }
                 }
             }

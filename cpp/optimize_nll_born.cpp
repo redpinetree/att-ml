@@ -16,10 +16,12 @@ void aux_update_lr_cache_born(bond& current,bond& parent,std::vector<std::vector
     for(int s=0;s<l_env_sample[current.order()].size();s++){
         array1d<double> res_vec_sample(current.w().nz());
         for(int k=0;k<current.w().nz();k++){
-            std::vector<double> res_vec_sample_addends;
+            std::vector<double> res_vec_sample_addends(current.w().nx()*current.w().ny());
+            size_t pos=0;
             for(int i=0;i<current.w().nx();i++){
                 for(int j=0;j<current.w().ny();j++){
-                    res_vec_sample_addends.push_back(l_env_sample[current.order()][s].at(i)*r_env_sample[current.order()][s].at(j)*current.w().at(i,j,k));
+                    res_vec_sample_addends[pos]=l_env_sample[current.order()][s].at(i)*r_env_sample[current.order()][s].at(j)*current.w().at(i,j,k);
+                    pos++;
                 }
             }
             res_vec_sample.at(k)=vec_add_float(res_vec_sample_addends);
@@ -39,10 +41,12 @@ void aux_update_u_cache_born(bond& current,bond& parent,std::vector<std::vector<
         array1d<double> res_vec2_sample(current.w().nz());
         if(parent.v1()==current.order()){
             for(int i=0;i<parent.w().nx();i++){
-                std::vector<double> res_vec2_sample_addends;
+                std::vector<double> res_vec2_sample_addends(parent.w().ny()*parent.w().nz());
+                size_t pos=0;
                 for(int j=0;j<parent.w().ny();j++){
                     for(int k=0;k<parent.w().nz();k++){
-                        res_vec2_sample_addends.push_back(r_env_sample[parent.order()][s].at(j)*u_env_sample[parent.order()][s].at(k)*parent.w().at(i,j,k));
+                        res_vec2_sample_addends[pos]=r_env_sample[parent.order()][s].at(j)*u_env_sample[parent.order()][s].at(k)*parent.w().at(i,j,k);
+                        pos++;
                     }
                 }
                 res_vec2_sample.at(i)=vec_add_float(res_vec2_sample_addends);
@@ -50,10 +54,12 @@ void aux_update_u_cache_born(bond& current,bond& parent,std::vector<std::vector<
         }
         else{
             for(int j=0;j<parent.w().ny();j++){
-                std::vector<double> res_vec2_sample_addends;
+                std::vector<double> res_vec2_sample_addends(parent.w().nx()*parent.w().nz());
+                size_t pos=0;
                 for(int i=0;i<parent.w().nx();i++){
                     for(int k=0;k<parent.w().nz();k++){
-                        res_vec2_sample_addends.push_back(l_env_sample[parent.order()][s].at(i)*u_env_sample[parent.order()][s].at(k)*parent.w().at(i,j,k));
+                        res_vec2_sample_addends[pos]=l_env_sample[parent.order()][s].at(i)*u_env_sample[parent.order()][s].at(k)*parent.w().at(i,j,k);
+                        pos++;
                     }
                 }
                 res_vec2_sample.at(j)=vec_add_float(res_vec2_sample_addends);
@@ -111,7 +117,6 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
     std::uniform_real_distribution<> unif_dist(1e-16,1.0);
     std::vector<site> best_vs;
     std::multiset<bond,bmi_comparator> best_es;
-    // for(int t=1;t<=iter_max;t++){
     int t=1;
     int iter=1;
     while(iter<iter_max){
@@ -124,8 +129,6 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
         w=calc_w_born(g,train_samples_batch,train_labels_batch,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
         auto it=g.es().begin();
         while(done_idxs.size()<g.es().size()){
-        // for(auto it=g.es().begin();done_idxs.size()<g.es().size();++it){
-        // for(auto it=g.es().begin();it!=--g.es().end();++it){
             bond current=*it;
             if(current.order()==g.vs().size()-1){ //handle top tensor
                 g.vs()[current.order()].p_bond()=current;
@@ -151,11 +154,7 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
             key.depth()=g.vs()[key.order()].depth();
             key.bmi()=-1e50;
             auto it_parent=g.es().lower_bound(key);
-            // auto it_parent=g.es().find(g.vs()[g.vs()[(*it).order()].u_idx()].p_bond());
             bond parent=*it_parent; //must be a dereferenced pointer to the actual object, not a copy!
-            // std::cout<<"g:"<<(std::string) g<<"\n";
-            // std::cout<<"current:"<<(std::string) current.w()<<"\n";
-            // std::cout<<"parent:"<<(std::string) parent.w()<<"\n";
             
             array4d<double> fused=optimize::fused_update_born(g,current,parent,z,w,l_env_sample,r_env_sample,u_env_sample,fused_m,fused_v,t,lr,beta1,beta2,epsilon);
             
@@ -318,9 +317,9 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
                 for(int i=0;i<next_current.w().nx();i++){
                     for(int j=0;j<next_current.w().ny();j++){
                         for(int k=0;k<r.nx();k++){
-                            std::vector<double> res_addends;
+                            std::vector<double> res_addends(r.ny());
                             for(int l=0;l<r.ny();l++){
-                                res_addends.push_back(next_current.w().at(i,j,l)*r.at(k,l,0));
+                                res_addends[l]=next_current.w().at(i,j,l)*r.at(k,l,0);
                             }
                             res.at(i,j,k)=vec_add_float(res_addends);
                         }
@@ -341,9 +340,9 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
                 for(int i=0;i<next_current.w().nx();i++){
                     for(int j=0;j<next_current.w().ny();j++){
                         for(int k=0;k<r.nx();k++){
-                            std::vector<double> res_addends;
+                            std::vector<double> res_addends(r.ny());
                             for(int l=0;l<r.ny();l++){
-                                res_addends.push_back(next_current.w().at(i,j,l)*r.at(k,l,0));
+                                res_addends[l]=next_current.w().at(i,j,l)*r.at(k,l,0);
                             }
                             res.at(i,j,k)=vec_add_float(res_addends);
                         }
@@ -366,9 +365,9 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
                     for(int i=0;i<r.nx();i++){
                         for(int j=0;j<next_current.w().ny();j++){
                             for(int k=0;k<next_current.w().nz();k++){
-                                std::vector<double> res_addends;
+                                std::vector<double> res_addends(r.ny());
                                 for(int l=0;l<r.ny();l++){
-                                    res_addends.push_back(next_current.w().at(l,j,k)*r.at(i,l,0));
+                                    res_addends[l]=next_current.w().at(l,j,k)*r.at(i,l,0);
                                 }
                                 res.at(i,j,k)=vec_add_float(res_addends);
                             }
@@ -380,9 +379,9 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
                     for(int i=0;i<next_current.w().nx();i++){
                         for(int j=0;j<r.nx();j++){
                             for(int k=0;k<next_current.w().nz();k++){
-                                std::vector<double> res_addends;
+                                std::vector<double> res_addends(r.ny());
                                 for(int l=0;l<r.ny();l++){
-                                    res_addends.push_back(next_current.w().at(i,l,k)*r.at(j,l,0));
+                                    res_addends[l]=next_current.w().at(i,l,k)*r.at(j,l,0);
                                 }
                                 res.at(i,j,k)=vec_add_float(res_addends);
                             }
@@ -642,16 +641,18 @@ void optimize::site_update_born(graph<cmp>& g,bond& b,double z,std::vector<doubl
             }
         }
     }
-    std::vector<double> grad_norm_addends;
+    std::vector<double> grad_norm_addends(grad.nx()*grad.ny()*grad.nz());
+    #pragma omp parallel for collapse(3)
     for(int i=0;i<grad.nx();i++){
         for(int j=0;j<grad.ny();j++){
             for(int k=0;k<grad.nz();k++){
-                grad_norm_addends.push_back(grad.at(i,j,k)*grad.at(i,j,k));
+                grad_norm_addends[(grad.ny()*grad.nx()*k)+(grad.nx()*j)+i]=grad.at(i,j,k)*grad.at(i,j,k);
             }
         }
     }
     double grad_norm=sqrt(vec_add_float(grad_norm_addends));
     if(grad_norm>1){ //gradient clipping by norm
+        #pragma omp parallel for collapse(3)
         for(int i=0;i<grad.nx();i++){
             for(int j=0;j<grad.ny();j++){
                 for(int k=0;k<grad.nz();k++){
@@ -660,6 +661,7 @@ void optimize::site_update_born(graph<cmp>& g,bond& b,double z,std::vector<doubl
             }
         }
     }
+    #pragma omp parallel for collapse(3)
     for(int i=0;i<grad.nx();i++){
         for(int j=0;j<grad.ny();j++){
             for(int k=0;k<grad.nz();k++){
@@ -681,13 +683,14 @@ template<typename cmp>
 array4d<double> optimize::fused_update_born(graph<cmp>& g,bond& b1,bond& b2,double z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::map<std::pair<int,int>,array4d<double> >& m_cache,std::map<std::pair<int,int>,array4d<double> >& v_cache,int t,double lr,double beta1,double beta2,double epsilon){
     //calculate fused, dz and dw
     array4d<double> fused(b1.w().nx(),b1.w().ny(),(b2.v1()==b1.order())?b2.w().ny():b2.w().nx(),b2.w().nz());
+    #pragma omp parallel for collapse(4)
     for(int i=0;i<fused.nx();i++){
         for(int j=0;j<fused.ny();j++){
             for(int k=0;k<fused.nz();k++){
                 for(int l=0;l<fused.nw();l++){
-                    std::vector<double> sum_addends;
+                    std::vector<double> sum_addends(b1.w().nz());
                     for(int m=0;m<b1.w().nz();m++){
-                        sum_addends.push_back(b1.w().at(i,j,m)*((b2.v1()==b1.order())?b2.w().at(m,k,l):b2.w().at(k,m,l)));
+                        sum_addends[m]=b1.w().at(i,j,m)*((b2.v1()==b1.order())?b2.w().at(m,k,l):b2.w().at(k,m,l));
                     }
                     fused.at(i,j,k,l)=vec_add_float(sum_addends);
                 }
@@ -742,18 +745,20 @@ array4d<double> optimize::fused_update_born(graph<cmp>& g,bond& b1,bond& b2,doub
             }
         }
     }
-    std::vector<double> grad_2site_norm_addends;
+    std::vector<double> grad_2site_norm_addends(grad_2site.nx()*grad_2site.ny()*grad_2site.nz()*grad_2site.nw());
+    #pragma omp parallel for collapse(4)
     for(int i=0;i<grad_2site.nx();i++){
         for(int j=0;j<grad_2site.ny();j++){
             for(int k=0;k<grad_2site.nz();k++){
                 for(int l=0;l<grad_2site.nw();l++){
-                    grad_2site_norm_addends.push_back(grad_2site.at(i,j,k,l)*grad_2site.at(i,j,k,l));
+                    grad_2site_norm_addends[(grad_2site.nz()*grad_2site.ny()*grad_2site.nx()*l)+(grad_2site.ny()*grad_2site.nx()*k)+(grad_2site.nx()*j)+i]=grad_2site.at(i,j,k,l)*grad_2site.at(i,j,k,l);
                 }
             }
         }
     }
     double grad_2site_norm=sqrt(vec_add_float(grad_2site_norm_addends));
     if(grad_2site_norm>1){ //gradient clipping by norm
+        #pragma omp parallel for collapse(4)
         for(int i=0;i<grad_2site.nx();i++){
             for(int j=0;j<grad_2site.ny();j++){
                 for(int k=0;k<grad_2site.nz();k++){
@@ -764,6 +769,7 @@ array4d<double> optimize::fused_update_born(graph<cmp>& g,bond& b1,bond& b2,doub
             }
         }
     }
+    #pragma omp parallel for collapse(4)
     for(int i=0;i<grad_2site.nx();i++){
         for(int j=0;j<grad_2site.ny();j++){
             for(int k=0;k<grad_2site.nz();k++){
@@ -794,15 +800,17 @@ double optimize::calc_bmi_born(graph<cmp>& g,bond& current,std::vector<double>& 
     std::vector<double> ab_subsystem_sample(n_samples);
     #pragma omp parallel for
     for(int s=0;s<n_samples;s++){
-        std::vector<double> a_subsystem_sample_addends;
+        std::vector<double> a_subsystem_sample_addends(current.w().nz());
         for(int m=0;m<current.w().nz();m++){
-            std::vector<double> weight_addends;
+            std::vector<double> weight_addends(l_env_sample[current.order()][s].nx()*r_env_sample[current.order()][s].nx());
+            size_t pos=0;
             for(int k=0;k<l_env_sample[current.order()][s].nx();k++){
                 for(int l=0;l<r_env_sample[current.order()][s].nx();l++){
-                     weight_addends.push_back(l_env_sample[current.order()][s].at(k)*r_env_sample[current.order()][s].at(l)*current.w().at(k,l,m));
+                     weight_addends[pos]=l_env_sample[current.order()][s].at(k)*r_env_sample[current.order()][s].at(l)*current.w().at(k,l,m);
+                     pos++;
                 }
             }
-            a_subsystem_sample_addends.push_back(vec_add_float(weight_addends)*vec_add_float(weight_addends));
+            a_subsystem_sample_addends[m]=vec_add_float(weight_addends)*vec_add_float(weight_addends);
         }
         a_subsystem_sample[s]=vec_add_float(a_subsystem_sample_addends);
         int prev_idx=current.order();
@@ -815,9 +823,9 @@ double optimize::calc_bmi_born(graph<cmp>& g,bond& current,std::vector<double>& 
                 intermediate=array3d<double>(parent.w().nx(),parent.w().nz(),1);
                 for(int k=0;k<parent.w().nx();k++){
                     for(int m=0;m<parent.w().nz();m++){
-                        std::vector<double> intermediate_addends;
+                        std::vector<double> intermediate_addends(parent.w().ny());
                         for(int l=0;l<parent.w().ny();l++){
-                            intermediate_addends.push_back(parent.w().at(k,l,m)*r_env_sample[parent.order()][s].at(l));
+                            intermediate_addends[l]=parent.w().at(k,l,m)*r_env_sample[parent.order()][s].at(l);
                         }
                         intermediate.at(k,m,0)=vec_add_float(intermediate_addends);
                     }
@@ -827,9 +835,9 @@ double optimize::calc_bmi_born(graph<cmp>& g,bond& current,std::vector<double>& 
                 intermediate=array3d<double>(parent.w().ny(),parent.w().nz(),1);
                 for(int l=0;l<parent.w().ny();l++){
                     for(int m=0;m<parent.w().nz();m++){
-                        std::vector<double> intermediate_addends;
+                        std::vector<double> intermediate_addends(parent.w().nx());
                         for(int k=0;k<parent.w().nx();k++){
-                            intermediate_addends.push_back(parent.w().at(k,l,m)*l_env_sample[parent.order()][s].at(k));
+                            intermediate_addends[k]=parent.w().at(k,l,m)*l_env_sample[parent.order()][s].at(k);
                         }
                         intermediate.at(l,m,0)=vec_add_float(intermediate_addends);
                     }
@@ -839,9 +847,9 @@ double optimize::calc_bmi_born(graph<cmp>& g,bond& current,std::vector<double>& 
             for(int k=0;k<res.nx();k++){
                 for(int l=0;l<res.ny();l++){
                     for(int m=0;m<res.nz();m++){
-                        std::vector<double> res_addends;
+                        std::vector<double> res_addends(intermediate.nx());
                         for(int n=0;n<intermediate.nx();n++){
-                            res_addends.push_back(b_subsystem_tensor_sample[s].at(k,l,n)*intermediate.at(n,m,0));
+                            res_addends[n]=b_subsystem_tensor_sample[s].at(k,l,n)*intermediate.at(n,m,0);
                         }
                         res.at(k,l,m)=vec_add_float(res_addends);
                     }
@@ -853,11 +861,13 @@ double optimize::calc_bmi_born(graph<cmp>& g,bond& current,std::vector<double>& 
             prev_idx=parent.order();
             parent=g.vs()[g.vs()[parent.order()].u_idx()].p_bond();
         }
-        std::vector<double> b_subsystem_sample_addends;
+        std::vector<double> b_subsystem_sample_addends(b_subsystem_tensor_sample[s].nx()*b_subsystem_tensor_sample[s].ny()*b_subsystem_tensor_sample[s].nz());
+        size_t pos=0;
         for(int k=0;k<b_subsystem_tensor_sample[s].nx();k++){
             for(int l=0;l<b_subsystem_tensor_sample[s].ny();l++){
                 for(int m=0;m<b_subsystem_tensor_sample[s].nz();m++){
-                    b_subsystem_sample_addends.push_back(b_subsystem_tensor_sample[s].at(k,l,m)*b_subsystem_tensor_sample[s].at(k,l,m));
+                    b_subsystem_sample_addends[pos]=b_subsystem_tensor_sample[s].at(k,l,m)*b_subsystem_tensor_sample[s].at(k,l,m);
+                    pos++;
                 }
             }
         }
@@ -865,11 +875,12 @@ double optimize::calc_bmi_born(graph<cmp>& g,bond& current,std::vector<double>& 
         ab_subsystem_sample[s]=w[s];
     }
     
-    std::vector<double> z_addends;
+    std::vector<double> z_addends(current.w().nx()*current.w().ny()*current.w().nz());
+    #pragma omp parallel for collapse(3)
     for(int i=0;i<current.w().nx();i++){
         for(int j=0;j<current.w().ny();j++){
             for(int k=0;k<current.w().nz();k++){
-                z_addends.push_back(current.w().at(i,j,k)*current.w().at(i,j,k));
+                z_addends[(current.w().ny()*current.w().nx()*k)+(current.w().nx()*j)+i]=current.w().at(i,j,k)*current.w().at(i,j,k);
             }
         }
     }
@@ -899,13 +910,14 @@ double optimize::calc_ee_born(bond& current,bond& parent){
     if(current.w().nz()==1){return 0;} //ee is nonnegative and upper-bounded by bond dimension, so dim=1 -> ee=0
     double ee=0;
     array4d<double> fused(current.w().nx(),current.w().ny(),(parent.v1()==current.order())?parent.w().ny():parent.w().nx(),parent.w().nz());
+    #pragma omp parallel for collapse(4)
     for(int i=0;i<fused.nx();i++){
         for(int j=0;j<fused.ny();j++){
             for(int k=0;k<fused.nz();k++){
                 for(int l=0;l<fused.nw();l++){
-                    std::vector<double> sum_addends;
+                    std::vector<double> sum_addends(current.w().nz());
                     for(int m=0;m<current.w().nz();m++){
-                        sum_addends.push_back(current.w().at(i,j,m)*((parent.v1()==current.order())?parent.w().at(m,k,l):parent.w().at(k,m,l)));
+                        sum_addends[m]=current.w().at(i,j,m)*((parent.v1()==current.order())?parent.w().at(m,k,l):parent.w().at(k,m,l));
                     }
                     fused.at(i,j,k,l)=vec_add_float(sum_addends);
                 }
@@ -913,6 +925,7 @@ double optimize::calc_ee_born(bond& current,bond& parent){
         }
     }
     array3d<double> fused_mat(fused.nx()*fused.ny(),fused.nz()*fused.nw(),1);
+    #pragma omp parallel for collapse(4)
     for(int i=0;i<fused.nx();i++){
         for(int j=0;j<fused.ny();j++){
             for(int k=0;k<fused.nz();k++){
@@ -965,12 +978,6 @@ template<typename cmp>
 void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<std::vector<array1d<double> > >& l_env_sample,std::vector<std::vector<array1d<double> > >& r_env_sample,std::vector<std::vector<array1d<double> > >& u_env_sample,std::vector<sample_data>& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     z=calc_z_born(g);
     w=calc_w_born(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
-    //update l/r env of parent and u_env of current
-    // aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
-    // aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
-    
-    // z=update_cache_z(g,current.order(),l_env_z,r_env_z,u_env_z);
-    // w=update_cache_w(g,current.order(),l_env_sample,r_env_sample,u_env_sample);
     
     array3d<double> current_m(current.w().nx(),current.w().ny(),current.w().nz());
     array3d<double> current_v(current.w().nx(),current.w().ny(),current.w().nz());
@@ -991,12 +998,13 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
         current.w()=tensorize(q,current.w().nx(),current.w().ny(),2);
         if(current.order()==parent.v1()){
             array3d<double> res(r.nx(),parent.w().ny(),parent.w().nz());
+            #pragma omp parallel for collapse(3)
             for(int i=0;i<r.nx();i++){
                 for(int j=0;j<parent.w().ny();j++){
                     for(int k=0;k<parent.w().nz();k++){
-                        std::vector<double> res_addends;
+                        std::vector<double> res_addends(r.ny());
                         for(int l=0;l<r.ny();l++){
-                            res_addends.push_back(parent.w().at(l,j,k)*r.at(i,l,0));
+                            res_addends[l]=parent.w().at(l,j,k)*r.at(i,l,0);
                         }
                         res.at(i,j,k)=vec_add_float(res_addends);
                     }
@@ -1006,12 +1014,13 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
         }
         else{
             array3d<double> res(parent.w().nx(),r.nx(),parent.w().nz());
+            #pragma omp parallel for collapse(3)
             for(int i=0;i<parent.w().nx();i++){
                 for(int j=0;j<r.nx();j++){
                     for(int k=0;k<parent.w().nz();k++){
-                        std::vector<double> res_addends;
+                        std::vector<double> res_addends(r.ny());
                         for(int l=0;l<r.ny();l++){
-                            res_addends.push_back(parent.w().at(i,l,k)*r.at(j,l,0));
+                            res_addends[l]=parent.w().at(i,l,k)*r.at(j,l,0);
                         }
                         res.at(i,j,k)=vec_add_float(res_addends);
                     }
@@ -1033,7 +1042,6 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
         g.center_idx()=parent.order();
         
         z=calc_z_born(g);
-        // w=calc_w_born(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
         
         // update l/r env of parent
         aux_update_lr_cache_born(current,parent,l_env_sample,r_env_sample);
@@ -1057,12 +1065,13 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
             parent.w()=tensorize(q,parent.w().nx(),parent.w().nz(),1);
         }
         array3d<double> res(current.w().nx(),current.w().ny(),r.nx());
+        #pragma omp parallel for collapse(3)
         for(int i=0;i<current.w().nx();i++){
             for(int j=0;j<current.w().ny();j++){
                 for(int k=0;k<r.nx();k++){
-                    std::vector<double> res_addends;
+                    std::vector<double> res_addends(r.ny());
                     for(int l=0;l<r.ny();l++){
-                        res_addends.push_back(current.w().at(i,j,l)*r.at(k,l,0));
+                        res_addends[l]=current.w().at(i,j,l)*r.at(k,l,0);
                     }
                     res.at(i,j,k)=vec_add_float(res_addends);
                 }
@@ -1083,7 +1092,6 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
         g.center_idx()=current.order();
         
         z=calc_z_born(g);
-        // w=calc_w_born(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
         
         //update u_env of current
         aux_update_lr_cache_born(current,parent,l_env_sample,r_env_sample);
@@ -1162,12 +1170,13 @@ double way1_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,ty
         parent.w()=tensorize(q_mat,parent.w().nx(),parent.w().nz(),1);
     }
     array3d<double> res(current.w().nx(),current.w().ny(),r_mat.nx());
+    #pragma omp parallel for collapse(3)
     for(int i=0;i<current.w().nx();i++){
         for(int j=0;j<current.w().ny();j++){
             for(int k=0;k<r_mat.nx();k++){
-                std::vector<double> res_addends;
+                std::vector<double> res_addends(r_mat.ny());
                 for(int l=0;l<r_mat.ny();l++){
-                    res_addends.push_back(current.w().at(i,j,l)*r_mat.at(k,l,0));
+                    res_addends[l]=current.w().at(i,j,l)*r_mat.at(k,l,0);
                 }
                 res.at(i,j,k)=vec_add_float(res_addends);
             }
@@ -1237,20 +1246,10 @@ double way2_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,ty
     
     g.vs()[current.v1()].u_idx()=current.order();
     g.vs()[current.v2()].u_idx()=current.order();
-    // if(current.v1()>current.v2()){
-        // swap=current.v1();
-        // current.v1()=current.v2();
-        // current.v2()=swap;
-    // }
     g.vs()[current.order()].l_idx()=current.v1();
     g.vs()[current.order()].r_idx()=current.v2();
     g.vs()[parent.v1()].u_idx()=parent.order();
     g.vs()[parent.v2()].u_idx()=parent.order();
-    // if(parent.v1()>parent.v2()){
-        // swap=parent.v1();
-        // parent.v1()=parent.v2();
-        // parent.v2()=swap;
-    // }
     g.vs()[parent.order()].l_idx()=parent.v1();
     g.vs()[parent.order()].r_idx()=parent.v2();
     
@@ -1332,12 +1331,13 @@ double way2_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,ty
         parent.w()=tensorize(q_mat,parent.w().nx(),parent.w().nz(),1);
     }
     array3d<double> res(current.w().nx(),current.w().ny(),r_mat.nx());
+    #pragma omp parallel for collapse(3)
     for(int i=0;i<current.w().nx();i++){
         for(int j=0;j<current.w().ny();j++){
             for(int k=0;k<r_mat.nx();k++){
-                std::vector<double> res_addends;
+                std::vector<double> res_addends(r_mat.ny());
                 for(int l=0;l<r_mat.ny();l++){
-                    res_addends.push_back(current.w().at(i,j,l)*r_mat.at(k,l,0));
+                    res_addends[l]=current.w().at(i,j,l)*r_mat.at(k,l,0);
                 }
                 res.at(i,j,k)=vec_add_float(res_addends);
             }
@@ -1407,20 +1407,10 @@ double way3_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,ty
     
     g.vs()[current.v1()].u_idx()=current.order();
     g.vs()[current.v2()].u_idx()=current.order();
-    // if(current.v1()>current.v2()){
-        // swap=current.v1();
-        // current.v1()=current.v2();
-        // current.v2()=swap;
-    // }
     g.vs()[current.order()].l_idx()=current.v1();
     g.vs()[current.order()].r_idx()=current.v2();
     g.vs()[parent.v1()].u_idx()=parent.order();
     g.vs()[parent.v2()].u_idx()=parent.order();
-    // if(parent.v1()>parent.v2()){
-        // swap=parent.v1();
-        // parent.v1()=parent.v2();
-        // parent.v2()=swap;
-    // }
     g.vs()[parent.order()].l_idx()=parent.v1();
     g.vs()[parent.order()].r_idx()=parent.v2();
     
@@ -1501,12 +1491,13 @@ double way3_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,ty
         parent.w()=tensorize(q_mat,parent.w().nx(),parent.w().nz(),1);
     }
     array3d<double> res(current.w().nx(),current.w().ny(),r_mat.nx());
+    #pragma omp parallel for collapse(3)
     for(int i=0;i<current.w().nx();i++){
         for(int j=0;j<current.w().ny();j++){
             for(int k=0;k<r_mat.nx();k++){
-                std::vector<double> res_addends;
+                std::vector<double> res_addends(r_mat.ny());
                 for(int l=0;l<r_mat.ny();l++){
-                    res_addends.push_back(current.w().at(i,j,l)*r_mat.at(k,l,0));
+                    res_addends[l]=current.w().at(i,j,l)*r_mat.at(k,l,0);
                 }
                 res.at(i,j,k)=vec_add_float(res_addends);
             }

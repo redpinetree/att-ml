@@ -41,12 +41,14 @@ graph<cmp> graph_utils::init_pbttn(int idim,int tdim,int r_max,int num_vs){
         vs[vs.size()-1].p_k()=std::vector<double>(r_k,1/(double) r_k);
         
         array3d<double> w(r_i,r_j,r_k); //bond is still as weight matrix
-        std::vector<double> sum_addends;
+        std::vector<double> sum_addends(r_i*r_j*r_k);
+        size_t pos=0;
         for(int i=0;i<r_i;i++){
             for(int j=0;j<r_j;j++){
                 for(int k=0;k<r_k;k++){
                     w.at(i,j,k)=unif_dist(mpi_utils::prng);
-                    sum_addends.push_back(w.at(i,j,k));
+                    sum_addends[pos]=w.at(i,j,k);
+                    pos++;
                 }
             }
         }
@@ -119,12 +121,14 @@ graph<cmp> graph_utils::init_mps(int idim,int tdim,int r_max,int num_vs){
         vs[vs.size()-1].p_k()=std::vector<double>(r_k,1/(double) r_k);
         
         array3d<double> w(r_i,r_j,r_k); //bond is still as weight matrix
-        std::vector<double> sum_addends;
+        std::vector<double> sum_addends(r_i*r_j*r_k);
+        size_t pos=0;
         for(int i=0;i<r_i;i++){
             for(int j=0;j<r_j;j++){
                 for(int k=0;k<r_k;k++){
                     w.at(i,j,k)=unif_dist(mpi_utils::prng);
-                    sum_addends.push_back(w.at(i,j,k));
+                    sum_addends[pos]=w.at(i,j,k);
+                    pos++;
                 }
             }
         }
@@ -218,12 +222,14 @@ graph<cmp> graph_utils::init_rand(int idim,int tdim,int r_max,int num_vs){
         vs[vs.size()-1].p_k()=std::vector<double>(r_k,1/(double) r_k);
         
         array3d<double> w(r_i,r_j,r_k); //bond is still as weight matrix
-        std::vector<double> sum_addends;
+        std::vector<double> sum_addends(r_i*r_j*r_k);
+        size_t pos=0;
         for(int i=0;i<r_i;i++){
             for(int j=0;j<r_j;j++){
                 for(int k=0;k<r_k;k++){
                     w.at(i,j,k)=unif_dist(mpi_utils::prng);
-                    sum_addends.push_back(w.at(i,j,k));
+                    sum_addends[pos]=w.at(i,j,k);
+                    pos++;
                 }
             }
         }
