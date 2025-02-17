@@ -646,8 +646,9 @@ void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<a
     for(int i=0;i<grad.nx();i++){
         for(int j=0;j<grad.ny();j++){
             for(int k=0;k<grad.nz();k++){
-                m_cache.at(i,j,k)=(beta1*m_cache.at(i,j,k))+((1-beta1)*grad.at(i,j,k));
-                v_cache.at(i,j,k)=(beta2*v_cache.at(i,j,k))+((1-beta2)*grad.at(i,j,k)*grad.at(i,j,k));
+                double proj_grad=(b.w().at(i,j,k)>grad.at(i,j,k))?grad.at(i,j,k):b.w().at(i,j,k); //projected gradient
+                m_cache.at(i,j,k)=(beta1*m_cache.at(i,j,k))+((1-beta1)*proj_grad);
+                v_cache.at(i,j,k)=(beta2*v_cache.at(i,j,k))+((1-beta2)*proj_grad*proj_grad);
                 double corrected_m=m_cache.at(i,j,k)/(1-pow(beta1,(double) t));
                 double corrected_v=v_cache.at(i,j,k)/(1-pow(beta2,(double) t));
                 b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*0.01*b.w().at(i,j,k)); //weight decay (adamw)
@@ -761,8 +762,9 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
         for(int j=0;j<grad_2site.ny();j++){
             for(int k=0;k<grad_2site.nz();k++){
                 for(int l=0;l<grad_2site.nw();l++){
-                    m_cache[key].at(i,j,k,l)=(beta1*m_cache[key].at(i,j,k,l))+((1-beta1)*grad_2site.at(i,j,k,l));
-                    v_cache[key].at(i,j,k,l)=(beta2*v_cache[key].at(i,j,k,l))+((1-beta2)*grad_2site.at(i,j,k,l)*grad_2site.at(i,j,k,l));
+                    double proj_grad=(fused.at(i,j,k,l)>grad_2site.at(i,j,k,l))?grad_2site.at(i,j,k,l):fused.at(i,j,k,l); //projected gradient
+                    m_cache[key].at(i,j,k,l)=(beta1*m_cache[key].at(i,j,k,l))+((1-beta1)*proj_grad);
+                    v_cache[key].at(i,j,k,l)=(beta2*v_cache[key].at(i,j,k,l))+((1-beta2)*proj_grad*proj_grad);
                     double corrected_m=m_cache[key].at(i,j,k,l)/(1-pow(beta1,(double) t));
                     double corrected_v=v_cache[key].at(i,j,k,l)/(1-pow(beta2,(double) t));
                     fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*0.01*fused.at(i,j,k,l)); //weight decay (adamw)
