@@ -331,13 +331,13 @@ array3d<double> nn_hals(array3d<double>& aTa,array3d<double>& aTb,array3d<double
         for(int k=0;k<aTb.nx();k++){
             if(aTa.at(k,k,0)!=0){
                 double zero_check=0;
-                std::vector<double> c;
+                std::vector<double> c(x.ny());
                 for(int col=0;col<x.ny();col++){
                     double c_sum=0;
                     for(int l=0;l<x.nx();l++){
                         c_sum+=aTa.at(k,l,0)*x.at(l,col,0);
                     }
-                    c.push_back(c_sum);
+                    c[col]=c_sum;
                 }
                 for(int col=0;col<x.ny();col++){
                     c[col]-=x.at(k,col,0)*aTa.at(k,k,0); //this term in c removes current k column information
@@ -399,13 +399,13 @@ array3d<double> nn_hals2(array3d<double>& aaT,array3d<double>& baT,array3d<doubl
         for(int k=0;k<baT.ny();k++){
             if(aaT.at(k,k,0)!=0){
                 double zero_check=0;
-                std::vector<double> c;
+                std::vector<double> c(x.nx());
                 for(int col=0;col<x.nx();col++){
                     double c_sum=0;
                     for(int l=0;l<x.ny();l++){
                         c_sum+=x.at(col,l,0)*aaT.at(l,k,0);
                     }
-                    c.push_back(c_sum);
+                    c[col]=c_sum;
                 }
                 for(int col=0;col<x.nx();col++){
                     c[col]-=x.at(col,k,0)*aaT.at(k,k,0); //this term in c removes current k column information

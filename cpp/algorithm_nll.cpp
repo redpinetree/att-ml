@@ -19,21 +19,23 @@
 #include "optimize_nll_born.hpp"
 
 std::vector<sample_data> algorithm::load_data_from_file(std::string& fn,int& n_samples,int& data_total_length,int& data_idim){
-    std::vector<sample_data> data;
     std::ifstream ifs(fn);
     std::string input_line;
     std::getline(ifs,input_line);
     std::istringstream header(input_line);
     header>>n_samples>>data_idim>>data_total_length;
+    std::vector<sample_data> data(n_samples);
+    size_t pos=0;
     while(std::getline(ifs,input_line)){
         std::istringstream line(input_line);
-        std::vector<int> s;
+        std::vector<int> s(data_total_length);
         int val=0;
         for(int i=0;i<data_total_length;i++){
             line>>val;
-            s.push_back(val+1); //smallest value in sample_data is 1
+            s[i]=val+1; //smallest value in sample_data is 1
         }
-        data.push_back(sample_data(data_total_length,s));
+        data[pos]=sample_data(data_total_length,s);
+        pos++;
     }
     // for(int i=0;i<data.size();i++){
         // for(int j=0;j<data[i].n_phys_sites();j++){
@@ -47,17 +49,19 @@ std::vector<sample_data> algorithm::load_data_from_file(std::string& fn,int& n_s
 
 std::vector<int> algorithm::load_data_labels_from_file(std::string& label_fn,int& n_samples,int& data_labels_tdim){
     int n_samples_in_file;
-    std::vector<int> data_labels;
     std::ifstream ifs(label_fn);
     std::string input_line;
     std::getline(ifs,input_line);
     std::istringstream header(input_line);
     header>>n_samples>>data_labels_tdim;
+    std::vector<int> data_labels(n_samples);
+    size_t pos=0;
     while(std::getline(ifs,input_line)){
         std::istringstream line(input_line);
         int val;
         line>>val;
-        data_labels.push_back(val);
+        data_labels[pos]=val;
+        pos++;
     }
     // for(int i=0;i<data_labels.size();i++){
         // std::cout<<data_labels[i]<<"\n";

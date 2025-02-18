@@ -40,8 +40,8 @@ public:
         }
         return "vertices: ["+vs_ss.str()+"]\nedges: ["+es_ss.str()+"]\n";
     }
-    std::vector<site> vs() const{return this->vs_;};
-    std::multiset<bond,cmp> es() const{return this->es_;};
+    const std::vector<site>& vs() const{return this->vs_;};
+    const std::multiset<bond,cmp>& es() const{return this->es_;};
     int n_phys_sites() const{return this->n_phys_sites_;};
     std::vector<site>& vs(){return this->vs_;};
     std::multiset<bond,cmp>& es(){return this->es_;};
@@ -75,7 +75,7 @@ public:
         graph<cmp> g;
         int ver,n_phys_sites,center_idx,es_size,vs_size;
         std::multiset<bond,cmp> es;
-        std::vector<site> vs;
+        std::vector<site> vs(vs_size);
         is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
         if(ver!=1){
             std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
@@ -92,7 +92,7 @@ public:
         g.es()=es;
         is.read(reinterpret_cast<char*>(&vs_size),sizeof(vs_size));
         for(int i=0;i<vs_size;i++){
-            vs.push_back(site::load(is));
+            vs[i]=site::load(is);
         }
         g.vs()=vs;
         return g;

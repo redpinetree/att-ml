@@ -129,39 +129,42 @@ public:
             std::cerr<<"Attempted to sum over non-existent axis "<<ax<<" in array2d. Aborting...\n";
             exit(1);
         }
-        std::vector<T> res;
         if(ax==0){
+            std::vector<T> res(this->ny());
             for(int j=0;j<this->ny();j++){
-                std::vector<T> v;
+                std::vector<T> v(this->nx());
                 for(int i=0;i<this->nx();i++){
-                    v.push_back(this->at(i,j));
+                    v[i]=this->at(i,j);
                 }
-                res.push_back(ksum(v));
+                res[j]=ksum(v);
             }
+            return res;
         }
         else if(ax==1){
+            std::vector<T> res(this->nx());
             for(int i=0;i<this->nx();i++){
-                std::vector<T> v;
+                std::vector<T> v(this->ny());
                 for(int j=0;j<this->ny();j++){
-                    v.push_back(this->at(i,j));
+                    v[j]=this->at(i,j);
                 }
-                res.push_back(ksum(v));
+                res[i]=ksum(v);
             }
+            return res;
         }
-        return res;
+        return std::vector<T>();
     }
     std::vector<T> lse_over_axis(int ax){
         if(ax>1){
             std::cerr<<"Attempted to sum over non-existent axis "<<ax<<" in array2d. Aborting...\n";
             exit(1);
         }
-        std::vector<T> res;
         if(ax==0){
+            std::vector<T> res(this->ny());
             for(int j=0;j<this->ny();j++){
                 T e=0;
-                std::vector<T> v;
+                std::vector<T> v(this->nx());
                 for(int i=0;i<this->nx();i++){
-                    v.push_back(this->at(i,j));
+                    v[i]=this->at(i,j);
                 }
                 std::sort(v.begin(),v.end());
                 double max=*(std::max_element(v.begin(),v.end()));
@@ -169,15 +172,17 @@ public:
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
-                res.push_back(e);
+                res[j]=e;
             }
+            return res;
         }
         else if(ax==1){
+            std::vector<T> res(this->nx());
             for(int i=0;i<this->nx();i++){
                 T e=0;
-                std::vector<T> v;
+                std::vector<T> v(this->ny());
                 for(int j=0;j<this->ny();j++){
-                    v.push_back(this->at(i,j));
+                    v[j]=this->at(i,j);
                 }
                 std::sort(v.begin(),v.end());
                 double max=*(std::max_element(v.begin(),v.end()));
@@ -185,10 +190,10 @@ public:
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
-                res.push_back(e);
+                res[i]=e;
             }
+            return res;
         }
-        return res;
     }
     T sum_over_all(){
         return ksum(this->e());
@@ -285,41 +290,52 @@ public:
             std::cerr<<"Attempted to sum over non-existent axes "<<ax1<<" in array3d. Aborting...\n";
             exit(1);
         }
-        std::vector<T> res;
         if(((ax0==0)&&(ax1==2))||((ax0==2)&&(ax1==0))){
+            std::vector<T> res(this->ny());
             for(int j=0;j<this->ny();j++){
-                std::vector<T> v;
+                std::vector<T> v(this->nx()*this->nz());
+                size_t pos=0;
                 for(int i=0;i<this->nx();i++){
                     for(int k=0;k<this->nz();k++){
-                        v.push_back(this->at(i,j,k));
+                        v[pos]=this->at(i,j,k);
+                        pos++;
                     }
                 }
-                res.push_back(ksum(v));
+                res[j]=ksum(v);
             }
+            return res;
         }
         else if(((ax0==1)&&(ax1==2))||((ax0==2)&&(ax1==1))){
+            std::vector<T> res(this->nx());
             for(int i=0;i<this->nx();i++){
-                std::vector<T> v;
+                std::vector<T> v(this->ny()*this->nz());
+                size_t pos=0;
                 for(int j=0;j<this->ny();j++){
                     for(int k=0;k<this->nz();k++){
-                        v.push_back(this->at(i,j,k));
+                        v[pos]=this->at(i,j,k);
+                        pos++;
                     }
                 }
-                res.push_back(ksum(v));
+                res[i]=ksum(v);
             }
+            return res;
         }
         else if(((ax0==0)&&(ax1==1))||((ax0==1)&&(ax1==0))){
+            std::vector<T> res(this->nz());
             for(int k=0;k<this->nz();k++){
-                std::vector<T> v;
+                std::vector<T> v(this->nx()*this->ny());
+                size_t pos=0;
                 for(int i=0;i<this->nx();i++){
                     for(int j=0;j<this->ny();j++){
-                        v.push_back(this->at(i,j,k));
+                        v[pos]=this->at(i,j,k);
+                        pos++;
                     }
                 }
-                res.push_back(ksum(v));
+                res[k]=ksum(v);
             }
+            return res;
         }
-        return res;
+        return std::vector<T>();
     }
     std::vector<T> lse_over_axis(int ax0,int ax1){
         if(ax0>2){
@@ -334,10 +350,12 @@ public:
         if(((ax0==0)&&(ax1==2))||((ax0==2)&&(ax1==0))){
             for(int j=0;j<this->ny();j++){
                 T e=0;
-                std::vector<T> v;
+                std::vector<T> v(this->nx()*this->nz());
+                size_t pos=0;
                 for(int i=0;i<this->nx();i++){
                     for(int k=0;k<this->nz();k++){
-                        v.push_back(this->at(i,j,k));
+                        v[pos]=this->at(i,j,k);
+                        pos++;
                     }
                 }
                 std::sort(v.begin(),v.end());
@@ -346,16 +364,19 @@ public:
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
-                res.push_back(e);
+                res[j]=e;
             }
+            return res;
         }
         else if(((ax0==1)&&(ax1==2))||((ax0==2)&&(ax1==1))){
             for(int i=0;i<this->nx();i++){
                 T e=0;
-                std::vector<T> v;
+                std::vector<T> v(this->ny()*this->nz());
+                size_t pos=0;
                 for(int j=0;j<this->ny();j++){
                     for(int k=0;k<this->nz();k++){
-                        v.push_back(this->at(i,j,k));
+                        v[pos]=this->at(i,j,k);
+                        pos++;
                     }
                 }
                 std::sort(v.begin(),v.end());
@@ -364,16 +385,19 @@ public:
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
-                res.push_back(e);
+                res[i]=e;
             }
+            return res;
         }
         else if(((ax0==0)&&(ax1==1))||((ax0==1)&&(ax1==0))){
             for(int k=0;k<this->nz();k++){
                 T e=0;
-                std::vector<T> v;
+                std::vector<T> v(this->nx()*this->ny());
+                size_t pos=0;
                 for(int i=0;i<this->nx();i++){
                     for(int j=0;j<this->ny();j++){
-                        v.push_back(this->at(i,j,k));
+                        v[pos]=this->at(i,j,k);
+                        pos++;
                     }
                 }
                 std::sort(v.begin(),v.end());
@@ -382,10 +406,10 @@ public:
                     e+=exp(v[n]-max);
                 }
                 e=max+log(e);
-                res.push_back(e);
+                res[k]=e;
             }
+            return res;
         }
-        return res;
     }
     T sum_over_all(){
         return ksum(this->e());
