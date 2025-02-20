@@ -20,5 +20,6 @@ template<typename cmp>
 std::vector<double > calc_w_born(graph<cmp>&,std::vector<sample_data>&,std::vector<int>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 template<typename cmp>
 std::vector<double> update_cache_w_born(graph<cmp>&,int,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+std::vector<double> update_cache_w_born(bond&,bond&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
 
 #endif

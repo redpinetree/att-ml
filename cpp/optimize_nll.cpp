@@ -973,17 +973,9 @@ void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,
     //single-site updates
     for(int t2=1;t2<=single_site_update_count;t2++){
         optimize::site_update(current,z,w,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample,current_m,current_v,t2,lr,beta1,beta2,epsilon);
-        
-        g.vs()[current.order()].p_bond()=current;
-        g.es().erase(it);
-        it=g.es().insert(current);
-        
-        // update l/r env of parent
-        aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
-        aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
 
-        z=update_cache_z(g,current.order(),l_env_z,r_env_z,u_env_z);
-        w=update_cache_w(g,current.order(),l_env_sample,r_env_sample,u_env_sample);
+        z=update_cache_z(current,parent,l_env_z,r_env_z,u_env_z);
+        w=update_cache_w(current,parent,l_env_sample,r_env_sample,u_env_sample);
         
         normalize_using_z(current.w(),z);
         
@@ -991,24 +983,13 @@ void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,
         g.es().erase(it);
         it=g.es().insert(current);
         
-        aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
-        aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
-        
-        z=update_cache_z(g,current.order(),l_env_z,r_env_z,u_env_z);
-        w=update_cache_w(g,current.order(),l_env_sample,r_env_sample,u_env_sample);
+        z=update_cache_z(current,parent,l_env_z,r_env_z,u_env_z);
+        w=update_cache_w(current,parent,l_env_sample,r_env_sample,u_env_sample);
         
         optimize::site_update(parent,z,w,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample,parent_m,parent_v,t2,lr,beta1,beta2,epsilon);
         
-        g.vs()[parent.order()].p_bond()=parent;
-        g.es().erase(it_parent);
-        it_parent=g.es().insert(parent);
-        
-        //update u_env of current
-        aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
-        aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
-        
-        z=update_cache_z(g,parent.order(),l_env_z,r_env_z,u_env_z);
-        w=update_cache_w(g,parent.order(),l_env_sample,r_env_sample,u_env_sample);
+        z=update_cache_z(current,parent,l_env_z,r_env_z,u_env_z);
+        w=update_cache_w(current,parent,l_env_sample,r_env_sample,u_env_sample);
         
         normalize_using_z(parent.w(),z);
         
@@ -1016,11 +997,8 @@ void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,
         g.es().erase(it_parent);
         it_parent=g.es().insert(parent);
         
-        aux_update_lr_cache(current,parent,l_env_z,r_env_z,l_env_sample,r_env_sample);
-        aux_update_u_cache(current,parent,l_env_z,r_env_z,u_env_z,l_env_sample,r_env_sample,u_env_sample);
-        
-        z=update_cache_z(g,parent.order(),l_env_z,r_env_z,u_env_z);
-        w=update_cache_w(g,parent.order(),l_env_sample,r_env_sample,u_env_sample);
+        z=update_cache_z(current,parent,l_env_z,r_env_z,u_env_z);
+        w=update_cache_w(current,parent,l_env_sample,r_env_sample,u_env_sample);
     }
 }
 template void inner_updates(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<sample_data>&,std::vector<int>&,int,double,double,double,double);

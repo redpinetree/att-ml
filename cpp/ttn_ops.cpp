@@ -699,3 +699,125 @@ std::vector<double> update_cache_w(graph<cmp>& g,int center,std::vector<std::vec
     return w;
 }
 template std::vector<double> update_cache_w(graph<bmi_comparator>&,int,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&);
+
+//EXPERIMENTAL: only recompute Z using current and parent tensor + 4 env vectors
+double update_cache_z(bond& current,bond& parent,std::vector<array1d<double> >& l_env,std::vector<array1d<double> >& r_env,std::vector<array1d<double> >& u_env){
+    double z=0;
+    array1d<double> res_vec(current.w().nz());
+    std::vector<double> res_vec_addends(current.w().nx()*current.w().ny());
+    array1d<double> res_vec2(current.w().nz());
+    std::vector<double> res_vec2_addends((parent.v1()==current.order())?(parent.w().ny()*parent.w().nz()):(parent.w().nx()*parent.w().nz()));
+    for(int k=0;k<current.w().nz();k++){
+        size_t pos=0;
+        for(int i=0;i<current.w().nx();i++){
+            for(int j=0;j<current.w().ny();j++){
+                res_vec_addends[pos]=l_env[current.order()].at(i)*r_env[current.order()].at(j)*current.w().at(i,j,k);
+                pos++;
+            }
+        }
+        res_vec.at(k)=vec_add_float(res_vec_addends);
+    }
+    if(parent.v1()==current.order()){
+        l_env[parent.order()]=res_vec;
+    }
+    else{
+        r_env[parent.order()]=res_vec;
+    }
+    
+    if(parent.v1()==current.order()){
+        for(int i=0;i<parent.w().nx();i++){
+            size_t pos=0;
+            for(int j=0;j<parent.w().ny();j++){
+                for(int k=0;k<parent.w().nz();k++){
+                    res_vec2_addends[pos]=r_env[parent.order()].at(j)*u_env[parent.order()].at(k)*parent.w().at(i,j,k);
+                    pos++;
+                }
+            }
+            res_vec2.at(i)=vec_add_float(res_vec2_addends);
+        }
+        u_env[current.order()]=res_vec2;
+    }
+    else{
+        for(int j=0;j<parent.w().ny();j++){
+            size_t pos=0;
+            for(int i=0;i<parent.w().nx();i++){
+                for(int k=0;k<parent.w().nz();k++){
+                    res_vec2_addends[pos]=l_env[parent.order()].at(i)*u_env[parent.order()].at(k)*parent.w().at(i,j,k);
+                    pos++;
+                }
+            }
+            res_vec2.at(j)=vec_add_float(res_vec2_addends);
+        }
+        u_env[current.order()]=res_vec2;
+    }
+    
+    
+    std::vector<double> z_addends(current.w().nz());
+    for(int k=0;k<current.w().nz();k++){
+        z_addends[k]=res_vec.at(k)*res_vec2.at(k);
+    }
+    z=vec_add_float(z_addends);
+    return z;
+}
+
+//EXPERIMENTAL: only recompute W using current and parent tensor + 4 env vectors
+std::vector<double> update_cache_w(bond& current,bond& parent,std::vector<std::vector<array1d<double> > >& l_env,std::vector<std::vector<array1d<double> > >& r_env,std::vector<std::vector<array1d<double> > >& u_env){
+    int n_samples=u_env[0].size();
+    std::vector<double> w(n_samples);
+    array1d<double> res_vec(current.w().nz());
+    std::vector<double> res_vec_addends(current.w().nx()*current.w().ny());
+    array1d<double> res_vec2(current.w().nz());
+    std::vector<double> res_vec2_addends((parent.v1()==current.order())?(parent.w().ny()*parent.w().nz()):(parent.w().nx()*parent.w().nz()));
+    #pragma omp parallel for firstprivate(res_vec,res_vec_addends,res_vec2,res_vec2_addends)
+    for(int s=0;s<n_samples;s++){
+        for(int k=0;k<current.w().nz();k++){
+            size_t pos=0;
+            for(int i=0;i<current.w().nx();i++){
+                for(int j=0;j<current.w().ny();j++){
+                    res_vec_addends[pos]=l_env[current.order()][s].at(i)*r_env[current.order()][s].at(j)*current.w().at(i,j,k);
+                    pos++;
+                }
+            }
+            res_vec.at(k)=vec_add_float(res_vec_addends);
+        }
+        if(parent.v1()==current.order()){
+            l_env[parent.order()][s]=res_vec;
+        }
+        else{
+            r_env[parent.order()][s]=res_vec;
+        }
+        
+        if(parent.v1()==current.order()){
+            for(int i=0;i<parent.w().nx();i++){
+                size_t pos=0;
+                for(int j=0;j<parent.w().ny();j++){
+                    for(int k=0;k<parent.w().nz();k++){
+                        res_vec2_addends[pos]=r_env[parent.order()][s].at(j)*u_env[parent.order()][s].at(k)*parent.w().at(i,j,k);
+                        pos++;
+                    }
+                }
+                res_vec2.at(i)=vec_add_float(res_vec2_addends);
+            }
+        }
+        else{
+            for(int j=0;j<parent.w().ny();j++){
+                size_t pos=0;
+                for(int i=0;i<parent.w().nx();i++){
+                    for(int k=0;k<parent.w().nz();k++){
+                        res_vec2_addends[pos]=l_env[parent.order()][s].at(i)*u_env[parent.order()][s].at(k)*parent.w().at(i,j,k);
+                        pos++;
+                    }
+                }
+                res_vec2.at(j)=vec_add_float(res_vec2_addends);
+            }
+        }
+        u_env[current.order()][s]=res_vec2;
+        
+        std::vector<double> w_addends(current.w().nz());
+        for(int k=0;k<current.w().nz();k++){
+            w_addends[k]=res_vec.at(k)*res_vec2.at(k);
+        }
+        w[s]=vec_add_float(w_addends);
+    }
+    return w;
+}

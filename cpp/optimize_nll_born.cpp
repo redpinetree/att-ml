@@ -114,10 +114,8 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
     r_env_sample.reserve(g.vs().size());
     std::vector<std::vector<array1d<double> > > u_env_sample;
     u_env_sample.reserve(g.vs().size());
-    //canonicalize ttn
-    canonicalize(g,(*g.es().begin()).order());
-    double z=calc_z_born(g);
-    std::vector<double> w=calc_w_born(g,train_samples_batch,train_labels_batch,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
+    double z;
+    std::vector<double> w;
     
     double best_nll=1e50;
     double best_test_nll=1e50;
@@ -1050,12 +1048,7 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
         g.center_idx()=parent.order();
         
         z=calc_z_born(g);
-        
-        // update l/r env of parent
-        aux_update_lr_cache_born(current,parent,l_env_sample,r_env_sample);
-        aux_update_u_cache_born(current,parent,l_env_sample,r_env_sample,u_env_sample);
-
-        w=update_cache_w_born(g,current.order(),l_env_sample,r_env_sample,u_env_sample);
+        w=update_cache_w_born(current,parent,l_env_sample,r_env_sample,u_env_sample);
         
         optimize::site_update_born(g,parent,z,w,l_env_sample,r_env_sample,u_env_sample,parent_m,parent_v,t2,lr,beta1,beta2,epsilon);
         
@@ -1100,12 +1093,7 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
         g.center_idx()=current.order();
         
         z=calc_z_born(g);
-        
-        //update u_env of current
-        aux_update_lr_cache_born(current,parent,l_env_sample,r_env_sample);
-        aux_update_u_cache_born(current,parent,l_env_sample,r_env_sample,u_env_sample);
-        
-        w=update_cache_w_born(g,parent.order(),l_env_sample,r_env_sample,u_env_sample);
+        w=update_cache_w_born(current,parent,l_env_sample,r_env_sample,u_env_sample);
     }
 }
 template void inner_updates_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<std::vector<array1d<double> > >&,std::vector<sample_data>&,std::vector<int>&,int,double,double,double,double);
