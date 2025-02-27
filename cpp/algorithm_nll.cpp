@@ -73,27 +73,34 @@ std::vector<int> algorithm::load_data_labels_from_file(std::string& label_fn,int
 template<typename cmp>
 void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& train_samples,std::vector<int>& train_labels,std::vector<sample_data>& test_samples,std::vector<int>& test_labels,int iter_max,int r_max,bool compress_r,double lr,int batch_size,std::map<int,double>& train_nll_history,std::map<int,double>& test_nll_history,std::map<int,int>& sweep_history,bool struct_opt){
     double nll=optimize::opt_struct_nll(g,train_samples,train_labels,test_samples,test_labels,iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt);
-    std::vector<array1d<double> > train_probs;
+    array2d<double> train_probs;
     std::vector<int> train_classes=optimize::classify(g,train_samples,train_probs);
     double train_acc=0;
     for(int s=0;s<train_labels.size();s++){
         train_acc+=(train_labels[s]==train_classes[s]);
     }
     train_acc/=(double) train_labels.size();
-    for(int a=0;a<train_probs.size();a++){
-        std::cout<<train_classes[a]<<" "<<(std::string) train_probs[a].exp_form();
+    for(int a=0;a<train_probs.ny();a++){
+        array1d<double> train_probs_sample(train_probs.nx());
+        for(int b=0;b<train_probs_sample.nx();b++){
+            train_probs_sample.at(b)=train_probs.at(b,a);
+        }
+        std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample.exp_form();
     }
-    std::cout<<"Test acc.="<<train_acc<<"\n";
+    std::cout<<"Train acc.="<<train_acc<<"\n";
     
-    std::vector<array1d<double> > test_probs;
+    array2d<double> test_probs;
     std::vector<int> test_classes=optimize::classify(g,test_samples,test_probs);
     double test_acc=0;
     for(int s=0;s<test_labels.size();s++){
         test_acc+=(test_labels[s]==test_classes[s]);
     }
-    test_acc/=(double) test_labels.size();
-    for(int a=0;a<test_probs.size();a++){
-        std::cout<<test_classes[a]<<" "<<(std::string) test_probs[a].exp_form();
+    for(int a=0;a<test_probs.ny();a++){
+        array1d<double> test_probs_sample(train_probs.nx());
+        for(int b=0;b<test_probs_sample.nx();b++){
+            test_probs_sample.at(b)=test_probs.at(b,a);
+        }
+        std::cout<<test_classes[a]<<" "<<(std::string) test_probs_sample.exp_form();
     }
     std::cout<<"Test acc.="<<test_acc<<"\n";
     
@@ -115,15 +122,19 @@ void algorithm::train_nll(graph<cmp>& g,std::vector<sample_data>& train_samples,
     std::vector<int> dummy_test_labels;
     std::map<int,double> dummy_test_nll_history;
     double nll=optimize::opt_struct_nll(g,train_samples,train_labels,dummy_test_samples,dummy_test_labels,iter_max,r_max,compress_r,lr,batch_size,train_nll_history,dummy_test_nll_history,sweep_history,struct_opt);
-    std::vector<array1d<double> > train_probs;
+    array2d<double> train_probs;
     std::vector<int> train_classes=optimize::classify(g,train_samples,train_probs);
     double train_acc=0;
     for(int s=0;s<train_labels.size();s++){
         train_acc+=(train_labels[s]==train_classes[s]);
     }
     train_acc/=(double) train_labels.size();
-    for(int a=0;a<train_probs.size();a++){
-        std::cout<<train_classes[a]<<" "<<(std::string) train_probs[a].exp_form();
+    for(int a=0;a<train_probs.ny();a++){
+        array1d<double> train_probs_sample(train_probs.nx());
+        for(int b=0;b<train_probs_sample.nx();b++){
+            train_probs_sample.at(b)=train_probs.at(b,a);
+        }
+        std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample.exp_form();
     }
     std::cout<<"Train acc.="<<train_acc<<"\n";
     
@@ -180,27 +191,35 @@ template void algorithm::train_nll(graph<bmi_comparator>&,std::vector<sample_dat
 template<typename cmp>
 void algorithm::train_nll_born(graph<cmp>& g,std::vector<sample_data>& train_samples,std::vector<int>& train_labels,std::vector<sample_data>& test_samples,std::vector<int>& test_labels,int iter_max,int r_max,bool compress_r,double lr,int batch_size,std::map<int,double>& train_nll_history,std::map<int,double>& test_nll_history,std::map<int,int>& sweep_history,bool struct_opt){
     double nll=optimize::opt_struct_nll_born(g,train_samples,train_labels,test_samples,test_labels,iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt);
-    std::vector<array1d<double> > train_probs;
+    array2d<double> train_probs;
     std::vector<int> train_classes=optimize::classify_born(g,train_samples,train_probs);
     double train_acc=0;
     for(int s=0;s<train_labels.size();s++){
         train_acc+=(train_labels[s]==train_classes[s]);
     }
     train_acc/=(double) train_labels.size();
-    for(int a=0;a<train_probs.size();a++){
-        std::cout<<train_classes[a]<<" "<<(std::string) train_probs[a].exp_form();
+    for(int a=0;a<train_probs.ny();a++){
+        array1d<double> train_probs_sample(train_probs.nx());
+        for(int b=0;b<train_probs_sample.nx();b++){
+            train_probs_sample.at(b)=train_probs.at(b,a);
+        }
+        std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample.exp_form();
     }
-    std::cout<<"Test acc.="<<train_acc<<"\n";
+    std::cout<<"Train acc.="<<train_acc<<"\n";
     
-    std::vector<array1d<double> > test_probs;
+    array2d<double> test_probs;
     std::vector<int> test_classes=optimize::classify_born(g,test_samples,test_probs);
     double test_acc=0;
     for(int s=0;s<test_labels.size();s++){
         test_acc+=(test_labels[s]==test_classes[s]);
     }
     test_acc/=(double) test_labels.size();
-    for(int a=0;a<test_probs.size();a++){
-        std::cout<<test_classes[a]<<" "<<(std::string) test_probs[a].exp_form();
+    for(int a=0;a<test_probs.ny();a++){
+        array1d<double> test_probs_sample(train_probs.nx());
+        for(int b=0;b<test_probs_sample.nx();b++){
+            test_probs_sample.at(b)=test_probs.at(b,a);
+        }
+        std::cout<<test_classes[a]<<" "<<(std::string) test_probs_sample.exp_form();
     }
     std::cout<<"Test acc.="<<test_acc<<"\n";
     
@@ -218,15 +237,19 @@ void algorithm::train_nll_born(graph<cmp>& g,std::vector<sample_data>& train_sam
     std::vector<int> dummy_test_labels;
     std::map<int,double> dummy_test_nll_history;
     double nll=optimize::opt_struct_nll_born(g,train_samples,train_labels,dummy_test_samples,dummy_test_labels,iter_max,r_max,compress_r,lr,batch_size,train_nll_history,dummy_test_nll_history,sweep_history,struct_opt);
-    std::vector<array1d<double> > train_probs;
+    array2d<double> train_probs;
     std::vector<int> train_classes=optimize::classify_born(g,train_samples,train_probs);
     double train_acc=0;
     for(int s=0;s<train_labels.size();s++){
         train_acc+=(train_labels[s]==train_classes[s]);
     }
     train_acc/=(double) train_labels.size();
-    for(int a=0;a<train_probs.size();a++){
-        std::cout<<train_classes[a]<<" "<<(std::string) train_probs[a].exp_form();
+    for(int a=0;a<train_probs.ny();a++){
+        array1d<double> train_probs_sample(train_probs.nx());
+        for(int b=0;b<train_probs_sample.nx();b++){
+            train_probs_sample.at(b)=train_probs.at(b,a);
+        }
+        std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample.exp_form();
     }
     std::cout<<"Train acc.="<<train_acc<<"\n";
     

@@ -106,7 +106,7 @@ template<typename T>
 class array2d{
 public:
     array2d():nx_(0),ny_(0){
-        this->e_=std::vector<T>(1,0);
+        this->e_=std::vector<T>();
     }
     array2d(int nx,int ny):nx_(nx),ny_(ny){
         this->e_=std::vector<T>(ny*nx,0);
@@ -259,7 +259,7 @@ template<typename T>
 class array3d{
 public:
     array3d():nx_(0),ny_(0),nz_(0){
-        this->e_=std::vector<T>(1,0);
+        this->e_=std::vector<T>();
     }
     array3d(int nx,int ny,int nz):nx_(nx),ny_(ny),nz_(nz){
         this->e_=std::vector<T>(nz*ny*nx,0);
@@ -486,7 +486,7 @@ template<typename T>
 class array4d{
 public:
     array4d():nx_(0),ny_(0),nz_(0),nw_(0){
-        this->e_=std::vector<T>(1,0);
+        this->e_=std::vector<T>();
     }
     array4d(int nx,int ny,int nz,int nw):nx_(nx),ny_(ny),nz_(nz),nw_(nw){
         this->e_=std::vector<T>(nw*nz*ny*nx,0);
