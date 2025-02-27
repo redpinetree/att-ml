@@ -1,3 +1,4 @@
+#include <cstring>
 #include <deque>
 
 #include "omp.h"
@@ -194,7 +195,7 @@ double calc_z_born(graph<cmp>& g){
 template double calc_z_born(graph<bmi_comparator>&);
 
 template<typename cmp>
-std::vector<double> calc_w_born(graph<cmp>& g,std::vector<sample_data>& samples,std::vector<int>& labels,std::vector<array2d<double> >& l_env,std::vector<array2d<double> >& r_env,std::vector<array2d<double> >& u_env){
+std::vector<double> calc_w_born(graph<cmp>& g,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,std::vector<array2d<double> >& l_env,std::vector<array2d<double> >& r_env,std::vector<array2d<double> >& u_env){
     l_env.clear();
     r_env.clear();
     u_env.clear();
@@ -206,13 +207,7 @@ std::vector<double> calc_w_born(graph<cmp>& g,std::vector<sample_data>& samples,
             array2d<double> vec(g.vs()[n].rank(),n_samples);
             #pragma omp parallel for
             for(int s=0;s<n_samples;s++){
-                if(samples[s].s()[n]!=0){
-                    for(int a=0;a<vec.nx();a++){
-                        if(a==(samples[s].s()[n]-1)){ //if a==samples[s].s()[n]-1, element is 1. else 0
-                            vec.at(a,s)=1;
-                        }
-                    }
-                }
+                memcpy(&(vec.e())[g.vs()[n].rank()*s],&(samples[s][n].e())[0],g.vs()[n].rank()*sizeof(double));
             }
             contracted_vectors.push_back(vec);
         }
@@ -334,7 +329,7 @@ std::vector<double> calc_w_born(graph<cmp>& g,std::vector<sample_data>& samples,
     }
     return w;
 }
-template std::vector<double> calc_w_born(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<int>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&);
+template std::vector<double> calc_w_born(graph<bmi_comparator>&,std::vector<std::vector<array1d<double> > >&,std::vector<int>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&);
 
 template<typename cmp>
 std::vector<double> update_cache_w_born(graph<cmp>& g,int center,std::vector<array2d<double> >& l_env,std::vector<array2d<double> >& r_env,std::vector<array2d<double> >& u_env){

@@ -215,9 +215,9 @@ int main(int argc,char **argv){
     double trial_time=0; //not including init time
     
     int train_data_idim,train_n_samples,train_data_total_length;
-    std::vector<sample_data> train_data=algorithm::load_data_from_file(input,train_n_samples,train_data_total_length,train_data_idim);
+    std::vector<std::vector<array1d<double> > > train_data=algorithm::load_data_from_file(input,train_n_samples,train_data_total_length,train_data_idim);
     int test_data_idim,test_n_samples,test_data_total_length;
-    std::vector<sample_data> test_data;
+    std::vector<std::vector<array1d<double> > > test_data;
     if(test_set){
         test_data=algorithm::load_data_from_file(test_file,test_n_samples,test_data_total_length,test_data_idim);
     }

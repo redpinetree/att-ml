@@ -1,3 +1,4 @@
+#include <cstring>
 #include <limits>
 #include <list>
 #include <random>
@@ -85,7 +86,7 @@ void aux_update_u_cache_born(bond& current,bond& parent,std::vector<array2d<doub
 }
 
 template<typename cmp>
-double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& train_samples,std::vector<int>& train_labels,std::vector<sample_data>& test_samples,std::vector<int>& test_labels,int iter_max,int r_max,bool compress_r,double lr,int batch_size,std::map<int,double>& train_nll_history,std::map<int,double>& test_nll_history,std::map<int,int>& sweep_history,bool struct_opt){
+double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<std::vector<array1d<double> > >& train_samples,std::vector<int>& train_labels,std::vector<std::vector<array1d<double> > >& test_samples,std::vector<int>& test_labels,int iter_max,int r_max,bool compress_r,double lr,int batch_size,std::map<int,double>& train_nll_history,std::map<int,double>& test_nll_history,std::map<int,int>& sweep_history,bool struct_opt){
     if(iter_max==0){return 0;}
     int single_site_update_count=10;
     double prev_nll=1e50;
@@ -112,7 +113,7 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
     for(int i=0;i<train_samples.size();i++){
         batch_shuffle[i]=i;
     }
-    std::vector<sample_data> train_samples_batch(train_samples.begin()+batch_start_idx,((batch_start_idx+batch_size<train_samples.size())?(train_samples.begin()+batch_start_idx+batch_size):train_samples.end()));
+    std::vector<std::vector<array1d<double> > > train_samples_batch(train_samples.begin()+batch_start_idx,((batch_start_idx+batch_size<train_samples.size())?(train_samples.begin()+batch_start_idx+batch_size):train_samples.end()));
     std::vector<int> train_labels_batch;
     if(train_labels.size()!=0){
         std::vector<int> train_labels_batch(train_labels.begin()+batch_start_idx,((batch_start_idx+batch_size<train_labels.size())?(train_labels.begin()+batch_start_idx+batch_size):train_labels.end()));
@@ -494,14 +495,14 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
         sweep_history.insert(std::pair<int,double>(t,iter));
         
         //update minibatch and recalculate minibatch-dependent w
-        train_samples_batch=std::vector<sample_data>(train_samples.begin()+batch_start_idx,((batch_start_idx+batch_size<train_samples.size())?(train_samples.begin()+batch_start_idx+batch_size):train_samples.end()));
+        train_samples_batch=std::vector<std::vector<array1d<double> > > (train_samples.begin()+batch_start_idx,((batch_start_idx+batch_size<train_samples.size())?(train_samples.begin()+batch_start_idx+batch_size):train_samples.end()));
         if(train_labels.size()!=0){
             train_labels_batch=std::vector<int>(train_labels.begin()+batch_start_idx,((batch_start_idx+batch_size<train_labels.size())?(train_labels.begin()+batch_start_idx+batch_size):train_labels.end()));
         }
         batch_start_idx=(batch_start_idx+batch_size<train_samples.size())?batch_start_idx+batch_size:0;
         if(batch_start_idx==0){
             std::shuffle(std::begin(batch_shuffle),std::end(batch_shuffle),mpi_utils::prng);
-            std::vector<sample_data> train_samples_copy=train_samples;
+            std::vector<std::vector<array1d<double> > >  train_samples_copy=train_samples;
             for(int i=0;i<train_samples.size();i++){
                 train_samples[i]=train_samples_copy[batch_shuffle[i]];
             }
@@ -544,10 +545,10 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<sample_data>& tra
     
     return best_nll;
 }
-template double optimize::opt_struct_nll_born(graph<bmi_comparator>&,std::vector<sample_data>&,std::vector<int>&,std::vector<sample_data>&,std::vector<int>&,int,int,bool,double,int,std::map<int,double>&,std::map<int,double>&,std::map<int,int>&,bool);
+template double optimize::opt_struct_nll_born(graph<bmi_comparator>&,std::vector<std::vector<array1d<double> > > &,std::vector<int>&,std::vector<std::vector<array1d<double> > > &,std::vector<int>&,int,int,bool,double,int,std::map<int,double>&,std::map<int,double>&,std::map<int,int>&,bool);
 
 template<typename cmp>
-std::vector<int> optimize::classify_born(graph<cmp>& g,std::vector<sample_data>& samples,array2d<double>& probs){
+std::vector<int> optimize::classify_born(graph<cmp>& g,std::vector<std::vector<array1d<double> > >& samples,array2d<double>& probs){
     std::vector<array2d<double> > contracted_vectors; //batched vectors
     contracted_vectors.reserve(g.vs().size());
     int n_samples=samples.size();
@@ -556,13 +557,7 @@ std::vector<int> optimize::classify_born(graph<cmp>& g,std::vector<sample_data>&
             array2d<double> vec(g.vs()[n].rank(),n_samples);
             #pragma omp parallel for
             for(int s=0;s<n_samples;s++){
-                if(samples[s].s()[n]!=0){
-                    for(int a=0;a<vec.nx();a++){
-                        if(a==(samples[s].s()[n]-1)){ //if a==samples[s].s()[n]-1, element is 1. else 0
-                            vec.at(a,s)=1;
-                        }
-                    }
-                }
+                memcpy(&(vec.e())[g.vs()[n].rank()*s],&(samples[s][n].e())[0],g.vs()[n].rank()*sizeof(double));
             }
             contracted_vectors.push_back(vec);
         }
@@ -620,7 +615,7 @@ std::vector<int> optimize::classify_born(graph<cmp>& g,std::vector<sample_data>&
     }
     return classes;
 }
-template std::vector<int> optimize::classify_born(graph<bmi_comparator>&,std::vector<sample_data>&,array2d<double>&);
+template std::vector<int> optimize::classify_born(graph<bmi_comparator>&,std::vector<std::vector<array1d<double> > >&,array2d<double>&);
 
 template<typename cmp>
 void optimize::site_update_born(graph<cmp>& g,bond& b,double z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array3d<double>& m_cache,array3d<double>& v_cache,int t,double lr,double beta1,double beta2,double epsilon){
@@ -989,7 +984,7 @@ int inner_svd_born(array3d<double>& fused_mat,array3d<double>& mat1,array3d<doub
 }
 
 template<typename cmp>
-void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,std::vector<sample_data>& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     z=calc_z_born(g);
     w=calc_w_born(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
     
@@ -1104,7 +1099,7 @@ void inner_updates_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator
         w=update_cache_w_born(current,parent,l_env_sample,r_env_sample,u_env_sample);
     }
 }
-template void inner_updates_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<sample_data>&,std::vector<int>&,int,double,double,double,double);
+template void inner_updates_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<std::vector<array1d<double> > >&,std::vector<int>&,int,double,double,double,double);
 
 template<typename cmp>
 double inner_bmi_born(graph<cmp>& g,bond& current,bond& parent,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample){
@@ -1120,7 +1115,7 @@ double inner_bmi_born(graph<cmp>& g,bond& current,bond& parent,std::vector<doubl
 template double inner_bmi_born(graph<bmi_comparator>&,bond&,bond&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&);
 
 template<typename cmp>
-double way1_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way1_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 1
     array3d<double> fused_mat(fused.nx()*fused.ny(),fused.nz()*fused.nw(),1);
     for(int i=0;i<fused.nx();i++){
@@ -1215,10 +1210,10 @@ double way1_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,ty
     it_parent=g.es().insert(parent);
     return bmi;
 }
-template double way1_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,array4d<double>&,int,bool,std::vector<sample_data>&,std::vector<int>&,int,double,double,double,double);
+template double way1_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,array4d<double>&,int,bool,std::vector<std::vector<array1d<double> > >&,std::vector<int>&,int,double,double,double,double);
 
 template<typename cmp>
-double way2_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way2_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 2
     array3d<double> fused_mat(fused.nx()*fused.nz(),fused.ny()*fused.nw(),1);
     for(int i=0;i<fused.nx();i++){
@@ -1376,10 +1371,10 @@ double way2_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,ty
     it_parent=g.es().insert(parent);
     return bmi;
 }
-template double way2_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,array4d<double>&,int,bool,std::vector<sample_data>&,std::vector<int>&,int,double,double,double,double);
+template double way2_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,array4d<double>&,int,bool,std::vector<std::vector<array1d<double> > >&,std::vector<int>&,int,double,double,double,double);
 
 template<typename cmp>
-double way3_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<sample_data>& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
+double way3_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 2
     array3d<double> fused_mat(fused.nz()*fused.ny(),fused.nx()*fused.nw(),1);
     for(int i=0;i<fused.nz();i++){
@@ -1537,4 +1532,4 @@ double way3_born(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,ty
     it_parent=g.es().insert(parent);
     return bmi;
 }
-template double way3_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,array4d<double>&,int,bool,std::vector<sample_data>&,std::vector<int>&,int,double,double,double,double);
+template double way3_born(graph<bmi_comparator>&,typename std::multiset<bond,bmi_comparator>::iterator&,typename std::multiset<bond,bmi_comparator>::iterator&,bond&,bond&,double&,std::vector<double>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,array4d<double>&,int,bool,std::vector<std::vector<array1d<double> > >&,std::vector<int>&,int,double,double,double,double);
