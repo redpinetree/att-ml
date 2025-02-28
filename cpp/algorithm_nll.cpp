@@ -83,7 +83,7 @@ void algorithm::train_nll(graph<cmp>& g,std::vector<std::vector<array1d<double> 
         for(int b=0;b<train_probs_sample.nx();b++){
             train_probs_sample.at(b)=train_probs.at(b,a);
         }
-        std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample.exp_form();
+        // std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample;
     }
     std::cout<<"Train acc.="<<train_acc<<"\n";
     
@@ -93,12 +93,13 @@ void algorithm::train_nll(graph<cmp>& g,std::vector<std::vector<array1d<double> 
     for(int s=0;s<test_labels.size();s++){
         test_acc+=(test_labels[s]==test_classes[s]);
     }
+    test_acc/=(double) test_labels.size();
     for(int a=0;a<test_probs.ny();a++){
         array1d<double> test_probs_sample(train_probs.nx());
         for(int b=0;b<test_probs_sample.nx();b++){
             test_probs_sample.at(b)=test_probs.at(b,a);
         }
-        std::cout<<test_classes[a]<<" "<<(std::string) test_probs_sample.exp_form();
+        // std::cout<<test_classes[a]<<" "<<(std::string) test_probs_sample;
     }
     std::cout<<"Test acc.="<<test_acc<<"\n";
     
@@ -132,7 +133,7 @@ void algorithm::train_nll(graph<cmp>& g,std::vector<std::vector<array1d<double> 
         for(int b=0;b<train_probs_sample.nx();b++){
             train_probs_sample.at(b)=train_probs.at(b,a);
         }
-        std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample.exp_form();
+        // std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample;
     }
     std::cout<<"Train acc.="<<train_acc<<"\n";
     
@@ -201,7 +202,7 @@ void algorithm::train_nll_born(graph<cmp>& g,std::vector<std::vector<array1d<dou
         for(int b=0;b<train_probs_sample.nx();b++){
             train_probs_sample.at(b)=train_probs.at(b,a);
         }
-        std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample.exp_form();
+        // std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample;
     }
     std::cout<<"Train acc.="<<train_acc<<"\n";
     
@@ -217,7 +218,7 @@ void algorithm::train_nll_born(graph<cmp>& g,std::vector<std::vector<array1d<dou
         for(int b=0;b<test_probs_sample.nx();b++){
             test_probs_sample.at(b)=test_probs.at(b,a);
         }
-        std::cout<<test_classes[a]<<" "<<(std::string) test_probs_sample.exp_form();
+        // std::cout<<test_classes[a]<<" "<<(std::string) test_probs_sample;
     }
     std::cout<<"Test acc.="<<test_acc<<"\n";
     
@@ -247,7 +248,7 @@ void algorithm::train_nll_born(graph<cmp>& g,std::vector<std::vector<array1d<dou
         for(int b=0;b<train_probs_sample.nx();b++){
             train_probs_sample.at(b)=train_probs.at(b,a);
         }
-        std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample.exp_form();
+        // std::cout<<train_classes[a]<<" "<<(std::string) train_probs_sample;
     }
     std::cout<<"Train acc.="<<train_acc<<"\n";
     

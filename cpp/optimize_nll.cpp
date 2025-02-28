@@ -564,21 +564,23 @@ std::vector<int> optimize::classify(graph<cmp>& g,std::vector<std::vector<array1
     int contracted_idx_count=0;
     while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset repeatedly until all idxs processed
         for(auto it=g.es().begin();it!=g.es().end();++it){
-            if((contracted_vectors[(*it).v1()].nx()!=0)&&(contracted_vectors[(*it).v2()].nx()!=0)&&(((*it).order()==g.vs().size()-1)||(contracted_vectors[(*it).order()].nx()==0))){ //process if children have been contracted and (parent is not yet contracted OR is top)
-                std::vector<double> res_vec_addends(contracted_vectors[(*it).v1()].nx()*contracted_vectors[(*it).v2()].nx());
+            if((contracted_vectors[(*it).v1()].nx()!=0)&&(contracted_vectors[(*it).v2()].nx()!=0)&&((it==--g.es().end())||(contracted_vectors[(*it).order()].nx()==0))){ //process if children have been contracted and (parent is not yet contracted OR is top)
+                array2d<double> res_vec((*it).w().nz(),n_samples);
+                std::vector<double> res_vec_addends((*it).w().nx()*(*it).w().ny());
                 #pragma omp parallel for firstprivate(res_vec_addends)
                 for(int s=0;s<n_samples;s++){
                     for(int k=0;k<(*it).w().nz();k++){
                         size_t pos=0;
-                        for(int i=0;i<contracted_vectors[(*it).v1()].nx();i++){
-                            for(int j=0;j<contracted_vectors[(*it).v2()].nx();j++){
+                        for(int i=0;i<(*it).w().nx();i++){
+                            for(int j=0;j<(*it).w().ny();j++){
                                 res_vec_addends[pos]=contracted_vectors[(*it).v1()].at(i,s)*contracted_vectors[(*it).v2()].at(j,s)*(*it).w().at(i,j,k);
                                 pos++;
                             }
                         }
-                        contracted_vectors[(*it).order()].at(k,s)=vec_add_float(res_vec_addends);
+                        res_vec.at(k,s)=vec_add_float(res_vec_addends);
                     }
                 }
+                contracted_vectors[(*it).order()]=res_vec;
                 contracted_idx_count++;
                 if(contracted_idx_count==(g.vs().size()-g.n_phys_sites())){break;}
             }

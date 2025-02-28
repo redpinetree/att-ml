@@ -215,11 +215,7 @@ std::vector<double> calc_w_born(graph<cmp>& g,std::vector<std::vector<array1d<do
             array2d<double> vec(g.vs()[n].rank(),n_samples);
             #pragma omp parallel for
             for(int s=0;s<n_samples;s++){
-                for(int a=0;a<vec.nx();a++){
-                    if(a==labels[s]){ //if a==labels[s], element is 1. else 0
-                        vec.at(a,s)=1;
-                    }
-                }
+                vec.at(labels[s],s)=1;
             }
             contracted_vectors.push_back(vec);
         }
@@ -229,6 +225,18 @@ std::vector<double> calc_w_born(graph<cmp>& g,std::vector<std::vector<array1d<do
         l_env.push_back(array2d<double>(0,n_samples));
         r_env.push_back(array2d<double>(0,n_samples));
         u_env.push_back(array2d<double>(0,n_samples));
+    }
+    
+    if(labels.size()==0){ //top tensor's u_env is all ones
+        u_env[g.vs().size()-1]=array2d<double>(g.vs()[g.vs().size()-1].rank(),n_samples);
+        for(int s=0;s<n_samples;s++){
+            for(int i=0;i<g.vs()[g.vs().size()-1].rank();i++){
+                u_env[g.vs().size()-1].at(i,s)=1;
+            }
+        }
+    }
+    else{
+        u_env[g.vs().size()-1]=contracted_vectors[g.vs().size()-1];
     }
     
     int contracted_idx_count=0;
@@ -272,18 +280,6 @@ std::vector<double> calc_w_born(graph<cmp>& g,std::vector<std::vector<array1d<do
             }
             w[s]=vec_add_float(w_addends);
         }
-    }
-    
-    if(labels.size()==0){ //top tensor's u_env is all ones
-        u_env[g.vs().size()-1]=array2d<double>(g.vs()[g.vs().size()-1].rank(),n_samples);
-        for(int s=0;s<n_samples;s++){
-            for(int i=0;i<g.vs()[g.vs().size()-1].rank();i++){
-                u_env[g.vs().size()-1].at(i,s)=1;
-            }
-        }
-    }
-    else{
-        u_env[g.vs().size()-1]=contracted_vectors[g.vs().size()-1];
     }
     
     contracted_idx_count=0; //reset counter
