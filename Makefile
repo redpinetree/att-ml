@@ -1,11 +1,11 @@
 MPICXX = mpicxx
 CXX = g++
-CXXFLAGS = -O3 -ffloat-store -ffp-contract=off -march=native -pipe -std=c++17 -fopenmp
+CXXFLAGS = -O3 -march=native -pipe -std=c++17 -fopenmp -fno-trapping-math -fno-math-errno
 # CXXFLAGS = -O0
 
 TARGET = ./bin/tree_ml
 
-SRC = ./cpp/main_tree_ml.cpp ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/optimize_nll_born.cpp ./cpp/ttn_ops.cpp ./cpp/ttn_ops_born.cpp ./cpp/mat_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp ./cpp/mpi_utils.cpp
+SRC = ./cpp/main_tree_ml.cpp ./cpp/observables.cpp ./cpp/graph_utils.cpp ./cpp/algorithm_nll.cpp ./cpp/optimize_nll.cpp ./cpp/optimize_nll_born.cpp ./cpp/ttn_ops.cpp ./cpp/ttn_ops_born.cpp ./cpp/mat_ops.cpp ./cpp/sampling.cpp ./cpp/site.cpp ./cpp/bond.cpp
 
 OBJ = $(SRC:%.cpp=%.o)
 
@@ -14,10 +14,12 @@ OBJ = $(SRC:%.cpp=%.o)
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(MPICXX) $(OBJ) -llapack -lopenblas -o $(TARGET) $(CXXFLAGS)
+	$(CXX) $(OBJ) -llapack -lopenblas -o $(TARGET) $(CXXFLAGS)
 
+$(TARGET_DEBUG): $(OBJ)
+	$(CXX) -g $(OBJ) -llapack -lopenblas -o $(TARGET_DEBUG) $(CXXFLAGS)
 $(OBJ): %.o: %.cpp
-	$(MPICXX) -c $< -o $@ $(CXXFLAGS)
+	$(CXX) -c $< -o $@ $(CXXFLAGS)
 
 clean:
 	@rm -f ./cpp/*.o 2>/dev/null || true

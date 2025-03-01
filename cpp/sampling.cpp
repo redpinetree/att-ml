@@ -5,7 +5,6 @@
 #include <tuple>
 #include <vector>
 
-#include "mpi_utils.hpp"
 #include "ndarray.hpp"
 #include "sampling.hpp"
 #include "ttn_ops.hpp"
@@ -25,7 +24,7 @@ std::vector<sample_data> sampling::tree_sample(int root,graph<cmp>& g,int n_samp
     std::vector<sample_data> s_vec;
     for(int n=0;n<n_samples;n++){
         s_vec.push_back(sample_data(g.n_phys_sites(),std::vector<int>(g.vs().size(),0)));
-        s_vec[n].s()[root]=pdf(mpi_utils::prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
+        s_vec[n].s()[root]=pdf(prng)+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
     }
     if(g.vs()[root].virt()){
         todo_idxs.push(root);
@@ -59,7 +58,7 @@ std::vector<sample_data> sampling::tree_sample(int root,graph<cmp>& g,int n_samp
         for(int n=0;n<n_samples;n++){
             if(s_vec[n].s()[idx]!=0){
                 pdf=cond_prob_dists[s_vec[n].s()[idx]-1];
-                int composite_idx=pdf(mpi_utils::prng);
+                int composite_idx=pdf(prng);
                 s_vec[n].s()[v1]=(composite_idx/g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
                 s_vec[n].s()[v2]=(composite_idx%g.vs()[v2].rank())+1; //add 1 to avoid state 0, 0 means empty (to be traced out)
             }

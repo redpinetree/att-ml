@@ -1,8 +1,8 @@
 #include "site.hpp"
 
-site::site():rank_(1),vol_(1),depth_(0),virt_(false),bmi_(0){}
-site::site(int q,int vol):rank_(q),vol_(vol),depth_(0),virt_(false),bmi_(0){}
-site::site(int q,int vol,int depth,int l_idx,int r_idx):rank_(q),vol_(vol),depth_(depth),virt_(true),l_idx_(l_idx),r_idx_(r_idx),bmi_(0){}
+site::site():rank_(1),vol_(1),depth_(0),virt_(false),bmi_(0),ee_(0){}
+site::site(int q,int vol):rank_(q),vol_(vol),depth_(0),virt_(false),bmi_(0),ee_(0){}
+site::site(int q,int vol,int depth,int l_idx,int r_idx):rank_(q),vol_(vol),depth_(depth),virt_(true),l_idx_(l_idx),r_idx_(r_idx),bmi_(0),ee_(0){}
 
 site::operator std::string() const{
     if(this->virt()){

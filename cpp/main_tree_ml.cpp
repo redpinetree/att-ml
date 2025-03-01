@@ -10,20 +10,20 @@
 #include <getopt.h>
 
 #include "omp.h"
-#include "mpi.h"
 #include "sampling.hpp"
 #include "stopwatch.hpp"
-#include "mpi_utils.hpp"
 #include "graph.hpp"
 #include "graph_utils.hpp"
 #include "algorithm_nll.hpp"
 #include "observables.hpp"
 
+std::mt19937_64 prng; //initialize prng
+
 void print_usage(){
     std::cerr<<"usage: tree_ml [--options]\n";
     std::cerr<<"options:\n";
     std::cerr<<"\t-h,--help: display this message\n";
-    std::cerr<<"\t-v,--verbose:\n\t\t0->nothing printed to stdout (forced for MPI)\n\t\t1->sample number and aggregate timing data\n\t\t2->per-instance timing\n\t\t3->more detailed timing breakdown\n\t\t4->graph contents, debug observable data\n";
+    std::cerr<<"\t-v,--verbose:\n\t\t0->nothing printed to stdout\n\t\t1->sample number and aggregate timing data\n\t\t2->per-instance timing\n\t\t3->more detailed timing breakdown\n\t\t4->graph contents, debug observable data\n";
     std::cerr<<"\t-i,--input: REQUIRED -- input file containing training data.\n";
     std::cerr<<"\t-o,--output: prefix for output files. please omit the file extension.\n";
     std::cerr<<"\t-L,--label-file: input file containing training labels\n";
@@ -32,6 +32,7 @@ void print_usage(){
     std::cerr<<"\t-T,--init-tree-type: initial tree type: mps or pbttn or rand\n";
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
+    std::cerr<<"\t-S,--seed: seed for PRNG\n";
     std::cerr<<"\t--born: use double-layer TTNBM instead of single-layer nnTTN\n";
     std::cerr<<"\t--hybrid: pretrain with double-layer TTNBM then use single-layer nnTTN, with pretrained structure. Overrides --born.\n";
     std::cerr<<"\t--compress-r: enable rank compression\n";
@@ -57,11 +58,11 @@ graph<cmp> gen_graph(int idim,int tdim,int r_max,int num_vs,std::string init_tre
 }
 
 int main(int argc,char **argv){
-    //mpi init
-    mpi_utils::init();
     //omp init
     // omp_set_num_threads(1);
     //argument handling
+    long int seed=0;
+    // int seed=(int) std::chrono::system_clock::now().time_since_epoch().count();
     int born_flag=0;
     int hybrid_flag=0;
     int train_type=0;
@@ -100,10 +101,11 @@ int main(int argc,char **argv){
             {"nll-iter-max",required_argument,0,'N'},
             {"learning-rate",required_argument,0,'l'},
             {"batch_size",required_argument,0,'b'},
+            {"seed",required_argument,0,'S'},
             {0, 0, 0, 0}
         };
         int opt_idx=0;
-        int c=getopt_long(argc,argv,"hv:i:o:L:V:B:T:r:N:l:b:",long_opts,&opt_idx);
+        int c=getopt_long(argc,argv,"hv:i:o:L:V:B:T:r:N:l:b:S:",long_opts,&opt_idx);
         if(c==-1){break;} //end of options
         switch(c){
             //handle long option flags
@@ -122,14 +124,18 @@ int main(int argc,char **argv){
             case 'N': n_nll_iter_max=(int) atoi(optarg); break;
             case 'l': lr=atof(optarg); break;
             case 'b': batch_size=(int) atoi(optarg); break;
+            case 'S': seed=strtoul(optarg,0,16); break;
             case '?':
             //error printed
             exit(1);
             default:
-            if(mpi_utils::root){std::cerr<<"Error parsing arguments. Aborting...\n";}
+            std::cerr<<"Error parsing arguments. Aborting...\n";
             exit(1);
         }
     }
+    //seed prng
+    std::cout<<"PRNG seed: "<<seed<<"\n";
+    prng.seed(seed);
     //select training type
     if(hybrid_flag){
         train_type=2;
@@ -147,53 +153,36 @@ int main(int argc,char **argv){
     }
     //positional arguments
     if(((argc-optind)>0)||!input_set){
-        if(mpi_utils::root){print_usage();}
+        print_usage();
         exit(1);
     }
     //check if input specified
     if(!input_set){
-        if(mpi_utils::root){
-            std::cerr<<"Error: Must specify input file with training data.\n";
-            print_usage();
-        }
+        std::cerr<<"Error: Must specify input file with training data.\n";
+        print_usage();
         exit(1);
     }
     //check if test data specified properly, if needed
     if((!test_set)&&test_label_set){
-        if(mpi_utils::root){
-            std::cerr<<"Error: Must specify input file with test data when specifying test label data.\n";
-            print_usage();
-        }
+        std::cerr<<"Error: Must specify input file with test data when specifying test label data.\n";
+        print_usage();
         exit(1);
     }
     if(label_set&&test_set&&(!test_label_set)){
-        if(mpi_utils::root){
-            std::cerr<<"Error: Must specify input file with test label data when specifying training label data and test data.\n";
-            print_usage();
-        }
+        std::cerr<<"Error: Must specify input file with test label data when specifying training label data and test data.\n";
+        print_usage();
         exit(1);
-    }
-    //override verbosity if proc_num>1
-    if(mpi_utils::proc_num>1){
-        if(mpi_utils::root && verbose>0){
-            std::cerr<<"Since MPI is being used with more than 1 process, verbosity forced to 0.\n";
-        }
-        verbose=0;
     }
     //check initial tree options
     if(!((init_tree_type=="mps")||(init_tree_type=="pbttn")||(init_tree_type=="rand"))){
-        if(mpi_utils::root){
-            std::cerr<<"Error: -T must be one of \"mps\" or \"pbttn\" or \"rand\".\n";
-            print_usage();
-        }
+        std::cerr<<"Error: -T must be one of \"mps\" or \"pbttn\" or \"rand\".\n";
+        print_usage();
         exit(1);
     }
     //check if exactly one of top dim and label file is specified
     if(tdim_set&&label_set){
-        if(mpi_utils::root){
-            std::cerr<<"Error: -t cannot be set together with -L.\n";
-            print_usage();
-        }
+        std::cerr<<"Error: -t cannot be set together with -L.\n";
+        print_usage();
         exit(1);
     }
     std::vector<double> times;
@@ -287,10 +276,6 @@ int main(int argc,char **argv){
         sw.start();
         std::map<int,double> train_nll_history,test_nll_history;
         std::map<int,int> sweep_history;
-        
-        // std::cout<<"center_idx: "<<g.center_idx()<<"\n";
-        // std::cout<<"dz: "<<(std::string)calc_dz_born(g)<<"\n";
-        // std::cout<<"z: "<<exp(calc_z_born(g))<<"\n";
         
         if(label_set&&test_set&&test_label_set){
             algorithm::train_nll_born(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
@@ -386,7 +371,7 @@ int main(int argc,char **argv){
             for(int i=0;i<b.w().nx();i++){
                 for(int j=0;j<b.w().ny();j++){
                     for(int k=0;k<b.w().nz();k++){
-                        b.w().at(i,j,k)=unif_dist(mpi_utils::prng);
+                        b.w().at(i,j,k)=unif_dist(prng);
                         sum_addends[pos]=b.w().at(i,j,k);
                         pos++;
                     }
@@ -433,10 +418,6 @@ int main(int argc,char **argv){
         sw.start();
         std::map<int,double> train_nll_history,test_nll_history;
         std::map<int,int> sweep_history;
-        
-        // std::cout<<"center_idx: "<<g.center_idx()<<"\n";
-        // std::cout<<"dz: "<<(std::string)calc_dz_born(g)<<"\n";
-        // std::cout<<"z: "<<exp(calc_z_born(g))<<"\n";
         
         if(label_set&&test_set&&test_label_set){
             algorithm::train_nll(g,train_data,train_data_labels,test_data,test_data_labels,n_nll_iter_max,r_max,compress_r,lr,batch_size,train_nll_history,test_nll_history,sweep_history,struct_opt); //nll training with labels and test data
@@ -540,8 +521,6 @@ int main(int argc,char **argv){
     timer_std/=(times.size()-1);
     timer_std=sqrt(timer_std);
     if(verbose>=1){std::cout<<"Avg. time/trial: "<<timer_mean<<"ms+/-"<<timer_std<<"ms\n";}
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(mpi_utils::root&&(verbose>=1)){std::cout<<"Total time: "<<(double) sw_total.elapsed()<<"ms\n";}
-    MPI_Finalize();
+    if(verbose>=1){std::cout<<"Total time: "<<(double) sw_total.elapsed()<<"ms\n";}
     return 0;
 }

@@ -7,8 +7,8 @@
 
 #include "bond.hpp"
 #include "graph_utils.hpp"
-#include "mpi_utils.hpp"
 #include "site.hpp"
+#include "utils.hpp"
 
 template<typename cmp>
 graph<cmp> graph_utils::init_pbttn(int idim,int tdim,int r_max,int num_vs){
@@ -46,7 +46,7 @@ graph<cmp> graph_utils::init_pbttn(int idim,int tdim,int r_max,int num_vs){
         for(int i=0;i<r_i;i++){
             for(int j=0;j<r_j;j++){
                 for(int k=0;k<r_k;k++){
-                    w.at(i,j,k)=unif_dist(mpi_utils::prng);
+                    w.at(i,j,k)=unif_dist(prng);
                     sum_addends[pos]=w.at(i,j,k);
                     pos++;
                 }
@@ -126,7 +126,7 @@ graph<cmp> graph_utils::init_mps(int idim,int tdim,int r_max,int num_vs){
         for(int i=0;i<r_i;i++){
             for(int j=0;j<r_j;j++){
                 for(int k=0;k<r_k;k++){
-                    w.at(i,j,k)=unif_dist(mpi_utils::prng);
+                    w.at(i,j,k)=unif_dist(prng);
                     sum_addends[pos]=w.at(i,j,k);
                     pos++;
                 }
@@ -192,7 +192,7 @@ graph<cmp> graph_utils::init_rand(int idim,int tdim,int r_max,int num_vs){
         int v1=*(available_idxs.begin());
         available_idxs.erase(v1);
         std::uniform_int_distribution<int> pdf(0,available_idxs.size()-1);
-        int rand_idx=pdf(mpi_utils::prng);
+        int rand_idx=pdf(prng);
         auto it=available_idxs.begin();
         for(int i=0;i<rand_idx;i++){
             ++it;
@@ -227,7 +227,7 @@ graph<cmp> graph_utils::init_rand(int idim,int tdim,int r_max,int num_vs){
         for(int i=0;i<r_i;i++){
             for(int j=0;j<r_j;j++){
                 for(int k=0;k<r_k;k++){
-                    w.at(i,j,k)=unif_dist(mpi_utils::prng);
+                    w.at(i,j,k)=unif_dist(prng);
                     sum_addends[pos]=w.at(i,j,k);
                     pos++;
                 }

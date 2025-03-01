@@ -2,9 +2,12 @@
 #define UTILS_
 
 #include <cmath>
+#include <random>
 #include <tuple>
 
 #include "bond.hpp"
+
+extern std::mt19937_64 prng;
 
 struct vertices_comparator{
     explicit vertices_comparator(){}

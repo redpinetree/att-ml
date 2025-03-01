@@ -7,128 +7,9 @@
 
 #include "algorithm_nll.hpp"
 #include "mat_ops.hpp"
-#include "mpi_utils.hpp"
 #include "optimize_nll.hpp"
 #include "ttn_ops.hpp"
-
-void aux_update_lr_cache(bond& current,bond& parent,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample){
-    array1d<double> res_vec_z(current.w().nz());
-    for(int k=0;k<current.w().nz();k++){
-        std::vector<double> res_vec_z_addends(current.w().nx()*current.w().ny());
-        size_t pos=0;
-        for(int i=0;i<current.w().nx();i++){
-            for(int j=0;j<current.w().ny();j++){
-                res_vec_z_addends[pos]=l_env_z[current.order()].at(i)*r_env_z[current.order()].at(j)*current.w().at(i,j,k);
-                pos++;
-            }
-        }
-        res_vec_z.at(k)=vec_add_float(res_vec_z_addends);
-    }
-    if(parent.v1()==current.order()){
-        l_env_z[parent.order()]=res_vec_z;
-    }
-    else{
-        r_env_z[parent.order()]=res_vec_z;
-    }
-    std::vector<double> res_vec_sample_addends(current.w().nx()*current.w().ny());
-    if(parent.v1()==current.order()){
-        if(l_env_sample[parent.order()].nx()!=current.w().nz()){
-            l_env_sample[parent.order()]=array2d<double>(current.w().nz(),l_env_sample[parent.order()].ny());
-        }
-    }
-    else{
-        if(r_env_sample[parent.order()].nx()!=current.w().nz()){
-            r_env_sample[parent.order()]=array2d<double>(current.w().nz(),r_env_sample[parent.order()].ny());
-        }
-    }
-    #pragma omp parallel for firstprivate(res_vec_sample_addends)
-    for(int s=0;s<l_env_sample[current.order()].ny();s++){
-        for(int k=0;k<current.w().nz();k++){
-            size_t pos=0;
-            for(int i=0;i<current.w().nx();i++){
-                for(int j=0;j<current.w().ny();j++){
-                    res_vec_sample_addends[pos]=l_env_sample[current.order()].at(i,s)*r_env_sample[current.order()].at(j,s)*current.w().at(i,j,k);
-                    pos++;
-                }
-            }
-            if(parent.v1()==current.order()){
-                l_env_sample[parent.order()].at(k,s)=vec_add_float(res_vec_sample_addends);
-            }
-            else{
-                r_env_sample[parent.order()].at(k,s)=vec_add_float(res_vec_sample_addends);
-            }
-        }
-    }
-}
-
-void aux_update_u_cache(bond& current,bond& parent,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample){
-    array1d<double> res_vec2_z(current.w().nz());
-    if(parent.v1()==current.order()){
-        for(int i=0;i<parent.w().nx();i++){
-            std::vector<double> res_vec2_z_addends(parent.w().ny()*parent.w().nz());
-            size_t pos=0;
-            for(int j=0;j<parent.w().ny();j++){
-                for(int k=0;k<parent.w().nz();k++){
-                    res_vec2_z_addends[pos]=r_env_z[parent.order()].at(j)*u_env_z[parent.order()].at(k)*parent.w().at(i,j,k);
-                    pos++;
-                }
-            }
-            res_vec2_z.at(i)=vec_add_float(res_vec2_z_addends);
-        }
-    }
-    else{
-        for(int j=0;j<parent.w().ny();j++){
-            std::vector<double> res_vec2_z_addends(parent.w().nx()*parent.w().nz());
-            size_t pos=0;
-            for(int i=0;i<parent.w().nx();i++){
-                for(int k=0;k<parent.w().nz();k++){
-                    res_vec2_z_addends[pos]=l_env_z[parent.order()].at(i)*u_env_z[parent.order()].at(k)*parent.w().at(i,j,k);
-                    pos++;
-                }
-            }
-            res_vec2_z.at(j)=vec_add_float(res_vec2_z_addends);
-        }
-    }
-    u_env_z[current.order()]=res_vec2_z;
-    if(parent.v1()==current.order()){
-        std::vector<double> res_vec2_sample_addends(parent.w().ny()*parent.w().nz());
-        if(u_env_sample[current.order()].nx()!=parent.w().nx()){
-            u_env_sample[current.order()]=array2d<double>(parent.w().nx(),u_env_sample[current.order()].ny());
-        }
-        #pragma omp parallel for firstprivate(res_vec2_sample_addends)
-        for(int s=0;s<u_env_sample[parent.order()].ny();s++){
-            for(int i=0;i<parent.w().nx();i++){
-                size_t pos=0;
-                for(int j=0;j<parent.w().ny();j++){
-                    for(int k=0;k<parent.w().nz();k++){
-                        res_vec2_sample_addends[pos]=r_env_sample[parent.order()].at(j,s)*u_env_sample[parent.order()].at(k,s)*parent.w().at(i,j,k);
-                        pos++;
-                    }
-                }
-                u_env_sample[current.order()].at(i,s)=vec_add_float(res_vec2_sample_addends);
-            }
-        }
-    }
-    else{
-        std::vector<double> res_vec2_sample_addends(parent.w().nx()*parent.w().nz());
-        if(u_env_sample[current.order()].nx()!=parent.w().nx()){
-            u_env_sample[current.order()]=array2d<double>(parent.w().nx(),u_env_sample[current.order()].ny());
-        }
-        #pragma omp parallel for firstprivate(res_vec2_sample_addends)
-        for(int s=0;s<u_env_sample[parent.order()].ny();s++){
-            for(int j=0;j<parent.w().ny();j++){
-                size_t pos=0;
-                for(int i=0;i<parent.w().nx();i++){
-                    for(int k=0;k<parent.w().nz();k++){
-                        res_vec2_sample_addends[pos]=l_env_sample[parent.order()].at(i,s)*u_env_sample[parent.order()].at(k,s)*parent.w().at(i,j,k);
-                        pos++;
-                    }
-                }
-                u_env_sample[current.order()].at(j,s)=vec_add_float(res_vec2_sample_addends);
-            }
-        }
-    }
-}
+#include "utils.hpp"
 
 template<typename cmp>
 double optimize::opt_struct_nll(graph<cmp>& g,std::vector<std::vector<array1d<double> > >& train_samples,std::vector<int>& train_labels,std::vector<std::vector<array1d<double> > >& test_samples,std::vector<int>& test_labels,int iter_max,int r_max,bool compress_r,double lr,int batch_size,std::map<int,double>& train_nll_history,std::map<int,double>& test_nll_history,std::map<int,int>& sweep_history,bool struct_opt){
@@ -497,7 +378,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<std::vector<array1d<do
         }
         batch_start_idx=(batch_start_idx+batch_size<train_samples.size())?batch_start_idx+batch_size:0;
         if(batch_start_idx==0){
-            std::shuffle(std::begin(batch_shuffle),std::end(batch_shuffle),mpi_utils::prng);
+            std::shuffle(std::begin(batch_shuffle),std::end(batch_shuffle),prng);
             std::vector<std::vector<array1d<double> > > train_samples_copy=train_samples;
             for(int i=0;i<train_samples.size();i++){
                 train_samples[i]=train_samples_copy[batch_shuffle[i]];
@@ -549,11 +430,12 @@ std::vector<int> optimize::classify(graph<cmp>& g,std::vector<std::vector<array1
     contracted_vectors.reserve(g.vs().size());
     int n_samples=samples.size();
     for(int n=0;n<g.vs().size();n++){
+        int rank=g.vs()[n].rank();
         if(n<g.n_phys_sites()){ //physical (input) sites do not correspond to tensors, so environment is empty vector
-            array2d<double> vec(g.vs()[n].rank(),n_samples);
+            array2d<double> vec(rank,n_samples);
             #pragma omp parallel for
             for(int s=0;s<n_samples;s++){
-                memcpy(&(vec.e())[g.vs()[n].rank()*s],&(samples[s][n].e())[0],g.vs()[n].rank()*sizeof(double));
+                memcpy(&(vec.e())[rank*s],&(samples[s][n].e())[0],rank*sizeof(double));
             }
             contracted_vectors.push_back(vec);
         }
@@ -615,32 +497,33 @@ std::vector<int> optimize::classify(graph<cmp>& g,std::vector<std::vector<array1
 template std::vector<int> optimize::classify(graph<bmi_comparator>&,std::vector<std::vector<array1d<double> > >&,array2d<double>&);
 
 void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array3d<double>& m_cache,array3d<double>& v_cache,int t,double lr,double beta1,double beta2,double epsilon){
-    array3d<double> dz(b.w().nx(),b.w().ny(),b.w().nz());
+    int b_order=b.order();
+    array3d<double> b_w=b.w();
+    array3d<double> dz(b_w.nx(),b_w.ny(),b_w.nz());
     #pragma omp parallel for collapse(3)
     for(int i=0;i<dz.nx();i++){
         for(int j=0;j<dz.ny();j++){
             for(int k=0;k<dz.nz();k++){
-                dz.at(i,j,k)=l_env_z[b.order()].at(i)*r_env_z[b.order()].at(j)*u_env_z[b.order()].at(k);
+                dz.at(i,j,k)=l_env_z[b_order].at(i)*r_env_z[b_order].at(j)*u_env_z[b_order].at(k);
             }
         }
     }
-    std::vector<array3d<double> > dw(w.size());
-    array3d<double> dw_e(b.w().nx(),b.w().ny(),b.w().nz());
-    #pragma omp parallel for firstprivate(dw_e)
+    
+    array4d<double> dw(b_w.nx(),b_w.ny(),b_w.nz(),w.size());
+    #pragma omp parallel for collapse(4)
     for(int s=0;s<w.size();s++){
-        for(int i=0;i<dw_e.nx();i++){
-            for(int j=0;j<dw_e.ny();j++){
-                for(int k=0;k<dw_e.nz();k++){
-                    dw_e.at(i,j,k)=l_env_sample[b.order()].at(i,s)*r_env_sample[b.order()].at(j,s)*u_env_sample[b.order()].at(k,s);
+        for(int i=0;i<dw.nx();i++){
+            for(int j=0;j<dw.ny();j++){
+                for(int k=0;k<dw.nz();k++){
+                    dw.at(i,j,k,s)=l_env_sample[b_order].at(i,s)*r_env_sample[b_order].at(j,s)*u_env_sample[b_order].at(k,s);
                 }
             }
         }
-        dw[s]=dw_e;
     }
-
-    array3d<double> grad(b.w().nx(),b.w().ny(),b.w().nz());
-    array3d<double> grad_z_term(b.w().nx(),b.w().ny(),b.w().nz());
-    array3d<double> grad_w_term(b.w().nx(),b.w().ny(),b.w().nz());
+    
+    array3d<double> grad(b_w.nx(),b_w.ny(),b_w.nz());
+    array3d<double> grad_z_term(b_w.nx(),b_w.ny(),b_w.nz());
+    array3d<double> grad_w_term(b_w.nx(),b_w.ny(),b_w.nz());
     for(int i=0;i<grad.nx();i++){
         for(int j=0;j<grad.ny();j++){
             for(int k=0;k<grad.nz();k++){
@@ -648,7 +531,7 @@ void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<a
                 std::vector<double> grad_w_term_addends(w.size());
                 #pragma omp parallel for
                 for(int s=0;s<w.size();s++){
-                    grad_w_term_addends[s]=dw[s].at(i,j,k)/w[s];
+                    grad_w_term_addends[s]=dw.at(i,j,k,s)/w[s];
                 }
                 grad_w_term.at(i,j,k)=vec_add_float(grad_w_term_addends)/(double) w.size();
                 //perform unconstrained gd on original problem
@@ -680,33 +563,39 @@ void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<a
     for(int i=0;i<grad.nx();i++){
         for(int j=0;j<grad.ny();j++){
             for(int k=0;k<grad.nz();k++){
-                double proj_grad=(b.w().at(i,j,k)>grad.at(i,j,k))?grad.at(i,j,k):b.w().at(i,j,k); //projected gradient
+                double proj_grad=(b_w.at(i,j,k)>grad.at(i,j,k))?grad.at(i,j,k):b_w.at(i,j,k); //projected gradient
                 m_cache.at(i,j,k)=(beta1*m_cache.at(i,j,k))+((1-beta1)*proj_grad);
                 v_cache.at(i,j,k)=(beta2*v_cache.at(i,j,k))+((1-beta2)*proj_grad*proj_grad);
                 double corrected_m=m_cache.at(i,j,k)/(1-pow(beta1,(double) t));
                 double corrected_v=v_cache.at(i,j,k)/(1-pow(beta2,(double) t));
-                b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*0.01*b.w().at(i,j,k)); //weight decay (adamw)
-                b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
-                // b.w().at(i,j,k)=b.w().at(i,j,k)-(lr*grad.at(i,j,k));
-                if(b.w().at(i,j,k)<=0){b.w().at(i,j,k)=1e-100;}
-                // if(b.w().at(i,j,k)>1){b.w().at(i,j,k)=1;}
+                b_w.at(i,j,k)=b_w.at(i,j,k)-(lr*0.01*b_w.at(i,j,k)); //weight decay (adamw)
+                b_w.at(i,j,k)=b_w.at(i,j,k)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
+                // b_w.at(i,j,k)=b_w.at(i,j,k)-(lr*grad.at(i,j,k));
+                if(b_w.at(i,j,k)<=0){b_w.at(i,j,k)=1e-100;}
+                // if(b_w.at(i,j,k)>1){b_w.at(i,j,k)=1;}
             }
         }
     }
+    b.w()=b_w;
     normalize(b.w());
 }
 
 array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<double>& w,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,std::map<std::pair<int,int>,array4d<double> >& m_cache,std::map<std::pair<int,int>,array4d<double> >& v_cache,int t,double lr,double beta1,double beta2,double epsilon){
+    int b1_order=b1.order();
+    int b2_order=b2.order();
+    int b2_v1=b2.v1();
+    array3d<double> b1_w=b1.w();
+    array3d<double> b2_w=b2.w();
     //calculate fused, dz and dw
-    array4d<double> fused(b1.w().nx(),b1.w().ny(),(b2.v1()==b1.order())?b2.w().ny():b2.w().nx(),b2.w().nz());
-    std::vector<double> sum_addends(b1.w().nz());
+    array4d<double> fused(b1_w.nx(),b1_w.ny(),(b2_v1==b1_order)?b2_w.ny():b2_w.nx(),b2_w.nz());
+    std::vector<double> sum_addends(b1_w.nz());
     #pragma omp parallel for collapse(4) firstprivate(sum_addends)
     for(int i=0;i<fused.nx();i++){
         for(int j=0;j<fused.ny();j++){
             for(int k=0;k<fused.nz();k++){
                 for(int l=0;l<fused.nw();l++){
-                    for(int m=0;m<b1.w().nz();m++){
-                        sum_addends[m]=b1.w().at(i,j,m)*((b2.v1()==b1.order())?b2.w().at(m,k,l):b2.w().at(k,m,l));
+                    for(int m=0;m<b1_w.nz();m++){
+                        sum_addends[m]=b1_w.at(i,j,m)*((b2_v1==b1_order)?b2_w.at(m,k,l):b2_w.at(k,m,l));
                     }
                     fused.at(i,j,k,l)=vec_add_float(sum_addends);
                 }
@@ -720,33 +609,31 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
         for(int j=0;j<dz.ny();j++){
             for(int k=0;k<dz.nz();k++){
                 for(int l=0;l<dz.nw();l++){
-                    dz.at(i,j,k,l)=l_env_z[b1.order()].at(i)*r_env_z[b1.order()].at(j)*((b2.v1()==b1.order())?r_env_z[b2.order()].at(k):l_env_z[b2.order()].at(k))*u_env_z[b2.order()].at(l);
+                    dz.at(i,j,k,l)=l_env_z[b1_order].at(i)*r_env_z[b1_order].at(j)*((b2_v1==b1_order)?r_env_z[b2_order].at(k):l_env_z[b2_order].at(k))*u_env_z[b2_order].at(l);
                 }
             }
         }
     }
-    std::vector<array4d<double> > dw(w.size());
-    array4d<double> dw_e(fused.nx(),fused.ny(),fused.nz(),fused.nw());
-    #pragma omp parallel for firstprivate(dw_e)
+    array5d<double> dw(fused.nx(),fused.ny(),fused.nz(),fused.nw(),w.size());
+    #pragma omp parallel for collapse(5)
     for(int s=0;s<w.size();s++){
-        for(int i=0;i<dw_e.nx();i++){
-            for(int j=0;j<dw_e.ny();j++){
-                for(int k=0;k<dw_e.nz();k++){
-                    for(int l=0;l<dw_e.nw();l++){
-                        dw_e.at(i,j,k,l)=l_env_sample[b1.order()].at(i,s)*r_env_sample[b1.order()].at(j,s)*((b2.v1()==b1.order())?r_env_sample[b2.order()].at(k,s):l_env_sample[b2.order()].at(k,s))*u_env_sample[b2.order()].at(l,s);
+        for(int i=0;i<dw.nx();i++){
+            for(int j=0;j<dw.ny();j++){
+                for(int k=0;k<dw.nz();k++){
+                    for(int l=0;l<dw.nw();l++){
+                        dw.at(i,j,k,l,s)=l_env_sample[b1_order].at(i,s)*r_env_sample[b1_order].at(j,s)*((b2_v1==b1_order)?r_env_sample[b2_order].at(k,s):l_env_sample[b2_order].at(k,s))*u_env_sample[b2_order].at(l,s);
                     }
                 }
             }
         }
-        dw[s]=dw_e;
     }
     
-    std::pair<int,int> key=(b1.order()<b2.order())?std::make_pair(b1.order(),b2.order()):std::make_pair(b2.order(),b1.order());
+    std::pair<int,int> key=(b1_order<b2_order)?std::make_pair(b1_order,b2_order):std::make_pair(b2_order,b1_order);
     
     //reset m and v caches if there is a change in size
     if((m_cache[key].nx()!=fused.nx())||(m_cache[key].ny()!=fused.ny())||(m_cache[key].nz()!=fused.nz())||(m_cache[key].nw()!=fused.nw())){
-        m_cache[key]=array4d<double>(b1.w().nx(),b1.w().ny(),(b2.v1()==b1.order())?b2.w().ny():b2.w().nx(),b2.w().nz());
-        v_cache[key]=array4d<double>(b1.w().nx(),b1.w().ny(),(b2.v1()==b1.order())?b2.w().ny():b2.w().nx(),b2.w().nz());
+        m_cache[key]=array4d<double>(b1_w.nx(),b1_w.ny(),(b2_v1==b1_order)?b2_w.ny():b2_w.nx(),b2_w.nz());
+        v_cache[key]=array4d<double>(b1_w.nx(),b1_w.ny(),(b2_v1==b1_order)?b2_w.ny():b2_w.nx(),b2_w.nz());
     }
     
     array4d<double> grad_2site(fused.nx(),fused.ny(),fused.nz(),fused.nw());
@@ -754,7 +641,7 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
     array4d<double> grad_w_term_2site(grad_2site.nx(),grad_2site.ny(),grad_2site.nz(),grad_2site.nw());
                     
     // std::cout<<"n="<<n<<"\n";
-    // std::cout<<(std::string) b1.w()<<"\n";
+    // std::cout<<(std::string) b1_w<<"\n";
     for(int i=0;i<grad_2site.nx();i++){
         for(int j=0;j<grad_2site.ny();j++){
             for(int k=0;k<grad_2site.nz();k++){
@@ -763,7 +650,7 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
                     std::vector<double> grad_w_term_2site_addends(w.size());
                     #pragma omp parallel for
                     for(int s=0;s<w.size();s++){
-                        grad_w_term_2site_addends[s]=dw[s].at(i,j,k,l)/w[s];
+                        grad_w_term_2site_addends[s]=dw.at(i,j,k,l,s)/w[s];
                     }
                     grad_w_term_2site.at(i,j,k,l)=vec_add_float(grad_w_term_2site_addends)/(double) w.size();
                     //perform projected nonnegative gd on original problem
@@ -820,59 +707,63 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
 }
 
 double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample){
-    if(current.w().nz()==1){return 0;} //bmi is nonnegative and upper-bounded by bond dimension, so dim=1 -> bmi=0
+    int current_order=current.order();
+    int parent_order=parent.order();
+    array3d<double> current_w=current.w();
+    array3d<double> parent_w=parent.w();
+    if(current_w.nz()==1){return 0;} //bmi is nonnegative and upper-bounded by bond dimension, so dim=1 -> bmi=0
     int n_samples=u_env_sample[0].ny();
-    array1d<double> a_subsystem_vec_z(current.w().nz());
-    array1d<double> b_subsystem_vec_z(current.w().nz());
-    array2d<double> a_subsystem_vec_sample(current.w().nz(),n_samples);
-    array2d<double> b_subsystem_vec_sample(current.w().nz(),n_samples);
-    std::vector<double> a_subsystem_vec_z_addends(current.w().nx()*current.w().ny());
+    array1d<double> a_subsystem_vec_z(current_w.nz());
+    array1d<double> b_subsystem_vec_z(current_w.nz());
+    array2d<double> a_subsystem_vec_sample(current_w.nz(),n_samples);
+    array2d<double> b_subsystem_vec_sample(current_w.nz(),n_samples);
+    std::vector<double> a_subsystem_vec_z_addends(current_w.nx()*current_w.ny());
     #pragma omp parallel for firstprivate(a_subsystem_vec_z_addends)
-    for(int k=0;k<current.w().nz();k++){
+    for(int k=0;k<current_w.nz();k++){
         size_t pos=0;
-        for(int i=0;i<current.w().nx();i++){
-            for(int j=0;j<current.w().ny();j++){
-                a_subsystem_vec_z_addends[pos]=l_env_z[current.order()].at(i)*r_env_z[current.order()].at(j)*current.w().at(i,j,k);
+        for(int i=0;i<current_w.nx();i++){
+            for(int j=0;j<current_w.ny();j++){
+                a_subsystem_vec_z_addends[pos]=l_env_z[current_order].at(i)*r_env_z[current_order].at(j)*current_w.at(i,j,k);
                 pos++;
             }
         }
         a_subsystem_vec_z.at(k)=vec_add_float(a_subsystem_vec_z_addends);
     }
-    std::vector<double> a_subsystem_vec_sample_addends(current.w().nx()*current.w().ny());
+    std::vector<double> a_subsystem_vec_sample_addends(current_w.nx()*current_w.ny());
     #pragma omp parallel for firstprivate(a_subsystem_vec_sample_addends)
     for(int s=0;s<n_samples;s++){
-        for(int k=0;k<current.w().nz();k++){
+        for(int k=0;k<current_w.nz();k++){
             size_t pos=0;
-            for(int i=0;i<current.w().nx();i++){
-                for(int j=0;j<current.w().ny();j++){
-                    a_subsystem_vec_sample_addends[pos]=l_env_sample[current.order()].at(i,s)*r_env_sample[current.order()].at(j,s)*current.w().at(i,j,k);
+            for(int i=0;i<current_w.nx();i++){
+                for(int j=0;j<current_w.ny();j++){
+                    a_subsystem_vec_sample_addends[pos]=l_env_sample[current_order].at(i,s)*r_env_sample[current_order].at(j,s)*current_w.at(i,j,k);
                     pos++;
                 }
             }
             a_subsystem_vec_sample.at(k,s)=vec_add_float(a_subsystem_vec_sample_addends);
         }
     }
-    if((current.order()==parent.v1())){
-        std::vector<double> b_subsystem_vec_z_addends(parent.w().ny()*parent.w().nz());
+    if((current_order==parent.v1())){
+        std::vector<double> b_subsystem_vec_z_addends(parent_w.ny()*parent_w.nz());
         #pragma omp parallel for firstprivate(b_subsystem_vec_z_addends)
-        for(int k=0;k<parent.w().nx();k++){
+        for(int k=0;k<parent_w.nx();k++){
             size_t pos=0;
-            for(int l=0;l<parent.w().ny();l++){
-                for(int m=0;m<parent.w().nz();m++){
-                    b_subsystem_vec_z_addends[pos]=r_env_z[parent.order()].at(l)*u_env_z[parent.order()].at(m)*parent.w().at(k,l,m);
+            for(int l=0;l<parent_w.ny();l++){
+                for(int m=0;m<parent_w.nz();m++){
+                    b_subsystem_vec_z_addends[pos]=r_env_z[parent_order].at(l)*u_env_z[parent_order].at(m)*parent_w.at(k,l,m);
                     pos++;
                 }
             }
             b_subsystem_vec_z.at(k)=vec_add_float(b_subsystem_vec_z_addends);
         }
-        std::vector<double> b_subsystem_vec_sample_addends(parent.w().ny()*parent.w().nz());
+        std::vector<double> b_subsystem_vec_sample_addends(parent_w.ny()*parent_w.nz());
         #pragma omp parallel for firstprivate(b_subsystem_vec_sample_addends)
         for(int s=0;s<n_samples;s++){
-            for(int k=0;k<parent.w().nx();k++){
+            for(int k=0;k<parent_w.nx();k++){
                 size_t pos=0;
-                for(int l=0;l<parent.w().ny();l++){
-                    for(int m=0;m<parent.w().nz();m++){
-                        b_subsystem_vec_sample_addends[pos]=r_env_sample[parent.order()].at(l,s)*u_env_sample[parent.order()].at(m,s)*parent.w().at(k,l,m);
+                for(int l=0;l<parent_w.ny();l++){
+                    for(int m=0;m<parent_w.nz();m++){
+                        b_subsystem_vec_sample_addends[pos]=r_env_sample[parent_order].at(l,s)*u_env_sample[parent_order].at(m,s)*parent_w.at(k,l,m);
                         pos++;
                     }
                 }
@@ -881,26 +772,26 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
         }
     }
     else{
-        std::vector<double> b_subsystem_vec_z_addends(parent.w().nx()*parent.w().nz());
+        std::vector<double> b_subsystem_vec_z_addends(parent_w.nx()*parent_w.nz());
         #pragma omp parallel for firstprivate(b_subsystem_vec_z_addends)
-        for(int l=0;l<parent.w().ny();l++){
+        for(int l=0;l<parent_w.ny();l++){
             size_t pos=0;
-            for(int k=0;k<parent.w().nx();k++){
-                for(int m=0;m<parent.w().nz();m++){
-                    b_subsystem_vec_z_addends[pos]=l_env_z[parent.order()].at(k)*u_env_z[parent.order()].at(m)*parent.w().at(k,l,m);
+            for(int k=0;k<parent_w.nx();k++){
+                for(int m=0;m<parent_w.nz();m++){
+                    b_subsystem_vec_z_addends[pos]=l_env_z[parent_order].at(k)*u_env_z[parent_order].at(m)*parent_w.at(k,l,m);
                     pos++;
                 }
             }
             b_subsystem_vec_z.at(l)=vec_add_float(b_subsystem_vec_z_addends);
         }
-        std::vector<double> b_subsystem_vec_sample_addends(parent.w().nx()*parent.w().nz());
+        std::vector<double> b_subsystem_vec_sample_addends(parent_w.nx()*parent_w.nz());
         #pragma omp parallel for firstprivate(b_subsystem_vec_sample_addends)
         for(int s=0;s<n_samples;s++){
-            for(int l=0;l<parent.w().ny();l++){
+            for(int l=0;l<parent_w.ny();l++){
                 size_t pos=0;
-                for(int k=0;k<parent.w().nx();k++){
-                    for(int m=0;m<parent.w().nz();m++){
-                        b_subsystem_vec_sample_addends[pos]=l_env_sample[parent.order()].at(k,s)*u_env_sample[parent.order()].at(m,s)*parent.w().at(k,l,m);
+                for(int k=0;k<parent_w.nx();k++){
+                    for(int m=0;m<parent_w.nz();m++){
+                        b_subsystem_vec_sample_addends[pos]=l_env_sample[parent_order].at(k,s)*u_env_sample[parent_order].at(m,s)*parent_w.at(k,l,m);
                         pos++;
                     }
                 }
@@ -908,8 +799,8 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
             }
         }
     }
-    std::vector<double> z_addends(current.w().nz());
-    for(int k=0;k<current.w().nz();k++){
+    std::vector<double> z_addends(current_w.nz());
+    for(int k=0;k<current_w.nz();k++){
         z_addends[k]=a_subsystem_vec_z.at(k)*b_subsystem_vec_z.at(k);
     }
     double z=log(vec_add_float(z_addends));
@@ -918,11 +809,11 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
     double s_ab=0;
     #pragma omp parallel for reduction(-:s_a,s_b,s_ab)
     for(int s=0;s<n_samples;s++){
-        std::vector<double> s_a_addends(current.w().nz());
-        std::vector<double> s_b_addends(current.w().nz());
-        std::vector<double> s_ab_addends(current.w().nz());
+        std::vector<double> s_a_addends(current_w.nz());
+        std::vector<double> s_b_addends(current_w.nz());
+        std::vector<double> s_ab_addends(current_w.nz());
         size_t pos=0;
-        for(int k=0;k<current.w().nz();k++){
+        for(int k=0;k<current_w.nz();k++){
             s_a_addends[k]=a_subsystem_vec_sample.at(k,s)*b_subsystem_vec_z.at(k);
             s_b_addends[k]=a_subsystem_vec_z.at(k)*b_subsystem_vec_sample.at(k,s);
             s_ab_addends[k]=a_subsystem_vec_sample.at(k,s)*b_subsystem_vec_sample.at(k,s);
@@ -1025,6 +916,7 @@ template<typename cmp>
 double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 1
     array3d<double> fused_mat(fused.nx()*fused.ny(),fused.nz()*fused.nw(),1);
+    #pragma omp parallel for collapse(4)
     for(int i=0;i<fused.nx();i++){
         for(int j=0;j<fused.ny();j++){
             for(int k=0;k<fused.nz();k++){
@@ -1039,27 +931,33 @@ double way1(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     array3d<double> mat2;
     int r=inner_nmf(fused_mat,mat1,mat2,r_max,compress_r);
     
-    current.w()=array3d<double>(fused.nx(),fused.ny(),r);
-    parent.w()=(parent.v1()==current.order())?array3d<double>(r,fused.nz(),fused.nw()):array3d<double>(fused.nz(),r,fused.nw());
+    int current_order=current.order();
+    int parent_v1=parent.v1();
+    array3d<double> current_w=array3d<double>(fused.nx(),fused.ny(),r);
+    array3d<double> parent_w=(parent.v1()==current.order())?array3d<double>(r,fused.nz(),fused.nw()):array3d<double>(fused.nz(),r,fused.nw());
+    #pragma omp parallel for collapse(2)
     for(int i=0;i<mat1.nx();i++){
         for(int j=0;j<mat1.ny();j++){
             double val=mat1.at(i,j,0);
-            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=(val>epsilon)?val:epsilon;
+            current_w.at(i/current_w.ny(),i%current_w.ny(),j)=(val>epsilon)?val:epsilon;
         }
     }
+    #pragma omp parallel for collapse(2)
     for(int i=0;i<mat2.nx();i++){
         for(int j=0;j<mat2.ny();j++){
             double val;
-            if(parent.v1()==current.order()){
+            if(parent_v1==current_order){
                 val=mat2.at(i,j,0);
-                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=(val>epsilon)?val:epsilon;
+                parent_w.at(i,j/parent_w.nz(),j%parent_w.nz())=(val>epsilon)?val:epsilon;
             }
             else{
                 val=mat2.at(i,j,0);
-                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=(val>epsilon)?val:epsilon;
+                parent_w.at(j/parent_w.nz(),i,j%parent_w.nz())=(val>epsilon)?val:epsilon;
             }
         }
     }
+    current.w()=current_w;
+    parent.w()=parent_w;
     
     g.vs()[current.order()].rank()=r;
     
@@ -1093,6 +991,7 @@ template<typename cmp>
 double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 2
     array3d<double> fused_mat(fused.nx()*fused.nz(),fused.ny()*fused.nw(),1);
+    #pragma omp parallel for collapse(4)
     for(int i=0;i<fused.nx();i++){
         for(int j=0;j<fused.nz();j++){
             for(int k=0;k<fused.ny();k++){
@@ -1129,27 +1028,33 @@ double way2(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     g.vs()[parent.order()].l_idx()=parent.v1();
     g.vs()[parent.order()].r_idx()=parent.v2();
     
-    current.w()=array3d<double>(fused.nx(),fused.nz(),r);
-    parent.w()=(parent.v1()==current.order())?array3d<double>(r,fused.ny(),fused.nw()):array3d<double>(fused.ny(),r,fused.nw());
+    int current_order=current.order();
+    int parent_v1=parent.v1();
+    array3d<double> current_w=array3d<double>(fused.nx(),fused.nz(),r);
+    array3d<double> parent_w=(parent.v1()==current.order())?array3d<double>(r,fused.ny(),fused.nw()):array3d<double>(fused.ny(),r,fused.nw());
     g.vs()[current.order()].rank()=r;
+    #pragma omp parallel for collapse(2)
     for(int i=0;i<mat1.nx();i++){
         for(int j=0;j<mat1.ny();j++){
             double val=mat1.at(i,j,0);
-            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=(val>epsilon)?val:epsilon;
+            current_w.at(i/current_w.ny(),i%current_w.ny(),j)=(val>epsilon)?val:epsilon;
         }
     }
+    #pragma omp parallel for collapse(2)
     for(int i=0;i<mat2.nx();i++){
         for(int j=0;j<mat2.ny();j++){
             double val;
             val=mat2.at(i,j,0);
-            if(parent.v1()==current.order()){
-                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=(val>epsilon)?val:epsilon;
+            if(parent_v1==current_order){
+                parent_w.at(i,j/parent_w.nz(),j%parent_w.nz())=(val>epsilon)?val:epsilon;
             }
             else{
-                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=(val>epsilon)?val:epsilon;
+                parent_w.at(j/parent_w.nz(),i,j%parent_w.nz())=(val>epsilon)?val:epsilon;
             }
         }
     }
+    current.w()=current_w;
+    parent.w()=parent_w;
     if((current.w().nx()!=g.vs()[current.v1()].rank())||(current.w().ny()!=g.vs()[current.v2()].rank())||(current.w().nz()!=g.vs()[current.order()].rank())){
         std::cout<<"mismatch in current: ("<<current.w().nx()<<","<<current.w().ny()<<","<<current.w().nz()<<") vs ("<<g.vs()[current.v1()].rank()<<","<<g.vs()[current.v2()].rank()<<","<<g.vs()[current.order()].rank()<<")\n";
         exit(1);
@@ -1218,6 +1123,7 @@ template<typename cmp>
 double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,array4d<double>& fused,int r_max,bool compress_r,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     //split into two 3-leg tensors again via NMF: way 2
     array3d<double> fused_mat(fused.nz()*fused.ny(),fused.nx()*fused.nw(),1);
+    #pragma omp parallel for collapse(4)
     for(int i=0;i<fused.nz();i++){
         for(int j=0;j<fused.ny();j++){
             for(int k=0;k<fused.nx();k++){
@@ -1254,27 +1160,33 @@ double way3(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typenam
     g.vs()[parent.order()].l_idx()=parent.v1();
     g.vs()[parent.order()].r_idx()=parent.v2();
     
-    current.w()=array3d<double>(fused.nz(),fused.ny(),r);
-    parent.w()=(parent.v1()==current.order())?array3d<double>(r,fused.nx(),fused.nw()):array3d<double>(fused.nx(),r,fused.nw());
+    int current_order=current.order();
+    int parent_v1=parent.v1();
+    array3d<double> current_w=array3d<double>(fused.nz(),fused.ny(),r);
+    array3d<double> parent_w=(parent.v1()==current.order())?array3d<double>(r,fused.nx(),fused.nw()):array3d<double>(fused.nx(),r,fused.nw());
     g.vs()[current.order()].rank()=r;
+    #pragma omp parallel for collapse(2)
     for(int i=0;i<mat1.nx();i++){
         for(int j=0;j<mat1.ny();j++){
             double val=mat1.at(i,j,0);
-            current.w().at(i/current.w().ny(),i%current.w().ny(),j)=(val>epsilon)?val:epsilon;
+            current_w.at(i/current_w.ny(),i%current_w.ny(),j)=(val>epsilon)?val:epsilon;
         }
     }
+    #pragma omp parallel for collapse(2)
     for(int i=0;i<mat2.nx();i++){
         for(int j=0;j<mat2.ny();j++){
             double val;
             val=mat2.at(i,j,0);
-            if(parent.v1()==current.order()){
-                parent.w().at(i,j/parent.w().nz(),j%parent.w().nz())=(val>epsilon)?val:epsilon;
+            if(parent_v1==current_order){
+                parent_w.at(i,j/parent_w.nz(),j%parent_w.nz())=(val>epsilon)?val:epsilon;
             }
             else{
-                parent.w().at(j/parent.w().nz(),i,j%parent.w().nz())=(val>epsilon)?val:epsilon;
+                parent_w.at(j/parent_w.nz(),i,j%parent_w.nz())=(val>epsilon)?val:epsilon;
             }
         }
     }
+    current.w()=current_w;
+    parent.w()=parent_w;
     if((current.w().nx()!=g.vs()[current.v1()].rank())||(current.w().ny()!=g.vs()[current.v2()].rank())||(current.w().nz()!=g.vs()[current.order()].rank())){
         std::cout<<"mismatch in current: ("<<current.w().nx()<<","<<current.w().ny()<<","<<current.w().nz()<<") vs ("<<g.vs()[current.v1()].rank()<<","<<g.vs()[current.v2()].rank()<<","<<g.vs()[current.order()].rank()<<")\n";
         exit(1);
