@@ -366,18 +366,15 @@ int main(int argc,char **argv){
         std::uniform_real_distribution<> unif_dist(1e-10,1.0);
         for(auto it=g.es().begin();it!=g.es().end();++it){
             bond b=*it;
-            std::vector<double> sum_addends(b.w().nx()*b.w().ny()*b.w().nz());
-            size_t pos=0;
+            double sum=0;
             for(int i=0;i<b.w().nx();i++){
                 for(int j=0;j<b.w().ny();j++){
                     for(int k=0;k<b.w().nz();k++){
                         b.w().at(i,j,k)=unif_dist(prng);
-                        sum_addends[pos]=b.w().at(i,j,k);
-                        pos++;
+                        sum+=b.w().at(i,j,k);
                     }
                 }
             }
-            double sum=vec_add_float(sum_addends);
             for(int i=0;i<b.w().nx();i++){
                 for(int j=0;j<b.w().ny();j++){
                     for(int k=0;k<b.w().nz();k++){

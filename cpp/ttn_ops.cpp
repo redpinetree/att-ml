@@ -7,16 +7,16 @@
 #include "ttn_ops.hpp"
 
 void normalize(array3d<double>& w){
-    std::vector<double> norm_addends(w.nx()*w.ny()*w.nz());
-    #pragma omp parallel for collapse(3)
+    double norm_sq=0;
+    // #pragma omp parallel for collapse(3) reduction(+:norm_sq)
     for(int i=0;i<w.nx();i++){
         for(int j=0;j<w.ny();j++){
             for(int k=0;k<w.nz();k++){
-                norm_addends[(w.ny()*w.nx()*k)+(w.nx()*j)+i]=w.at(i,j,k)*w.at(i,j,k);
+                norm_sq+=w.at(i,j,k)*w.at(i,j,k);
             }
         }
     }
-    double norm=sqrt(vec_add_float(norm_addends));
+    double norm=sqrt(norm_sq);
     #pragma omp parallel for collapse(3)
     for(int i=0;i<w.nx();i++){
         for(int j=0;j<w.ny();j++){
@@ -32,18 +32,18 @@ void normalize(array3d<double>& w){
 }
 
 void normalize(array4d<double>& w){
-    std::vector<double> norm_addends(w.nx()*w.ny()*w.nz()*w.nw());
-    #pragma omp parallel for collapse(4)
+    double norm_sq=0;
+    // #pragma omp parallel for collapse(4) reduction(+:norm_sq)
     for(int i=0;i<w.nx();i++){
         for(int j=0;j<w.ny();j++){
             for(int k=0;k<w.nz();k++){
                 for(int l=0;l<w.nw();l++){
-                    norm_addends[(w.nz()*w.ny()*w.nx()*l)+(w.ny()*w.nx()*k)+(w.nx()*j)+i]=w.at(i,j,k,l)*w.at(i,j,k,l);
+                    norm_sq+=w.at(i,j,k,l)*w.at(i,j,k,l);
                 }
             }
         }
     }
-    double norm=sqrt(vec_add_float(norm_addends));
+    double norm=sqrt(norm_sq);
     #pragma omp parallel for collapse(4)
     for(int i=0;i<w.nx();i++){
         for(int j=0;j<w.ny();j++){
@@ -133,15 +133,11 @@ double calc_z(graph<cmp>& g){
             if((contracted_vectors[(*it).v1()].nx()!=0)&&(contracted_vectors[(*it).v2()].nx()!=0)&&(contracted_vectors[(*it).order()].nx()==0)){ //process if children have been contracted and parent is not yet contracted (check if size is 1)
                 array1d<double> res_vec(g.vs()[(*it).order()].rank());
                 for(int k=0;k<(*it).w().nz();k++){
-                    std::vector<double> res_vec_addends(contracted_vectors[(*it).v1()].nx()*contracted_vectors[(*it).v2()].nx());
-                    size_t pos=0;
                     for(int i=0;i<contracted_vectors[(*it).v1()].nx();i++){
                         for(int j=0;j<contracted_vectors[(*it).v2()].nx();j++){
-                            res_vec_addends[pos]=contracted_vectors[(*it).v1()].at(i)*contracted_vectors[(*it).v2()].at(j)*(*it).w().at(i,j,k);
-                            pos++;
+                            res_vec.at(k)+=contracted_vectors[(*it).v1()].at(i)*contracted_vectors[(*it).v2()].at(j)*(*it).w().at(i,j,k);
                         }
                     }
-                    res_vec.at(k)=vec_add_float(res_vec_addends);
                 }
                 contracted_vectors[(*it).order()]=res_vec;
                 contracted_idx_count++;
@@ -149,11 +145,10 @@ double calc_z(graph<cmp>& g){
             }
         }
     }
-    std::vector<double> z_addends(g.vs()[g.vs().size()-1].rank());
+    double z=0;
     for(int k=0;k<g.vs()[g.vs().size()-1].rank();k++){
-        z_addends[k]=contracted_vectors[g.vs().size()-1].at(k);
+        z+=contracted_vectors[g.vs().size()-1].at(k);
     }
-    double z=vec_add_float(z_addends);
     return z;
 }
 template double calc_z(graph<bmi_comparator>&);
@@ -190,15 +185,11 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
             if((contracted_vectors[b_v1].nx()!=0)&&(contracted_vectors[b_v2].nx()!=0)&&(contracted_vectors[b_order].nx()==0)){ //process if children have been contracted and parent is not yet contracted
                 array1d<double> res_vec(b_w.nz());
                 for(int k=0;k<b_w.nz();k++){
-                    std::vector<double> res_vec_addends(contracted_vectors[b_v1].nx()*contracted_vectors[b_v2].nx());
-                    size_t pos=0;
                     for(int i=0;i<contracted_vectors[b_v1].nx();i++){
                         for(int j=0;j<contracted_vectors[b_v2].nx();j++){
-                            res_vec_addends[pos]=contracted_vectors[b_v1].at(i)*contracted_vectors[b_v2].at(j)*b_w.at(i,j,k);
-                            pos++;
+                            res_vec.at(k)+=contracted_vectors[b_v1].at(i)*contracted_vectors[b_v2].at(j)*b_w.at(i,j,k);
                         }
                     }
-                    res_vec.at(k)=vec_add_float(res_vec_addends);
                 }
                 contracted_vectors[b_order]=res_vec;
                 l_env[b_order]=contracted_vectors[b_v1];
@@ -225,28 +216,20 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
                 }
                 array1d<double> res_vec_l(g.vs()[b_v1].rank());
                 for(int i=0;i<contracted_vectors[b_v1].nx();i++){
-                    std::vector<double> res_vec_l_addends(contracted_vectors[b_v2].nx()*b_w.nz());
-                    size_t pos=0;
                     for(int j=0;j<contracted_vectors[b_v2].nx();j++){
                         for(int k=0;k<b_w.nz();k++){
-                            res_vec_l_addends[pos]=r_env[b_order].at(j)*u_env[b_order].at(k)*b_w.at(i,j,k);
-                            pos++;
+                            res_vec_l.at(i)+=r_env[b_order].at(j)*u_env[b_order].at(k)*b_w.at(i,j,k);
                         }
                     }
-                    res_vec_l.at(i)=vec_add_float(res_vec_l_addends);
                 }
                 u_env[b_v1]=res_vec_l;
                 array1d<double> res_vec_r(g.vs()[b_v2].rank());
                 for(int j=0;j<contracted_vectors[b_v2].nx();j++){
-                    std::vector<double> res_vec_r_addends(contracted_vectors[b_v1].nx()*b_w.nz());
-                    size_t pos=0;
                     for(int i=0;i<contracted_vectors[b_v1].nx();i++){
                         for(int k=0;k<b_w.nz();k++){
-                            res_vec_r_addends[pos]=l_env[b_order].at(i)*u_env[b_order].at(k)*b_w.at(i,j,k);
-                            pos++;
+                            res_vec_r.at(j)+=l_env[b_order].at(i)*u_env[b_order].at(k)*b_w.at(i,j,k);
                         }
                     }
-                    res_vec_r.at(j)=vec_add_float(res_vec_r_addends);
                 }
                 u_env[b_v2]=res_vec_r;
                 contracted_idx_count++;
@@ -254,11 +237,10 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
             }
         }
     }
-    std::vector<double> z_addends(g.vs()[g.vs().size()-1].rank());
+    double z=0;
     for(int k=0;k<g.vs()[g.vs().size()-1].rank();k++){
-        z_addends[k]=contracted_vectors[g.vs().size()-1].at(k);
+        z+=contracted_vectors[g.vs().size()-1].at(k);
     }
-    double z=vec_add_float(z_addends);
     return z;
 }
 template double calc_z(graph<bmi_comparator>&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
@@ -341,18 +323,14 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<std::vector<array1d<double>
             array3d<double> b_w=(*it).w();
             if((contracted_vectors[b_v1].nx()!=0)&&(contracted_vectors[b_v2].nx()!=0)&&((it==--g.es().end())||(contracted_vectors[b_order].nx()==0))){ //process if children have been contracted and (parent is not yet contracted OR is top)
                 array2d<double> res_vec(b_w.nz(),n_samples);
-                std::vector<double> res_vec_addends(b_w.nx()*b_w.ny());
-                #pragma omp parallel for firstprivate(res_vec_addends)
+                #pragma omp parallel for collapse(2)
                 for(int s=0;s<n_samples;s++){
                     for(int k=0;k<b_w.nz();k++){
-                        size_t pos=0;
                         for(int i=0;i<b_w.nx();i++){
                             for(int j=0;j<b_w.ny();j++){
-                                res_vec_addends[pos]=contracted_vectors[b_v1].at(i,s)*contracted_vectors[b_v2].at(j,s)*b_w.at(i,j,k);
-                                pos++;
+                                res_vec.at(k,s)+=contracted_vectors[b_v1].at(i,s)*contracted_vectors[b_v2].at(j,s)*b_w.at(i,j,k);
                             }
                         }
-                        res_vec.at(k,s)=vec_add_float(res_vec_addends);
                     }
                 }
                 contracted_vectors[b_order]=res_vec;
@@ -371,12 +349,12 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<std::vector<array1d<double>
             w[s]=contracted_vectors[g.vs().size()-1].at(labels[s],s);
         }
         else{
-            std::vector<double> w_addends(g.vs()[g.vs().size()-1].rank());
+            w[s]=0;
             for(int k=0;k<g.vs()[g.vs().size()-1].rank();k++){
-                w_addends[k]=contracted_vectors[g.vs().size()-1].at(k,s);
+                w[s]+=contracted_vectors[g.vs().size()-1].at(k,s);
             }
-            w[s]=vec_add_float(w_addends);
         }
+        if(w[s]<1e-300){w[s]=1e-300;}
     }
     
     contracted_idx_count=0; //reset counter
@@ -388,34 +366,26 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<std::vector<array1d<double>
             array3d<double> b_w=(*it).w();
             if((u_env[b_v1].nx()==0)&&(u_env[b_v2].nx()==0)){
                 array2d<double> res_vec_l(b_w.nx(),n_samples);
-                std::vector<double> res_vec_l_addends(b_w.ny()*b_w.nz());
-                #pragma omp parallel for firstprivate(res_vec_l_addends)
+                #pragma omp parallel for collapse(2)
                 for(int s=0;s<n_samples;s++){
                     for(int i=0;i<b_w.nx();i++){
-                        size_t pos=0;
                         for(int j=0;j<b_w.ny();j++){
                             for(int k=0;k<b_w.nz();k++){
-                                res_vec_l_addends[pos]=r_env[b_order].at(j,s)*u_env[b_order].at(k,s)*b_w.at(i,j,k);
-                                pos++;
+                                res_vec_l.at(i,s)+=r_env[b_order].at(j,s)*u_env[b_order].at(k,s)*b_w.at(i,j,k);
                             }
                         }
-                        res_vec_l.at(i,s)=vec_add_float(res_vec_l_addends);
                     }
                 }
                 u_env[b_v1]=res_vec_l;
                 array2d<double> res_vec_r(b_w.ny(),n_samples);
-                std::vector<double> res_vec_r_addends(b_w.nx()*b_w.nz());
-                #pragma omp parallel for firstprivate(res_vec_r_addends)
+                #pragma omp parallel for collapse(2)
                 for(int s=0;s<n_samples;s++){
                     for(int j=0;j<b_w.ny();j++){
-                        size_t pos=0;
                         for(int i=0;i<b_w.nx();i++){
                             for(int k=0;k<b_w.nz();k++){
-                                res_vec_r_addends[pos]=l_env[b_order].at(i,s)*u_env[b_order].at(k,s)*b_w.at(i,j,k);
-                                pos++;
+                                res_vec_r.at(j,s)+=l_env[b_order].at(i,s)*u_env[b_order].at(k,s)*b_w.at(i,j,k);
                             }
                         }
-                        res_vec_r.at(j,s)=vec_add_float(res_vec_r_addends);
                     }
                 }
                 u_env[b_v2]=res_vec_r;
@@ -429,61 +399,46 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<std::vector<array1d<double>
 template std::vector<double> calc_w(graph<bmi_comparator>&,std::vector<std::vector<array1d<double> > >&,std::vector<int>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&);
 
 double update_cache_z(bond& current,bond& parent,std::vector<array1d<double> >& l_env,std::vector<array1d<double> >& r_env,std::vector<array1d<double> >& u_env){
-    double z=0;
     int current_order=current.order();
     int parent_order=parent.order();
     array3d<double> current_w=current.w();
     array3d<double> parent_w=parent.w();
     array1d<double> res_vec(current.w().nz());
-    std::vector<double> res_vec_addends(current_w.nx()*current_w.ny());
-    array1d<double> res_vec2(current_w.nz());
-    std::vector<double> res_vec2_addends((parent.v1()==current_order)?(parent_w.ny()*parent_w.nz()):(parent_w.nx()*parent_w.nz()));
+    array1d<double> res_vec2(current.w().nz());
     for(int k=0;k<current_w.nz();k++){
-        size_t pos=0;
         for(int i=0;i<current_w.nx();i++){
             for(int j=0;j<current_w.ny();j++){
-                res_vec_addends[pos]=l_env[current_order].at(i)*r_env[current_order].at(j)*current_w.at(i,j,k);
-                pos++;
+                res_vec.at(k)+=l_env[current_order].at(i)*r_env[current_order].at(j)*current_w.at(i,j,k);
             }
         }
-        res_vec.at(k)=vec_add_float(res_vec_addends);
     }
     
     if(parent.v1()==current_order){
         l_env[parent_order]=res_vec;
         for(int i=0;i<parent_w.nx();i++){
-            size_t pos=0;
             for(int j=0;j<parent_w.ny();j++){
                 for(int k=0;k<parent_w.nz();k++){
-                    res_vec2_addends[pos]=r_env[parent_order].at(j)*u_env[parent_order].at(k)*parent_w.at(i,j,k);
-                    pos++;
+                    res_vec2.at(i)+=r_env[parent_order].at(j)*u_env[parent_order].at(k)*parent_w.at(i,j,k);
                 }
             }
-            res_vec2.at(i)=vec_add_float(res_vec2_addends);
         }
-        u_env[current_order]=res_vec2;
     }
     else{
         r_env[parent_order]=res_vec;
         for(int j=0;j<parent_w.ny();j++){
-            size_t pos=0;
             for(int i=0;i<parent_w.nx();i++){
                 for(int k=0;k<parent_w.nz();k++){
-                    res_vec2_addends[pos]=l_env[parent_order].at(i)*u_env[parent_order].at(k)*parent_w.at(i,j,k);
-                    pos++;
+                    res_vec2.at(j)+=l_env[parent_order].at(i)*u_env[parent_order].at(k)*parent_w.at(i,j,k);
                 }
             }
-            res_vec2.at(j)=vec_add_float(res_vec2_addends);
         }
-        u_env[current_order]=res_vec2;
     }
+    u_env[current_order]=res_vec2;
     
-    
-    std::vector<double> z_addends(current_w.nz());
+    double z=0;
     for(int k=0;k<current_w.nz();k++){
-        z_addends[k]=res_vec.at(k)*res_vec2.at(k);
+        z+=res_vec.at(k)*u_env[current_order].at(k);
     }
-    z=vec_add_float(z_addends);
     return z;
 }
 
@@ -494,77 +449,66 @@ std::vector<double> update_cache_w(bond& current,bond& parent,std::vector<array2
     array3d<double> current_w=current.w();
     array3d<double> parent_w=parent.w();
     std::vector<double> w(n_samples);
-    std::vector<double> res_vec_addends(current_w.nx()*current_w.ny());
-    std::vector<double> res_vec2_addends((parent.v1()==current_order)?(parent_w.ny()*parent_w.nz()):(parent_w.nx()*parent_w.nz()));
-    std::vector<double> w_addends(current_w.nz());
     if(parent.v1()==current_order){
-        if(l_env[parent_order].nx()!=current_w.nz()){
-            l_env[parent_order]=array2d<double>(current_w.nz(),l_env[parent_order].ny());
-        }
-        if(u_env[current_order].nx()!=parent_w.nx()){
-            u_env[current_order]=array2d<double>(parent_w.nx(),u_env[current_order].ny());
-        }
-        #pragma omp parallel for firstprivate(w_addends,res_vec_addends,res_vec2_addends)
+        l_env[parent_order]=array2d<double>(current_w.nz(),l_env[parent_order].ny());
+        u_env[current_order]=array2d<double>(parent_w.nx(),u_env[current_order].ny());
+        #pragma omp parallel for collapse(2)
         for(int s=0;s<n_samples;s++){
             for(int k=0;k<current_w.nz();k++){
-                size_t pos=0;
                 for(int i=0;i<current_w.nx();i++){
                     for(int j=0;j<current_w.ny();j++){
-                        res_vec_addends[pos]=l_env[current_order].at(i,s)*r_env[current_order].at(j,s)*current_w.at(i,j,k);
-                        pos++;
+                        l_env[parent_order].at(k,s)+=l_env[current_order].at(i,s)*r_env[current_order].at(j,s)*current_w.at(i,j,k);
                     }
                 }
-                l_env[parent_order].at(k,s)=vec_add_float(res_vec_addends);
             }
+        }
+        #pragma omp parallel for collapse(2)
+        for(int s=0;s<n_samples;s++){
             for(int i=0;i<parent_w.nx();i++){
-                size_t pos=0;
                 for(int j=0;j<parent_w.ny();j++){
                     for(int k=0;k<parent_w.nz();k++){
-                        res_vec2_addends[pos]=r_env[parent_order].at(j,s)*u_env[parent_order].at(k,s)*parent_w.at(i,j,k);
-                        pos++;
+                        u_env[current_order].at(i,s)+=r_env[parent_order].at(j,s)*u_env[parent_order].at(k,s)*parent_w.at(i,j,k);
                     }
                 }
-                u_env[current_order].at(i,s)=vec_add_float(res_vec2_addends);
             }
+        }
+        #pragma omp parallel for
+        for(int s=0;s<n_samples;s++){
             for(int k=0;k<current_w.nz();k++){
-                w_addends[k]=l_env[parent_order].at(k,s)*u_env[current_order].at(k,s);
+                 w[s]+=l_env[parent_order].at(k,s)*u_env[current_order].at(k,s);
             }
-            w[s]=vec_add_float(w_addends);
+            if(w[s]<1e-300){w[s]=1e-300;}
         }
     }
     else{
-        if(r_env[parent_order].nx()!=current_w.nz()){
-            r_env[parent_order]=array2d<double>(current_w.nz(),r_env[parent_order].ny());
-        }
-        if(u_env[current_order].nx()!=parent_w.ny()){
-            u_env[current_order]=array2d<double>(parent_w.ny(),u_env[current_order].ny());
-        }
-        #pragma omp parallel for firstprivate(w_addends,res_vec_addends,res_vec2_addends)
+        r_env[parent_order]=array2d<double>(current_w.nz(),r_env[parent_order].ny());
+        u_env[current_order]=array2d<double>(parent_w.ny(),u_env[current_order].ny());
+        #pragma omp parallel for collapse(2)
         for(int s=0;s<n_samples;s++){
             for(int k=0;k<current_w.nz();k++){
-                size_t pos=0;
                 for(int i=0;i<current_w.nx();i++){
                     for(int j=0;j<current_w.ny();j++){
-                        res_vec_addends[pos]=l_env[current_order].at(i,s)*r_env[current_order].at(j,s)*current_w.at(i,j,k);
-                        pos++;
+                        r_env[parent_order].at(k,s)+=l_env[current_order].at(i,s)*r_env[current_order].at(j,s)*current_w.at(i,j,k);
                     }
                 }
-                r_env[parent_order].at(k,s)=vec_add_float(res_vec_addends);
             }
+        }
+        #pragma omp parallel for collapse(2)
+        for(int s=0;s<n_samples;s++){
             for(int j=0;j<parent_w.ny();j++){
-                size_t pos=0;
                 for(int i=0;i<parent_w.nx();i++){
                     for(int k=0;k<parent_w.nz();k++){
-                        res_vec2_addends[pos]=l_env[parent_order].at(i,s)*u_env[parent_order].at(k,s)*parent_w.at(i,j,k);
-                        pos++;
+                        u_env[current_order].at(j,s)+=l_env[parent_order].at(i,s)*u_env[parent_order].at(k,s)*parent_w.at(i,j,k);
                     }
                 }
-                u_env[current_order].at(j,s)=vec_add_float(res_vec2_addends);
             }
+        }
+        #pragma omp parallel for
+        for(int s=0;s<n_samples;s++){
             for(int k=0;k<current_w.nz();k++){
-                w_addends[k]=r_env[parent_order].at(k,s)*u_env[current_order].at(k,s);
+                 w[s]+=r_env[parent_order].at(k,s)*u_env[current_order].at(k,s);
             }
-            w[s]=vec_add_float(w_addends);
+            if(w[s]<1e-300){w[s]=1e-300;}
         }
     }
     return w;
