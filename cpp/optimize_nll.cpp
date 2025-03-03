@@ -784,6 +784,9 @@ double optimize::calc_bmi(bond& current,bond& parent,std::vector<array1d<double>
             b_subsystem_sample+=a_subsystem_vec_z.at(k)*b_subsystem_vec_sample.at(k,s);
             ab_subsystem_sample+=a_subsystem_vec_sample.at(k,s)*b_subsystem_vec_sample.at(k,s);
         }
+        if(a_subsystem_sample<=0){a_subsystem_sample=1e-300;}
+        if(b_subsystem_sample<=0){b_subsystem_sample=1e-300;}
+        if(ab_subsystem_sample<=0){ab_subsystem_sample=1e-300;}
         s_a-=log(a_subsystem_sample);
         s_b-=log(b_subsystem_sample);
         s_ab-=log(ab_subsystem_sample);
