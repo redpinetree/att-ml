@@ -22,9 +22,9 @@ void normalize(array3d<double>& w){
         for(int j=0;j<w.ny();j++){
             for(int k=0;k<w.nz();k++){
                 w.at(i,j,k)/=norm;
-                if(!(fabs(w.at(i,j,k))>1e-100)){
+                if(!(fabs(w.at(i,j,k))>1e-16)){
                     // std::cout<<"replaced "<<w.at(i,j,k)<<"\n";
-                    w.at(i,j,k)=1e-100;
+                    w.at(i,j,k)=1e-16;
                 }
             }
         }
@@ -50,9 +50,9 @@ void normalize(array4d<double>& w){
             for(int k=0;k<w.nz();k++){
                 for(int l=0;l<w.nw();l++){
                     w.at(i,j,k,l)/=norm;
-                    if(!(fabs(w.at(i,j,k,l))>1e-100)){
+                    if(!(fabs(w.at(i,j,k,l))>1e-16)){
                         // std::cout<<"replaced "<<w.at(i,j,k,l)<<"\n";
-                        w.at(i,j,k,l)=1e-100;
+                        w.at(i,j,k,l)=1e-16;
                     }
                 }
             }
@@ -66,9 +66,9 @@ void normalize_using_z(array3d<double>& w,double z){
         for(int j=0;j<w.ny();j++){
             for(int k=0;k<w.nz();k++){
                 w.at(i,j,k)/=z;
-                if(!(fabs(w.at(i,j,k))>1e-100)){
+                if(!(fabs(w.at(i,j,k))>1e-16)){
                     // std::cout<<"replaced "<<w.at(i,j,k)<<"\n";
-                    w.at(i,j,k)=1e-100;
+                    w.at(i,j,k)=1e-16;
                 }
             }
         }
@@ -82,9 +82,9 @@ void normalize_using_z(array4d<double>& w,double z){
             for(int k=0;k<w.nz();k++){
                 for(int l=0;l<w.nw();l++){
                     w.at(i,j,k,l)/=z;
-                    if(!(fabs(w.at(i,j,k,l))>1e-100)){
+                    if(!(fabs(w.at(i,j,k,l))>1e-16)){
                         // std::cout<<"replaced "<<w.at(i,j,k,l)<<"\n";
-                        w.at(i,j,k,l)=1e-100;
+                        w.at(i,j,k,l)=1e-16;
                     }
                 }
             }
@@ -149,6 +149,8 @@ double calc_z(graph<cmp>& g){
     for(int k=0;k<g.vs()[g.vs().size()-1].rank();k++){
         z+=contracted_vectors[g.vs().size()-1].at(k);
     }
+    if(z>1e300){z=1e300;}
+    if(z<1e-300){z=1e-300;}
     return z;
 }
 template double calc_z(graph<bmi_comparator>&);
@@ -241,6 +243,8 @@ double calc_z(graph<cmp>& g,std::vector<array1d<double> >& l_env,std::vector<arr
     for(int k=0;k<g.vs()[g.vs().size()-1].rank();k++){
         z+=contracted_vectors[g.vs().size()-1].at(k);
     }
+    if(z>1e300){z=1e300;}
+    if(z<1e-300){z=1e-300;}
     return z;
 }
 template double calc_z(graph<bmi_comparator>&,std::vector<array1d<double> >&,std::vector<array1d<double> >&,std::vector<array1d<double> >&);
@@ -267,6 +271,79 @@ std::vector<std::vector<array3d<double> > > calc_dw(std::vector<array2d<double> 
     }
     return res;
 }
+
+template<typename cmp>
+std::vector<double> calc_w(graph<cmp>& g,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels){
+    std::vector<array2d<double> > contracted_vectors; //batched vectors
+    contracted_vectors.reserve(g.vs().size());
+    int n_samples=samples.size();
+    for(int n=0;n<g.vs().size();n++){
+        int rank=g.vs()[n].rank();
+        if(n<g.n_phys_sites()){ //physical (input) sites do not correspond to tensors, so environment is empty vector
+            array2d<double> vec(rank,n_samples);
+            #pragma omp parallel for
+            for(int s=0;s<n_samples;s++){
+                memcpy(&(vec.e())[rank*s],&(samples[s][n].e())[0],rank*sizeof(double));
+            }
+            contracted_vectors.push_back(vec);
+        }
+        else if((n==g.vs().size()-1)&&(labels.size()!=0)){ //top tensor
+            array2d<double> vec(rank,n_samples);
+            #pragma omp parallel for
+            for(int s=0;s<n_samples;s++){
+                vec.at(labels[s],s)=1;
+            }
+            contracted_vectors.push_back(vec);
+        }
+        else{ //virtual sites correspond to tensors
+            contracted_vectors.push_back(array2d<double>(0,n_samples));
+        }
+    }
+    
+    int contracted_idx_count=0;
+    while(contracted_idx_count!=(g.vs().size()-g.n_phys_sites())){ //iterate over multiset repeatedly until all idxs processed
+        for(auto it=g.es().begin();it!=g.es().end();++it){
+            int b_order=(*it).order();
+            int b_v1=(*it).v1();
+            int b_v2=(*it).v2();
+            array3d<double> b_w=(*it).w();
+            if((contracted_vectors[b_v1].nx()!=0)&&(contracted_vectors[b_v2].nx()!=0)&&((it==--g.es().end())||(contracted_vectors[b_order].nx()==0))){ //process if children have been contracted and (parent is not yet contracted OR is top)
+                array2d<double> res_vec(b_w.nz(),n_samples);
+                #pragma omp parallel for collapse(2)
+                for(int s=0;s<n_samples;s++){
+                    for(int k=0;k<b_w.nz();k++){
+                        for(int i=0;i<b_w.nx();i++){
+                            for(int j=0;j<b_w.ny();j++){
+                                res_vec.at(k,s)+=contracted_vectors[b_v1].at(i,s)*contracted_vectors[b_v2].at(j,s)*b_w.at(i,j,k);
+                            }
+                        }
+                    }
+                }
+                contracted_vectors[b_order]=res_vec;
+                contracted_idx_count++;
+                if(contracted_idx_count==(g.vs().size()-g.n_phys_sites())){break;}
+            }
+        }
+    }
+    
+    std::vector<double> w(n_samples);
+    #pragma omp parallel for
+    for(int s=0;s<n_samples;s++){
+        if(labels.size()!=0){
+            w[s]=contracted_vectors[g.vs().size()-1].at(labels[s],s);
+        }
+        else{
+            w[s]=0;
+            for(int k=0;k<g.vs()[g.vs().size()-1].rank();k++){
+                w[s]+=contracted_vectors[g.vs().size()-1].at(k,s);
+            }
+        }
+        if(w[s]>1e300){w[s]=1e300;}
+        if(w[s]<1e-300){w[s]=1e-300;}
+    }
+    return w;
+}
+template std::vector<double> calc_w(graph<bmi_comparator>&,std::vector<std::vector<array1d<double> > >&,std::vector<int>&);
 
 template<typename cmp>
 std::vector<double> calc_w(graph<cmp>& g,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,std::vector<array2d<double> >& l_env,std::vector<array2d<double> >& r_env,std::vector<array2d<double> >& u_env){
@@ -354,6 +431,7 @@ std::vector<double> calc_w(graph<cmp>& g,std::vector<std::vector<array1d<double>
                 w[s]+=contracted_vectors[g.vs().size()-1].at(k,s);
             }
         }
+        if(w[s]>1e300){w[s]=1e300;}
         if(w[s]<1e-300){w[s]=1e-300;}
     }
     
@@ -437,7 +515,7 @@ double update_cache_z(bond& current,bond& parent,std::vector<array1d<double> >& 
     
     double z=0;
     for(int k=0;k<current_w.nz();k++){
-        z+=res_vec.at(k)*u_env[current_order].at(k);
+        z+=res_vec.at(k)*res_vec2.at(k);
     }
     return z;
 }
@@ -477,6 +555,7 @@ std::vector<double> update_cache_w(bond& current,bond& parent,std::vector<array2
             for(int k=0;k<current_w.nz();k++){
                  w[s]+=l_env[parent_order].at(k,s)*u_env[current_order].at(k,s);
             }
+            if(w[s]>1e300){w[s]=1e300;}
             if(w[s]<1e-300){w[s]=1e-300;}
         }
     }
@@ -508,6 +587,7 @@ std::vector<double> update_cache_w(bond& current,bond& parent,std::vector<array2
             for(int k=0;k<current_w.nz();k++){
                  w[s]+=r_env[parent_order].at(k,s)*u_env[current_order].at(k,s);
             }
+            if(w[s]>1e300){w[s]=1e300;}
             if(w[s]<1e-300){w[s]=1e-300;}
         }
     }

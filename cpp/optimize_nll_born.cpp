@@ -23,7 +23,7 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<std::vector<array
     // double lr=0.001;
     double beta1=0.9;
     double beta2=0.999;
-    double epsilon=1e-8;
+    double epsilon=1e-16;
     //initialize adam m,v caches
     std::map<std::pair<int,int>,array4d<double> > fused_m;
     std::map<std::pair<int,int>,array4d<double> > fused_v;
@@ -366,10 +366,7 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<std::vector<array
             
         //calculate test nll per sweep
         if(test_samples.size()!=0){
-            std::vector<array2d<double> > test_l_env_sample;
-            std::vector<array2d<double> > test_r_env_sample;
-            std::vector<array2d<double> > test_u_env_sample;
-            std::vector<double> test_w=calc_w_born(g,test_samples,test_labels,test_l_env_sample,test_r_env_sample,test_u_env_sample);
+            std::vector<double> test_w=calc_w_born(g,test_samples,test_labels);
             test_nll=0;
             #pragma omp parallel for reduction(-:test_nll)
             for(int s=0;s<test_samples.size();s++){

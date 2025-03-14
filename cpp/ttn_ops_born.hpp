@@ -17,6 +17,8 @@ void canonicalize(graph<cmp>&);
 template<typename cmp>
 double calc_z_born(graph<cmp>&);
 template<typename cmp>
+std::vector<double > calc_w_born(graph<cmp>&,std::vector<std::vector<array1d<double> > >&,std::vector<int>&);
+template<typename cmp>
 std::vector<double > calc_w_born(graph<cmp>&,std::vector<std::vector<array1d<double> > >&,std::vector<int>&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&);
 std::vector<double> update_cache_w_born(bond&,bond&,std::vector<array2d<double> >&,std::vector<array2d<double> >&,std::vector<array2d<double> >&);
 

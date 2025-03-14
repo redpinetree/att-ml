@@ -22,7 +22,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<std::vector<array1d<do
     // double lr=0.001;
     double beta1=0.9;
     double beta2=0.999;
-    double epsilon=1e-8;
+    double epsilon=1e-16;
     //initialize adam m,v caches
     std::map<std::pair<int,int>,array4d<double> > fused_m;
     std::map<std::pair<int,int>,array4d<double> > fused_v;
@@ -59,20 +59,22 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<std::vector<array1d<do
     std::vector<array2d<double> > u_env_sample;
     u_env_sample.reserve(g.vs().size());
     double z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
-    for(auto it=g.es().begin();it!=g.es().end();++it){
-        bond current=*it;
-        for(int i=0;i<current.w().nx();i++){
-            for(int j=0;j<current.w().ny();j++){
-                for(int k=0;k<current.w().nz();k++){
-                    current.w().at(i,j,k)/=pow(z,1/(double) g.es().size());
+    while(fabs(z-1)>=1e-8){ //normalize tensors so that z=1
+        for(auto it=g.es().begin();it!=g.es().end();++it){
+            bond current=*it;
+            for(int i=0;i<current.w().nx();i++){
+                for(int j=0;j<current.w().ny();j++){
+                    for(int k=0;k<current.w().nz();k++){
+                        current.w().at(i,j,k)/=pow(z,1/(double) g.es().size());
+                    }
                 }
             }
+            g.vs()[current.order()].p_bond()=current;
+            g.es().erase(it);
+            it=g.es().insert(current);
         }
-        g.vs()[current.order()].p_bond()=current;
-        g.es().erase(it);
-        it=g.es().insert(current);
+        z=calc_z(g,l_env_z,r_env_z,u_env_z);
     }
-    z=calc_z(g,l_env_z,r_env_z,u_env_z);
     std::vector<double> w=calc_w(g,train_samples_batch,train_labels_batch,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
     
     double best_nll=1e50;
@@ -259,23 +261,6 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<std::vector<array1d<do
             
             normalize(current.w());
             normalize(parent.w());
-            //keep z=1 by normalizing
-            // for(int i=0;i<current.w().nx();i++){
-                // for(int j=0;j<current.w().ny();j++){
-                    // for(int k=0;k<current.w().nz();k++){
-                        // current.w().at(i,j,k)/=pow(z,0.5);
-                        // if(!(current.w().at(i,j,k)>1e-100)){current.w().at(i,j,k)=1e-100;}
-                    // }
-                // }
-            // }
-            // for(int i=0;i<parent.w().nx();i++){
-                // for(int j=0;j<parent.w().ny();j++){
-                    // for(int k=0;k<parent.w().nz();k++){
-                        // parent.w().at(i,j,k)/=pow(z,0.5);
-                        // if(!(parent.w().at(i,j,k)>1e-100)){parent.w().at(i,j,k)=1e-100;}
-                    // }
-                // }
-            // }
             
             g.vs()[current.order()].p_bond()=current;
             g.es().erase(it);
@@ -308,7 +293,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<std::vector<array1d<do
             if(iter==iter_max){break;}
             iter++;
         }
-        //calculate train nll per sweep
+        //calculate train nll
         nll=0;
         #pragma omp parallel for reduction(-:nll)
         for(int s=0;s<train_samples_batch.size();s++){
@@ -320,10 +305,7 @@ double optimize::opt_struct_nll(graph<cmp>& g,std::vector<std::vector<array1d<do
         
         //calculate test nll per sweep
         if(test_samples.size()!=0){
-            std::vector<array2d<double> > test_l_env_sample;
-            std::vector<array2d<double> > test_r_env_sample;
-            std::vector<array2d<double> > test_u_env_sample;
-            std::vector<double> test_w=calc_w(g,test_samples,test_labels,test_l_env_sample,test_r_env_sample,test_u_env_sample);
+            std::vector<double> test_w=calc_w(g,test_samples,test_labels);
             test_nll=0;
             #pragma omp parallel for reduction(-:test_nll)
             for(int s=0;s<test_samples.size();s++){
@@ -565,14 +547,15 @@ void optimize::site_update(bond& b,double z,std::vector<double>& w,std::vector<a
                 double corrected_v=v_cache.at(i,j,k)/(1-pow(beta2,(double) t));
                 b_w.at(i,j,k)=b_w.at(i,j,k)-(lr*0.01*b_w.at(i,j,k)); //weight decay (adamw)
                 b_w.at(i,j,k)=b_w.at(i,j,k)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
-                // b_w.at(i,j,k)=b_w.at(i,j,k)-(lr*grad.at(i,j,k));
-                if(b_w.at(i,j,k)<=0){b_w.at(i,j,k)=1e-100;}
+                // b_w.at(i,j,k)=b_w.at(i,j,k)-(lr*proj_grad);
+                if(b_w.at(i,j,k)<=0){b_w.at(i,j,k)=1e-16;}
                 // if(b_w.at(i,j,k)>1){b_w.at(i,j,k)=1;}
             }
         }
     }
     b.w()=b_w;
     normalize(b.w());
+    // normalize_using_z(b.w(),z);
 }
 
 array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<double>& w,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,std::map<std::pair<int,int>,array4d<double> >& m_cache,std::map<std::pair<int,int>,array4d<double> >& v_cache,int t,double lr,double beta1,double beta2,double epsilon){
@@ -643,7 +626,7 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
                     grad_z_term_2site.at(i,j,k,l)=dz.at(i,j,k,l)/z;
                     double grad_w_term_2site_sum=0;
                     for(int s=0;s<w.size();s++){
-                        grad_w_term_2site_sum+=dw.at(i,j,k,l,s)/sqrt(w[s]);
+                        grad_w_term_2site_sum+=dw.at(i,j,k,l,s)/w[s];
                     }
                     grad_w_term_2site.at(i,j,k,l)=grad_w_term_2site_sum/(double) w.size();
                     //perform projected nonnegative gd on original problem
@@ -686,14 +669,15 @@ array4d<double> optimize::fused_update(bond& b1,bond& b2,double z,std::vector<do
                     double corrected_v=v_cache[key].at(i,j,k,l)/(1-pow(beta2,(double) t));
                     fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*0.01*fused.at(i,j,k,l)); //weight decay (adamw)
                     fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*(corrected_m/(sqrt(corrected_v)+epsilon)));
-                    // fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*grad_2site.at(i,j,k,l));
-                    if(fused.at(i,j,k,l)<=0){fused.at(i,j,k,l)=1e-100;}
+                    // fused.at(i,j,k,l)=fused.at(i,j,k,l)-(lr*proj_grad);
+                    if(fused.at(i,j,k,l)<=0){fused.at(i,j,k,l)=1e-16;}
                     // if(fused.at(i,j,k,l)>1){fused.at(i,j,k,l)=1;}
                 }
             }
         }
     }
     normalize(fused);
+    // normalize_using_z(fused,z);
     return fused;
 }
 
@@ -831,6 +815,10 @@ template<typename cmp>
 void inner_updates(graph<cmp>& g,typename std::multiset<bond,cmp>::iterator& it,typename std::multiset<bond,cmp>::iterator& it_parent,bond& current,bond& parent,double& z,std::vector<array1d<double> >& l_env_z,std::vector<array1d<double> >& r_env_z,std::vector<array1d<double> >& u_env_z,std::vector<double>& w,std::vector<array2d<double> >& l_env_sample,std::vector<array2d<double> >& r_env_sample,std::vector<array2d<double> >& u_env_sample,std::vector<std::vector<array1d<double> > >& samples,std::vector<int>& labels,int single_site_update_count,double lr,double beta1,double beta2,double epsilon){
     z=calc_z(g,l_env_z,r_env_z,u_env_z); //also calculate envs
     w=calc_w(g,samples,labels,l_env_sample,r_env_sample,u_env_sample); //also calculate envs
+    
+    // normalize_using_z(current.w(),pow(z,0.5));
+    // normalize_using_z(parent.w(),pow(z,0.5));
+    // z=update_cache_z(current,parent,l_env_z,r_env_z,u_env_z);
     
     array3d<double> current_m(current.w().nx(),current.w().ny(),current.w().nz());
     array3d<double> current_v(current.w().nx(),current.w().ny(),current.w().nz());

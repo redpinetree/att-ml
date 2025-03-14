@@ -474,12 +474,12 @@ int main(int argc,char **argv){
         observables::output_lines.push_back(total_mi_string);
         
         std::vector<sample_data> generated_samples=sampling::tree_sample(g,10);
-        for(int i=0;i<generated_samples.size();i++){
-            for(int j=0;j<generated_samples[i].n_phys_sites();j++){
-                std::cout<<generated_samples[i].s()[j]<<" ";
-            }
-            std::cout<<"\n";
-        }
+        // for(int i=0;i<generated_samples.size();i++){
+            // for(int j=0;j<generated_samples[i].n_phys_sites();j++){
+                // std::cout<<generated_samples[i].s()[j]<<" ";
+            // }
+            // std::cout<<"\n";
+        // }
         //compute output quantities
         // if(verbose>=4){std::cout<<std::string(g);}
         
