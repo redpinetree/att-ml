@@ -33,8 +33,8 @@ void print_usage(){
     std::cerr<<"\t-r,--r-max: maximum rank of spins in the approximation\n";
     std::cerr<<"\t-N,--nll-iter-max: maximum number of NLL optimization iterations\n";
     std::cerr<<"\t-S,--seed: seed for PRNG\n";
-    std::cerr<<"\t--born: use double-layer TTNBM instead of single-layer nnTTN\n";
-    std::cerr<<"\t--hybrid: pretrain with double-layer TTNBM then use single-layer nnTTN, with pretrained structure. Overrides --born.\n";
+    std::cerr<<"\t--born: use double-layer BMATT instead of single-layer nnTTN\n";
+    std::cerr<<"\t--hybrid: pretrain with double-layer BMATT then use single-layer nnTTN, with pretrained structure. Overrides --born.\n";
     std::cerr<<"\t--compress-r: enable rank compression\n";
     std::cerr<<"\t--struct-opt: enable structural optimization\n";
 }
@@ -144,7 +144,7 @@ int main(int argc,char **argv){
     else{
         if(born_flag){
             train_type=1;
-            std::cout<<"TTNBM training type.\n";
+            std::cout<<"BMATT training type.\n";
         }
         else{
             train_type=0;
@@ -252,7 +252,7 @@ int main(int argc,char **argv){
     }
     
     if((train_type==1)||(train_type==2)){
-        std::cout<<"Training details (TTNBM):\n\ttrain data: "<<input<<"\n";
+        std::cout<<"Training details (BMATT):\n\ttrain data: "<<input<<"\n";
         std::cout<<"\ttrain data size: "<<train_data.size()<<"\n";
         if(label_set){
             std::cout<<"\ttrain labels: "<<label_file<<"\n";
@@ -383,11 +383,11 @@ int main(int argc,char **argv){
                 }
             }
             g.vs()[b.order()].p_bond()=b;
-            //use bmi of ttnbm, so no need to update bmi
+            //use bmi of bmatt, so no need to update bmi
             g.es().erase(it);
             it=g.es().insert(b);
         }
-        init_tree_type="ttnbm";
+        init_tree_type="bmatt";
     }
 
     if((train_type==0)||(train_type==2)){
