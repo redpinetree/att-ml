@@ -355,12 +355,13 @@ double optimize::opt_struct_nll_born(graph<cmp>& g,std::vector<std::vector<array
             iter++;
         }
         //calculate train nll
+        w=calc_w_born(g,train_samples,train_labels);
         nll=0;
         #pragma omp parallel for reduction(-:nll)
-        for(int s=0;s<train_samples_batch.size();s++){
+        for(int s=0;s<train_samples.size();s++){
             nll-=log(w[s]);
         }
-        nll/=(double) train_samples_batch.size();
+        nll/=(double) train_samples.size();
         nll+=log(z);
         train_nll_history.insert(std::pair<int,double>(iter,nll));
             

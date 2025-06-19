@@ -75,7 +75,6 @@ public:
         graph<cmp> g;
         int ver,n_phys_sites,center_idx,es_size,vs_size;
         std::multiset<bond,cmp> es;
-        std::vector<site> vs(vs_size);
         is.read(reinterpret_cast<char*>(&ver),sizeof(ver)); //version
         if(ver!=1){
             std::cout<<"Wrong input version! Expected v1 and got v"<<ver<<".\n";
@@ -91,6 +90,7 @@ public:
         }
         g.es()=es;
         is.read(reinterpret_cast<char*>(&vs_size),sizeof(vs_size));
+        std::vector<site> vs(vs_size);
         for(int i=0;i<vs_size;i++){
             vs[i]=site::load(is);
         }
