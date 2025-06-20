@@ -15,7 +15,7 @@ This repository contains code for the optimization of adaptive tensor trees usin
 
 ## Usage
 
-After building, the code can be executed with a single process by invoking:
+After building, the code can be executed by invoking:
 
 ```
 OMP_NUM_THREADS={number of threads} ./bin/att_ml -i {training data} -L {training labels} -V {test data}  -B {test labels} -T {initial tree type} -r ${maximum rank} -N {number of iterations} -l {learning rate} -b {batch size} -o {output path prefix} -S {RNG seed} [--born|--hybrid] [--struct-opt]
