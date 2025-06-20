@@ -7,6 +7,7 @@
 
 #exceptions
 !.gitignore
+!LICENSE
 !README.md
 !/cpp/
 !Makefile
