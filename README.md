@@ -27,7 +27,7 @@ The following are some details on the options. First, I/O related options:
 - `-i` - path to the file containing the training dataset. (required)
 - `-L` - path to the file containing the training dataset labels.
 - `-V` - path to the file containing the test dataset.
-- `-B` - path to the file containing the training dataset labels.
+- `-B` - path to the file containing the test dataset labels.
 - `-o` - output path prefix for the output of the method.
 
 If `-L` is not set, only `-V` should be supplied if there is a test dataset present. If `-L` is set, then to use a test dataset, `-V` and `-B` must be supplied.
