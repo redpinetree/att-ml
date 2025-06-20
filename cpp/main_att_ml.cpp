@@ -20,7 +20,7 @@
 std::mt19937_64 prng; //initialize prng
 
 void print_usage(){
-    std::cerr<<"usage: tree_ml [--options]\n";
+    std::cerr<<"usage: att_ml [--options]\n";
     std::cerr<<"options:\n";
     std::cerr<<"\t-h,--help: display this message\n";
     std::cerr<<"\t-v,--verbose:\n\t\t0->nothing printed to stdout\n\t\t1->sample number and aggregate timing data\n\t\t2->per-instance timing\n\t\t3->more detailed timing breakdown\n\t\t4->graph contents, debug observable data\n";
