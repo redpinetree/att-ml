@@ -17,10 +17,6 @@ $(TARGET): $(OBJ)
 	mkdir -p ./bin
 	$(CXX) $(OBJ) -llapack -lblas -o $(TARGET) $(CXXFLAGS)
 
-$(TARGET_DEBUG): $(OBJ)
-	mkdir -p ./bin
-	$(CXX) -g $(OBJ) -llapack -lblas -o $(TARGET_DEBUG) $(CXXFLAGS)
-
 $(OBJ): %.o: %.cpp
 	$(CXX) -c $< -o $@ $(CXXFLAGS)
 
