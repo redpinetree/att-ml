@@ -14,10 +14,13 @@ OBJ = $(SRC:%.cpp=%.o)
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
+	mkdir -p ./bin
 	$(CXX) $(OBJ) -llapack -lopenblas -o $(TARGET) $(CXXFLAGS)
 
 $(TARGET_DEBUG): $(OBJ)
+	mkdir -p ./bin
 	$(CXX) -g $(OBJ) -llapack -lopenblas -o $(TARGET_DEBUG) $(CXXFLAGS)
+
 $(OBJ): %.o: %.cpp
 	$(CXX) -c $< -o $@ $(CXXFLAGS)
 
