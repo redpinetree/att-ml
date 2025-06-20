@@ -29,7 +29,7 @@ The following are some details on the options. First, I/O related options:
 - `-V` - path to the file containing the test dataset.
 - `-B` - path to the file containing the training dataset labels.
 - `-o` - output path prefix for the output of the method.
-If `-L` is not set, only `-V` should be supplied if there is a test dataset present. If `L` is set, then to use a test dataset, `-V` and `-B` must be supplied.
+If `-L` is not set, only `-V` should be supplied if there is a test dataset present. If `-L` is set, then to use a test dataset, `-V` and `-B` must be supplied.
 
 Next, simulation hyperparameters:
 - `-T` - initial tree type. Choices include "mps" (matrix product state -- a linear ansatz), "rand" (a randomly-drawn tree structure, and "pbttn" (a perfectly balanced binary tensor tree -- requires that the number of input features is a power of 2).
