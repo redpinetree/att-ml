@@ -1,6 +1,6 @@
 # Description
 
-This repository contains code for the optimization of adaptive tensor trees using either a Born machine-based approach or a nonnegative approach (or both, in a hybrid scheme). An explanation of the methods implemented in this repository can be found in [our preprint](https://arxiv.org/abs/2504.06722).
+This repository contains code for the optimization of adaptive tensor trees targeting discrete data distributions using either a Born machine-based approach or a nonnegative approach (or both, in a hybrid scheme). The nonnegative approach has the advantage of interpretability as a probabilistic graphical model at the expense of introducing a constraint to the optimization problem. An explanation of the methods implemented in this repository can be found in [our preprint](https://arxiv.org/abs/2504.06722).
 
 ## Building
 
@@ -53,3 +53,10 @@ The file `data.zip` contains three subfolders:
 - `scripts` contains Bash shell scripts that run the code on the sample datasets
 
 To run the examples, extract the contents of `data.zip` into the same directory as the `bin` and `cpp` folders and run a script from the `scripts` folder.
+
+In [our preprint](https://arxiv.org/abs/2504.06722), we consider various types of discrete datasets exhibiting some type of underlying structure including bitwise operation sentences, samples from a random Bayesian network, and DNA sequence data. The following is an example visualization obtained using the nonnegative approach, on the DNA sequence data:
+
+<p align="center"><img src="https://github.com/user-attachments/assets/8436e0a6-4c12-46f4-a24c-f079985e1fbd" alt="natt_carnivora" width=600></p>
+
+This network structure was obtained with mitochondrial DNA sequence data for various members of taxonomic order Carnivora as input, starting from a randomly-drawn tree. The bond colors represent the mutual information associated with the subsystems obtained when a bond is cut. The resulting tree structure reflects the clustering of species and generally agrees with the established classification annotated on the figure, demonstrating that the approach can determine the hidden structure of a given discrete dataset.
+
